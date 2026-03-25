@@ -79,7 +79,7 @@ A Trade Intent represents:
     "timeInForce": "IOC"
   },
   "mandateRef": "mnd-0003",
-  "policyRef": "pol-0003",
+  "policyRef": "cred-policy-0003",
   "executionMode": "pre-authorized",
   "challengeState": "not-required",
   "status": "created",
@@ -156,7 +156,7 @@ Optional object for execution protection.
 - reference to trade mandate
 
 ## `policyRef`
-- reference to policy or credential
+- reference to a policy credential or compatible future policy object
 
 ## `executionMode`
 Allowed values:
@@ -168,9 +168,11 @@ Allowed values:
 Allowed values:
 - `not-required`
 - `required`
-- `pending`
-- `passed`
-- `failed`
+- `pending-approval`
+- `approved`
+- `rejected`
+- `expired`
+- `cancelled`
 
 ## `status`
 Allowed values:
@@ -287,7 +289,7 @@ Challenge path:
 created
   -> evaluating
   -> challenge-required
-  -> pending
+  -> pending-approval
   -> approved
   -> routing
   -> executing

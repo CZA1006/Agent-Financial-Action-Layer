@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AFAL OpenAPI Preview</title>
+    <link
+      rel="stylesheet"
+      href="https://unpkg.com/swagger-ui-dist@5/swagger-ui.css"
+    />
+    <style>
+      :root {
+        color-scheme: light;
+        --page-bg: #f4f1e8;
+        --ink: #162114;
+        --muted: #5d6956;
+        --accent: #1d6b52;
+        --panel: #fffdf8;
+        --border: #d8d3c5;
+      }
+
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Helvetica Neue", sans-serif;
+        background:
+          radial-gradient(circle at top left, rgba(29, 107, 82, 0.08), transparent 28rem),
+          linear-gradient(180deg, #faf7ef 0%, var(--page-bg) 100%);
+        color: var(--ink);
+      }
+
+      .hero {
+        padding: 2rem 1.5rem 1rem;
+        border-bottom: 1px solid var(--border);
+      }
+
+      .hero-inner {
+        max-width: 1100px;
+        margin: 0 auto;
+      }
+
+      .eyebrow {
+        margin: 0 0 0.5rem;
+        font-size: 0.8rem;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--accent);
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(2rem, 3vw, 3rem);
+        line-height: 1;
+      }
+
+      .summary {
+        max-width: 54rem;
+        margin: 0.9rem 0 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+        margin-top: 1.2rem;
+      }
+
+      .meta span {
+        padding: 0.45rem 0.7rem;
+        border: 1px solid var(--border);
+        border-radius: 999px;
+        background: rgba(255, 253, 248, 0.9);
+        font-size: 0.9rem;
+      }
+
+      .swagger-shell {
+        max-width: 1300px;
+        margin: 0 auto;
+        padding: 1rem 1rem 2rem;
+      }
+
+      #swagger-ui {
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        overflow: hidden;
+        background: var(--panel);
+        box-shadow: 0 18px 60px rgba(22, 33, 20, 0.08);
+      }
+
+      .swagger-ui .topbar {
+        display: none;
+      }
+
+      .swagger-ui .information-container {
+        padding-top: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <section class="hero">
+      <div class="hero-inner">
+        <p class="eyebrow">AFAL Phase 1</p>
+        <h1>OpenAPI Contract Preview</h1>
+        <p class="summary">
+          This static preview renders the stable AFAL OpenAPI publication artifact at
+          <code>./latest.json</code>. It is intended for contract review, not production serving.
+        </p>
+        <div class="meta">
+          <span>Source: <code>docs/specs/openapi/latest.json</code></span>
+          <span>Routes: <code>execute-payment</code> + <code>settle-resource-usage</code></span>
+          <span>Renderer: Swagger UI</span>
+        </div>
+      </div>
+    </section>
+
+    <main class="swagger-shell">
+      <div id="swagger-ui"></div>
+    </main>
+
+    <script src="https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js"></script>
+    <script>
+      window.ui = SwaggerUIBundle({
+        url: "./latest.json",
+        dom_id: "#swagger-ui",
+        deepLinking: true,
+        docExpansion: "list",
+        defaultModelsExpandDepth: 2,
+        defaultModelExpandDepth: 2,
+        displayRequestDuration: true,
+        filter: true,
+      });
+    </script>
+  </body>
+</html>

@@ -6,10 +6,17 @@ Draft v0.1
 ## Purpose
 Defines the Resource Intent schema used by AFAL.
 
+## Phase 1 Conventions
+
+- Resource budgets are ATS objects in Phase 1, not mandatory credential subjects.
+- `policyRef` resolves to a `PolicyCredential` `id`.
+- Authorization decisions, challenge records, settlement records, and receipts are modeled as separate objects referenced by ID.
+
 ## Resource Intent Schema
 ```json
 {
   "intentId": "resint-0001",
+  "schemaVersion": "0.1",
   "intentType": "resource",
   "requester": {
     "agentDid": "did:afal:agent:research-agent-01",
@@ -17,7 +24,7 @@ Defines the Resource Intent schema used by AFAL.
   },
   "provider": {
     "providerId": "provider-openai",
-    "payeeDid": "did:afal:institution:provider-openai"
+    "providerDid": "did:afal:institution:provider-openai"
   },
   "resource": {
     "resourceClass": "inference",
@@ -29,11 +36,11 @@ Defines the Resource Intent schema used by AFAL.
     "asset": "USDC"
   },
   "budgetSource": {
-    "type": "compute-budget",
-    "reference": "cred-cb-001"
+    "type": "ats-budget",
+    "reference": "budg-res-001"
   },
   "mandateRef": "mnd-0002",
-  "policyRef": "pol-0002",
+  "policyRef": "cred-policy-0002",
   "executionMode": "pre-authorized",
   "challengeState": "not-required",
   "status": "created",
@@ -42,6 +49,15 @@ Defines the Resource Intent schema used by AFAL.
   "createdAt": "2026-03-24T12:00:00Z"
 }
 ```
+
+## Challenge State Values
+- `not-required`
+- `required`
+- `pending-approval`
+- `approved`
+- `rejected`
+- `expired`
+- `cancelled`
 
 ## Resource Classes
 - `inference`
@@ -60,6 +76,7 @@ Defines the Resource Intent schema used by AFAL.
 - `created`
 - `evaluating`
 - `challenge-required`
+- `pending-approval`
 - `approved`
 - `rejected`
 - `executing`
@@ -72,10 +89,10 @@ Defines the Resource Intent schema used by AFAL.
 ## Optional Extended Fields
 ```json
 {
-  "conversionRef": "conv-001",
-  "providerQuoteRef": "provquote-001",
+  "decisionRef": "dec-0002",
+  "challengeRef": "chall-0002",
   "usageReceiptRef": "usage-001",
-  "settlementRef": "settle-001",
+  "settlementRef": "stl-0002",
   "metadata": {
     "workflowId": "wf-123",
     "taskClass": "research"

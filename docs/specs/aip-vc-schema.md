@@ -6,15 +6,25 @@ Draft v0.1
 ## Purpose
 Defines the credential schemas used by AIP (Agent Identity Passport).
 
+## Phase 1 Conventions
+
+- All credentials use the common envelope below.
+- `credentialSubject.id` is the identity subject DID.
+- `policyRef` used elsewhere in Phase 1 points to a `PolicyCredential` `id`.
+- Compute/resource budgets remain ATS budget objects in Phase 1 and are not mandatory VC types.
+
 ## Common Credential Envelope
 ```json
 {
   "id": "cred-0001",
+  "schemaVersion": "0.1",
   "type": ["VerifiableCredential", "OwnershipCredential"],
   "issuer": "did:afal:institution:merchant-co",
   "issuanceDate": "2026-03-24T12:00:00Z",
   "expirationDate": "2027-03-24T12:00:00Z",
-  "credentialSubject": {},
+  "credentialSubject": {
+    "id": "did:afal:agent:payment-agent-01"
+  },
   "credentialStatus": {
     "id": "status-0001",
     "type": "StatusListEntry",
@@ -31,53 +41,79 @@ Defines the credential schemas used by AIP (Agent Identity Passport).
 ```
 
 ## Credential Types
+
 ### OwnershipCredential
 ```json
 {
-  "id": "did:afal:agent:payment-agent-01",
-  "ownerDid": "did:afal:owner:alice-01",
-  "institutionDid": "did:afal:institution:merchant-co",
-  "relationshipType": "owns_and_controls",
-  "agentType": "payment-agent",
-  "environment": "production"
+  "id": "cred-own-0001",
+  "type": ["VerifiableCredential", "OwnershipCredential"],
+  "issuer": "did:afal:institution:merchant-co",
+  "issuanceDate": "2026-03-24T12:00:00Z",
+  "credentialSubject": {
+    "id": "did:afal:agent:payment-agent-01",
+    "ownerDid": "did:afal:owner:alice-01",
+    "institutionDid": "did:afal:institution:merchant-co",
+    "relationshipType": "owns_and_controls",
+    "agentType": "payment-agent",
+    "environment": "production"
+  }
 }
 ```
 
 ### KycCredential / KybCredential
 ```json
 {
-  "id": "did:afal:owner:alice-01",
-  "kycStatus": "passed",
-  "jurisdiction": "HK",
-  "riskTier": "low",
-  "providerRef": "prov-kyc-001"
+  "id": "cred-kyc-0001",
+  "type": ["VerifiableCredential", "KycCredential"],
+  "issuer": "did:afal:institution:kyc-provider-01",
+  "issuanceDate": "2026-03-24T12:00:00Z",
+  "credentialSubject": {
+    "id": "did:afal:owner:alice-01",
+    "kycStatus": "passed",
+    "jurisdiction": "HK",
+    "riskTier": "low",
+    "providerRef": "prov-kyc-001"
+  }
 }
 ```
 
 ```json
 {
-  "id": "did:afal:institution:merchant-co",
-  "kybStatus": "passed",
-  "jurisdiction": "UAE",
-  "riskTier": "medium",
-  "providerRef": "prov-kyb-101"
+  "id": "cred-kyb-0001",
+  "type": ["VerifiableCredential", "KybCredential"],
+  "issuer": "did:afal:institution:kyb-provider-01",
+  "issuanceDate": "2026-03-24T12:00:00Z",
+  "credentialSubject": {
+    "id": "did:afal:institution:merchant-co",
+    "kybStatus": "passed",
+    "jurisdiction": "UAE",
+    "riskTier": "medium",
+    "providerRef": "prov-kyb-101"
+  }
 }
 ```
 
 ### AuthorityCredential
 ```json
 {
-  "id": "did:afal:agent:payment-agent-01",
-  "authorityClass": "payment-and-resource",
-  "allowedActions": [
-    "createPaymentIntent",
-    "createResourceIntent",
-    "executePayment"
-  ],
-  "scope": {
-    "payments": true,
-    "resourceSettlement": true,
-    "trading": false
+  "id": "cred-auth-0001",
+  "type": ["VerifiableCredential", "AuthorityCredential"],
+  "issuer": "did:afal:institution:merchant-co",
+  "issuanceDate": "2026-03-24T12:00:00Z",
+  "credentialSubject": {
+    "id": "did:afal:agent:payment-agent-01",
+    "authorityClass": "payment-and-resource",
+    "allowedActions": [
+      "createPaymentIntent",
+      "createResourceIntent",
+      "executePayment",
+      "settleResourceUsage"
+    ],
+    "scope": {
+      "payments": true,
+      "resourceSettlement": true,
+      "trading": false
+    }
   }
 }
 ```
@@ -85,15 +121,32 @@ Defines the credential schemas used by AIP (Agent Identity Passport).
 ### PolicyCredential
 ```json
 {
-  "id": "did:afal:agent:payment-agent-01",
-  "singlePaymentLimit": "100.00",
-  "dailyPaymentLimit": "1000.00",
-  "allowedAssets": ["USDC"],
-  "allowedCounterparties": ["did:afal:agent:fraud-service-01"],
-  "allowedChains": ["base"],
-  "challengeThreshold": "250.00"
+  "id": "cred-policy-0001",
+  "type": ["VerifiableCredential", "PolicyCredential"],
+  "issuer": "did:afal:institution:merchant-co",
+  "issuanceDate": "2026-03-24T12:00:00Z",
+  "credentialSubject": {
+    "id": "did:afal:agent:payment-agent-01",
+    "singlePaymentLimit": "100.00",
+    "dailyPaymentLimit": "1000.00",
+    "allowedAssets": ["USDC"],
+    "allowedCounterparties": ["did:afal:agent:fraud-service-01"],
+    "allowedProviders": ["did:afal:institution:provider-openai"],
+    "allowedChains": ["base"],
+    "challengeThreshold": "250.00"
+  }
 }
 ```
+
+## Policy Ownership
+
+In Phase 1:
+
+- mandates define action class and coarse scope
+- `PolicyCredential` externalizes reusable constraints
+- `policyRef` resolves to a `PolicyCredential` `id`
+- effective authorization is the intersection of mandate scope and policy constraints
+- if mandate and policy conflict, the stricter rule wins; irreconcilable conflicts must reject authorization
 
 ### Token Economy Extensions
 - `ComputeBudgetCredential`

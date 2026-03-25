@@ -1,0 +1,20 @@
+{
+  "name": "agent-financial-action-layer",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "AFAL Phase 1 schema-aligned mock orchestration workspace",
+  "scripts": {
+    "demo:mock": "node --import tsx/esm backend/afal/mock/demo.ts",
+    "export:openapi": "node scripts/export-openapi.mjs",
+    "preview:openapi": "node scripts/serve-openapi-preview.mjs",
+    "snapshot:openapi": "node scripts/publish-openapi-snapshot.mjs",
+    "test:mock": "node --import tsx/esm --test backend/afal/mock/demo.test.ts backend/afal/api/handlers.test.ts backend/afal/http/router.test.ts backend/afal/http/openapi-export.test.ts backend/afal/http/openapi-preview.test.ts backend/afal/http/openapi-snapshot.test.ts",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.21",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

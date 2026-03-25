@@ -6,70 +6,115 @@ The `app/trusted-surface/` folder contains the human approval surface for AFAL.
 
 A trusted surface is the interface through which high-risk or policy-sensitive actions can be reviewed, challenged, approved, or rejected by a human operator.
 
-This folder is not intended to become a full consumer app in Phase 1.
+Phase 1 uses a lightweight web trusted surface. It is an approval surface, not a general consumer application.
 
----
+## Phase 1 Decisions
 
-## Phase 1 Role
+- first trusted surface: web approval app
+- challenge and approval state are off-chain first
+- payment and resource actions share the same challenge and approval object model
+- approval outputs are structured AFAL objects, not ad hoc UI callbacks
 
-The goal of the trusted surface in the current phase is to:
-- define approval flow requirements
-- define challenge states
-- define what context a human must see before approving an action
-- provide a placeholder structure for future implementation
+## Canonical Flow
 
-This is a critical part of AMN because challenge and trusted approval are first-class features of AFAL.
+```text
+payment/resource intent
+  -> AMN authorization decision
+  -> challenge-required
+  -> challenge record + approval context
+  -> trusted-surface review
+  -> approval result
+  -> updated authorization decision
+  -> settlement
+  -> receipt
+```
 
----
+## Challenge State Machine
 
-## What Belongs Here
+```text
+not-required
+  -> required
+  -> pending-approval
+  -> approved
+```
 
-Examples of code or artifacts that belong in `app/trusted-surface/`:
+Alternative end states:
 
-- README and flow documentation
-- approval context object definitions
-- challenge state definitions
-- mock approval UI notes
-- approval / rejection state model
-- minimal prototype placeholder (later)
+- `rejected`
+- `expired`
+- `cancelled`
 
-Typical actions that may require trusted-surface interaction:
-- high-value payment approval
-- new counterparty approval
-- new provider approval
-- high-risk resource conversion
-- future high-risk trade approval
+## Approval Context Object
 
----
+The trusted surface consumes `ApprovalContext` from `docs/specs/afal-approval-challenge-schema.md`.
 
-## What Does Not Belong Here Yet
+Minimum fields that must be displayed to the human reviewer:
 
-The following should **not** be the focus of `app/trusted-surface/` in Phase 1:
+- action type
+- subject agent DID
+- payer/requester account
+- payee or provider identity
+- asset and amount, or resource quantity and max spend
+- chain or settlement rail
+- purpose / description
+- mandate reference
+- policy reference
+- challenge reason
+- risk signals
+- expiration time
 
-- full polished frontend product
-- large design system work
-- consumer wallet UX
-- general-purpose dashboard
-- multi-role enterprise portal
-- broad app functionality unrelated to challenge / approval
+## Approval Result Object
 
----
+The trusted surface must return a structured approval result containing:
 
-## Working Principle
+- `challengeRef`
+- `actionRef`
+- `result`
+- `approvedBy`
+- `approvalChannel`
+- `stepUpAuthUsed`
+- optional reviewer comment
+- `approvalReceiptRef`
+- `decidedAt`
 
-**This is a trusted approval surface, not a full consumer product.**
+## Callback / Output Contract
 
-The trusted surface should stay tightly aligned with:
-- AMN challenge logic
-- Payment / Resource / future Trade intent flows
-- approval / rejection / escalation state models
+The trusted surface does not execute settlement directly.
 
----
+Its job is to:
 
-## Immediate Next Step
+1. read `ChallengeRecord` and `ApprovalContext`
+2. produce `ApprovalResult`
+3. hand control back to AMN / AFAL orchestration
 
-Phase 1 work should focus on:
-- documenting the approval flow
-- defining minimum information shown during challenge
-- defining approval results and callbacks
-- leaving implementation lightweight until the rest of AFAL schemas stabilize
+Required callback behavior:
+
+- on approve: mark challenge `approved`, emit `ApprovalResult`, allow orchestration to continue
+- on reject: mark challenge `rejected`, emit `ApprovalResult`, stop execution
+- on expiry: mark challenge `expired`, stop execution
+
+## Phase 1 UX Rules
+
+The first implementation should optimize for:
+
+- clarity of what is being approved
+- clarity of risk signals
+- explicit identity and mandate references
+- auditability of who approved what and when
+
+It should not optimize for:
+
+- polished consumer wallet UX
+- dashboard breadth
+- large design system investment
+- multi-role admin complexity
+
+## Immediate Implementation Artifacts
+
+Phase 1 work in this folder should produce:
+
+- challenge flow documentation
+- approval context object notes
+- approval result object notes
+- state transition notes
+- lightweight placeholder UI scaffold later

@@ -6,10 +6,18 @@ Draft v0.1
 ## Purpose
 Defines the mandate schema for AMN (Agent Mandate Network).
 
+## Phase 1 Conventions
+
+- `policyRef` resolves to a `PolicyCredential` `id` in Phase 1.
+- Mandates define action scope; policy credentials externalize reusable constraints.
+- Effective authorization uses the intersection of mandate scope and policy constraints.
+- If mandate and policy disagree, the stricter rule wins; irreconcilable conflicts reject the action.
+
 ## Common Mandate Envelope
 ```json
 {
   "mandateId": "mnd-0001",
+  "schemaVersion": "0.1",
   "mandateType": "payment",
   "issuer": "did:afal:owner:alice-01",
   "subject": "did:afal:agent:payment-agent-01",
@@ -17,7 +25,7 @@ Defines the mandate schema for AMN (Agent Mandate Network).
   "issuedAt": "2026-03-24T12:00:00Z",
   "expiresAt": "2026-04-24T12:00:00Z",
   "scope": {},
-  "policyRef": "pol-0001",
+  "policyRef": "cred-policy-0001",
   "challengeRules": {},
   "metadata": {},
   "proof": {
@@ -53,6 +61,7 @@ Defines the mandate schema for AMN (Agent Mandate Network).
   "allowedCounterparties": ["did:afal:agent:fraud-service-01"],
   "singlePaymentLimit": "100.00",
   "dailyPaymentLimit": "1000.00",
+  "allowedChains": ["base"],
   "withdrawalAllowed": false
 }
 ```
@@ -61,7 +70,10 @@ Defines the mandate schema for AMN (Agent Mandate Network).
 ```json
 {
   "resourceClass": "inference",
-  "allowedProviders": ["provider-openai", "provider-anthropic"],
+  "allowedProviders": [
+    "did:afal:institution:provider-openai",
+    "did:afal:institution:provider-anthropic"
+  ],
   "dailyTokenLimit": 1000000,
   "maxSpendPerRequest": "50.00",
   "autoRefillAllowed": false
@@ -94,12 +106,13 @@ Defines the mandate schema for AMN (Agent Mandate Network).
 ```json
 {
   "decisionId": "dec-0001",
-  "subject": "did:afal:agent:payment-agent-01",
+  "actionRef": "payint-0001",
+  "subjectDid": "did:afal:agent:payment-agent-01",
   "mandateId": "mnd-0001",
   "actionType": "payment",
   "result": "approved",
-  "challengeRequired": false,
-  "policyRef": "pol-0001",
+  "challengeState": "not-required",
+  "policyRef": "cred-policy-0001",
   "evaluatedAt": "2026-03-24T12:05:00Z"
 }
 ```
@@ -108,6 +121,7 @@ Result values:
 - `approved`
 - `rejected`
 - `challenge-required`
+- `pending-approval`
 - `suspended`
 - `expired`
 - `revoked`

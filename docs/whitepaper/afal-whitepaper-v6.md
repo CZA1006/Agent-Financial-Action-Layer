@@ -457,7 +457,7 @@ AFAL introduces a **financial capability exposure layer** with two classes of ac
 - authorizeIntent
 - executePayment
 - getReceipt
-- freezeAgent
+- freezeIdentity
 - revokeCredential
 
 ### Imperative Financial Actions

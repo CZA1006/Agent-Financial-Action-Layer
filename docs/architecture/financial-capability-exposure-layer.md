@@ -120,7 +120,7 @@ Examples:
 - `createResourceIntent`
 - `authorizeIntent`
 - `getReceipt`
-- `freezeAgent`
+- `freezeIdentity`
 - `revokeCredential`
 
 ### Imperative Financial Actions
@@ -151,7 +151,7 @@ The first version of this layer should support the following capabilities.
 - `resolveIdentity`
 - `verifyCredential`
 - `presentCredential`
-- `freezeAgent`
+- `freezeIdentity`
 - `revokeCredential`
 
 ### Account / Treasury Capabilities
@@ -200,8 +200,8 @@ This layer must expose challenge as a first-class result.
 
 A capability invocation should be able to return:
 
-- success
-- rejection
+- approved
+- rejected
 - challenge-required
 - pending-approval
 - suspended

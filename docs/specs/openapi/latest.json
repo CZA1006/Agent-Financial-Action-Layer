@@ -1,0 +1,1838 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AFAL Phase 1 HTTP Capability Contract",
+    "version": "0.1.0-draft",
+    "summary": "OpenAPI-style draft for the framework-free AFAL capability transport layer",
+    "description": "This draft describes the Phase 1 HTTP surface above the AFAL API adapter.\n\nIt is intentionally narrow and tracks the current implementation under `backend/afal/http/`.\nThe goal is to freeze route names, request envelopes, status-code behavior, and top-level\nresponse semantics before choosing an HTTP server framework.\n\nPhase 1 scope in this draft:\n- execute payment capability\n- settle resource usage capability\n- stable requestRef handling\n- structured success/error envelopes\n\nCurrent behavior note:\n- `challenge-required` is not emitted as a separate top-level HTTP response in the current mock transport\n- the current Phase 1 flow resolves challenge inside orchestration and surfaces it within the successful flow payload\n  via `initialDecision.result`, `challenge`, `approvalContext`, and `approvalResult`\n- explicit top-level `challenge-required` HTTP semantics can be added later if AFAL exposes mid-flow transport states\n"
+  },
+  "servers": [
+    {
+      "url": "https://api.afal.local",
+      "description": "Placeholder server for contract drafting only"
+    }
+  ],
+  "tags": [
+    {
+      "name": "Capabilities",
+      "description": "AFAL machine-invokable financial capabilities"
+    }
+  ],
+  "paths": {
+    "/capabilities/execute-payment": {
+      "post": {
+        "tags": [
+          "Capabilities"
+        ],
+        "operationId": "executePayment",
+        "summary": "Execute a payment capability request",
+        "description": "Accepts a structured payment capability request and returns either a fully structured\npayment flow result or a structured AFAL error envelope.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExecutePaymentHttpRequest"
+              },
+              "examples": {
+                "canonical-payment": {
+                  "summary": "Canonical Phase 1 payment request",
+                  "value": {
+                    "requestRef": "req-0001",
+                    "input": {
+                      "requestRef": "req-0001",
+                      "monetaryBudgetRef": "budg-money-001",
+                      "intent": {
+                        "intentId": "payint-0001",
+                        "schemaVersion": "0.1",
+                        "intentType": "payment",
+                        "payer": {
+                          "agentDid": "did:afal:agent:payment-agent-01",
+                          "accountId": "acct-agent-001"
+                        },
+                        "payee": {
+                          "payeeDid": "did:afal:agent:fraud-service-01",
+                          "settlementAddress": "0xFRAUDSERVICEPAYEE"
+                        },
+                        "asset": "USDC",
+                        "amount": "45.00",
+                        "chain": "base",
+                        "purpose": {
+                          "category": "service-payment",
+                          "description": "fraud detection request",
+                          "referenceId": "svc-req-abc123"
+                        },
+                        "mandateRef": "mnd-0001",
+                        "policyRef": "cred-policy-0001",
+                        "executionMode": "pre-authorized",
+                        "challengeState": "required",
+                        "status": "created",
+                        "expiresAt": "2026-03-24T12:10:00Z",
+                        "nonce": "n-0001",
+                        "createdAt": "2026-03-24T12:05:00Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment flow completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ExecutePaymentSuccessResponse"
+                },
+                "examples": {
+                  "canonical-payment-success": {
+                    "summary": "Canonical payment success response",
+                    "value": {
+                      "ok": true,
+                      "capability": "executePayment",
+                      "requestRef": "req-0001",
+                      "statusCode": 200,
+                      "data": {
+                        "intent": {
+                          "intentId": "payint-0001",
+                          "status": "settled",
+                          "challengeState": "approved",
+                          "settlementRef": "stl-0001",
+                          "receiptRef": "rcpt-pay-0001"
+                        },
+                        "initialDecision": {
+                          "decisionId": "dec-0001",
+                          "result": "challenge-required"
+                        },
+                        "finalDecision": {
+                          "decisionId": "dec-0002",
+                          "result": "approved"
+                        },
+                        "settlement": {
+                          "settlementId": "stl-0001",
+                          "status": "settled"
+                        },
+                        "paymentReceipt": {
+                          "receiptId": "rcpt-pay-0001",
+                          "receiptType": "payment",
+                          "status": "final"
+                        },
+                        "capabilityResponse": {
+                          "responseId": "cap-0001",
+                          "result": "approved"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/capabilities/settle-resource-usage": {
+      "post": {
+        "tags": [
+          "Capabilities"
+        ],
+        "operationId": "settleResourceUsage",
+        "summary": "Execute a resource settlement capability request",
+        "description": "Accepts a structured resource capability request and returns either a fully structured\nresource flow result or a structured AFAL error envelope.\n",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SettleResourceUsageHttpRequest"
+              },
+              "examples": {
+                "canonical-resource": {
+                  "summary": "Canonical Phase 1 resource settlement request",
+                  "value": {
+                    "requestRef": "req-1001",
+                    "input": {
+                      "requestRef": "req-1001",
+                      "resourceBudgetRef": "budg-res-001",
+                      "resourceQuotaRef": "quota-001",
+                      "intent": {
+                        "intentId": "resint-0001",
+                        "schemaVersion": "0.1",
+                        "intentType": "resource",
+                        "requester": {
+                          "agentDid": "did:afal:agent:research-agent-01",
+                          "accountId": "acct-agent-002"
+                        },
+                        "provider": {
+                          "providerId": "provider-openai",
+                          "providerDid": "did:afal:institution:provider-openai"
+                        },
+                        "resource": {
+                          "resourceClass": "inference",
+                          "resourceUnit": "tokens",
+                          "quantity": 500000
+                        },
+                        "pricing": {
+                          "maxSpend": "18.50",
+                          "asset": "USDC"
+                        },
+                        "budgetSource": {
+                          "type": "ats-budget",
+                          "reference": "budg-res-001"
+                        },
+                        "mandateRef": "mnd-0002",
+                        "policyRef": "cred-policy-0002",
+                        "executionMode": "pre-authorized",
+                        "challengeState": "required",
+                        "status": "created",
+                        "expiresAt": "2026-03-24T12:30:00Z",
+                        "nonce": "n-2001",
+                        "createdAt": "2026-03-24T12:20:00Z"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resource settlement flow completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SettleResourceUsageSuccessResponse"
+                },
+                "examples": {
+                  "canonical-resource-success": {
+                    "summary": "Canonical resource settlement success response",
+                    "value": {
+                      "ok": true,
+                      "capability": "settleResourceUsage",
+                      "requestRef": "req-1001",
+                      "statusCode": 200,
+                      "data": {
+                        "intent": {
+                          "intentId": "resint-0001",
+                          "status": "settled",
+                          "challengeState": "approved",
+                          "settlementRef": "stl-1001",
+                          "usageReceiptRef": "usage-1001"
+                        },
+                        "initialDecision": {
+                          "decisionId": "dec-1001",
+                          "result": "challenge-required"
+                        },
+                        "finalDecision": {
+                          "decisionId": "dec-1002",
+                          "result": "approved"
+                        },
+                        "usageConfirmation": {
+                          "usageReceiptRef": "usage-1001"
+                        },
+                        "settlement": {
+                          "settlementId": "stl-1001",
+                          "status": "settled"
+                        },
+                        "resourceReceipt": {
+                          "receiptId": "rcpt-res-1001",
+                          "receiptType": "resource",
+                          "status": "final"
+                        },
+                        "capabilityResponse": {
+                          "responseId": "cap-1001",
+                          "result": "approved"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictResponse"
+          },
+          "502": {
+            "$ref": "#/components/responses/ProviderFailureResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "responses": {
+      "BadRequestResponse": {
+        "description": "Request envelope or transport shape is invalid",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "request-ref-mismatch": {
+                "summary": "requestRef mismatch between HTTP envelope and capability input",
+                "value": {
+                  "ok": false,
+                  "capability": "executePayment",
+                  "requestRef": "req-envelope",
+                  "statusCode": 400,
+                  "error": {
+                    "code": "bad-request",
+                    "message": "requestRef must match between the HTTP envelope and capability input"
+                  }
+                }
+              },
+              "unsupported-method": {
+                "summary": "unsupported method for a capability route",
+                "value": {
+                  "ok": false,
+                  "capability": "executePayment",
+                  "requestRef": "unknown",
+                  "statusCode": 400,
+                  "error": {
+                    "code": "bad-request",
+                    "message": "executePayment transport only supports POST"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ForbiddenResponse": {
+        "description": "Capability cannot proceed because authorization or credential checks failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "credential-verification-failed": {
+                "summary": "policy credential could not be verified",
+                "value": {
+                  "ok": false,
+                  "capability": "executePayment",
+                  "requestRef": "req-0001",
+                  "statusCode": 403,
+                  "error": {
+                    "code": "credential-verification-failed",
+                    "message": "Mock AFAL flow requires a verified policy credential: \"cred-policy-0001\""
+                  }
+                }
+              },
+              "authorization-rejected": {
+                "summary": "approval was rejected before settlement",
+                "value": {
+                  "ok": false,
+                  "capability": "executePayment",
+                  "requestRef": "req-0001",
+                  "statusCode": 403,
+                  "error": {
+                    "code": "authorization-rejected",
+                    "message": "Mock payment flow stopped before settlement because authorization result was \"rejected\""
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "NotFoundResponse": {
+        "description": "Referenced route, DID, account, budget, quota, or action is unknown",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "unknown-account": {
+                "summary": "payer account reference is not known",
+                "value": {
+                  "ok": false,
+                  "capability": "executePayment",
+                  "requestRef": "req-0001",
+                  "statusCode": 404,
+                  "error": {
+                    "code": "not-found",
+                    "message": "Unknown accountRef \"acct-missing\" for mock ATS state"
+                  }
+                }
+              },
+              "unknown-resource-budget": {
+                "summary": "resource budget reference is not known",
+                "value": {
+                  "ok": false,
+                  "capability": "settleResourceUsage",
+                  "requestRef": "req-1001",
+                  "statusCode": 404,
+                  "error": {
+                    "code": "not-found",
+                    "message": "Unknown resource budget \"budg-res-missing\" for mock ATS state"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ConflictResponse": {
+        "description": "Capability request reached a non-terminal conflict such as expired or cancelled approval",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "authorization-expired": {
+                "summary": "approval expired before settlement could proceed",
+                "value": {
+                  "ok": false,
+                  "capability": "executePayment",
+                  "requestRef": "req-0001",
+                  "statusCode": 409,
+                  "error": {
+                    "code": "authorization-expired",
+                    "message": "Mock payment flow stopped before settlement because authorization result was \"expired\""
+                  }
+                }
+              },
+              "authorization-cancelled": {
+                "summary": "approval was cancelled before resource settlement",
+                "value": {
+                  "ok": false,
+                  "capability": "settleResourceUsage",
+                  "requestRef": "req-1001",
+                  "statusCode": 409,
+                  "error": {
+                    "code": "authorization-cancelled",
+                    "message": "Mock resource flow stopped before settlement because authorization result was \"cancelled\""
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ProviderFailureResponse": {
+        "description": "Downstream provider usage confirmation or settlement dependency failed",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "provider-usage-confirmation-failed": {
+                "summary": "provider usage confirmation dependency failed",
+                "value": {
+                  "ok": false,
+                  "capability": "settleResourceUsage",
+                  "requestRef": "req-1001",
+                  "statusCode": 502,
+                  "error": {
+                    "code": "provider-failure",
+                    "message": "Provider usage confirmation failed"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "InternalErrorResponse": {
+        "description": "Unclassified server-side failure",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "internal-error": {
+                "summary": "fallback internal error mapping",
+                "value": {
+                  "ok": false,
+                  "capability": "executePayment",
+                  "requestRef": "req-0001",
+                  "statusCode": 500,
+                  "error": {
+                    "code": "internal-error",
+                    "message": "Unknown AFAL API error"
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "ExecutePaymentHttpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "input"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/PaymentFlowInput"
+          }
+        }
+      },
+      "SettleResourceUsageHttpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "input"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "input": {
+            "$ref": "#/components/schemas/ResourceFlowInput"
+          }
+        }
+      },
+      "PaymentFlowInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "intent"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "monetaryBudgetRef": {
+            "type": "string"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/PaymentIntent"
+          }
+        }
+      },
+      "ResourceFlowInput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "intent",
+          "resourceBudgetRef",
+          "resourceQuotaRef"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "resourceBudgetRef": {
+            "type": "string"
+          },
+          "resourceQuotaRef": {
+            "type": "string"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/ResourceIntent"
+          }
+        }
+      },
+      "DidRef": {
+        "type": "string",
+        "pattern": "^did:afal:[^:]+:[^:]+$"
+      },
+      "IdRef": {
+        "type": "string"
+      },
+      "Timestamp": {
+        "type": "string",
+        "format": "date-time"
+      },
+      "DecimalString": {
+        "type": "string"
+      },
+      "AuthorizationResult": {
+        "type": "string",
+        "enum": [
+          "approved",
+          "rejected",
+          "challenge-required",
+          "pending-approval",
+          "suspended",
+          "expired"
+        ]
+      },
+      "ChallengeState": {
+        "type": "string",
+        "enum": [
+          "not-required",
+          "required",
+          "pending-approval",
+          "approved",
+          "rejected",
+          "expired",
+          "cancelled"
+        ]
+      },
+      "CommonActionStatus": {
+        "type": "string",
+        "enum": [
+          "created",
+          "evaluating",
+          "challenge-required",
+          "pending-approval",
+          "approved",
+          "rejected",
+          "executing",
+          "executed",
+          "settled",
+          "failed",
+          "expired",
+          "cancelled"
+        ]
+      },
+      "ExecutionMode": {
+        "type": "string",
+        "enum": [
+          "human-in-the-loop",
+          "pre-authorized",
+          "fully-agent-native"
+        ]
+      },
+      "AgentActorRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "agentDid",
+          "accountId"
+        ],
+        "properties": {
+          "agentDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "accountId": {
+            "$ref": "#/components/schemas/IdRef"
+          }
+        }
+      },
+      "CounterpartyRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "payeeDid"
+        ],
+        "properties": {
+          "payeeDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "settlementAddress": {
+            "type": "string"
+          }
+        }
+      },
+      "ProviderRef": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "providerId",
+          "providerDid"
+        ],
+        "properties": {
+          "providerId": {
+            "type": "string"
+          },
+          "providerDid": {
+            "$ref": "#/components/schemas/DidRef"
+          }
+        }
+      },
+      "PaymentPurpose": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "category",
+          "description"
+        ],
+        "properties": {
+          "category": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "referenceId": {
+            "$ref": "#/components/schemas/IdRef"
+          }
+        }
+      },
+      "ResourceSpec": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "resourceClass",
+          "resourceUnit",
+          "quantity"
+        ],
+        "properties": {
+          "resourceClass": {
+            "type": "string"
+          },
+          "resourceUnit": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          }
+        }
+      },
+      "ResourcePricing": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "maxSpend",
+          "asset"
+        ],
+        "properties": {
+          "maxSpend": {
+            "$ref": "#/components/schemas/DecimalString"
+          },
+          "asset": {
+            "type": "string"
+          }
+        }
+      },
+      "BudgetSource": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "reference"
+        ],
+        "properties": {
+          "type": {
+            "type": "string",
+            "const": "ats-budget"
+          },
+          "reference": {
+            "$ref": "#/components/schemas/IdRef"
+          }
+        }
+      },
+      "PaymentIntent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "intentId",
+          "schemaVersion",
+          "intentType",
+          "payer",
+          "payee",
+          "asset",
+          "amount",
+          "chain",
+          "purpose",
+          "mandateRef",
+          "executionMode",
+          "challengeState",
+          "status",
+          "nonce",
+          "createdAt"
+        ],
+        "properties": {
+          "intentId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "0.1"
+          },
+          "intentType": {
+            "type": "string",
+            "const": "payment"
+          },
+          "payer": {
+            "$ref": "#/components/schemas/AgentActorRef"
+          },
+          "payee": {
+            "$ref": "#/components/schemas/CounterpartyRef"
+          },
+          "asset": {
+            "type": "string"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/DecimalString"
+          },
+          "chain": {
+            "type": "string"
+          },
+          "purpose": {
+            "$ref": "#/components/schemas/PaymentPurpose"
+          },
+          "mandateRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "policyRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "executionMode": {
+            "$ref": "#/components/schemas/ExecutionMode"
+          },
+          "challengeState": {
+            "$ref": "#/components/schemas/ChallengeState"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CommonActionStatus"
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "nonce": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "decisionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "challengeRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "settlementRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "receiptRef": {
+            "$ref": "#/components/schemas/IdRef"
+          }
+        }
+      },
+      "ResourceIntent": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "intentId",
+          "schemaVersion",
+          "intentType",
+          "requester",
+          "provider",
+          "resource",
+          "pricing",
+          "budgetSource",
+          "mandateRef",
+          "executionMode",
+          "challengeState",
+          "status",
+          "nonce",
+          "createdAt"
+        ],
+        "properties": {
+          "intentId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "0.1"
+          },
+          "intentType": {
+            "type": "string",
+            "const": "resource"
+          },
+          "requester": {
+            "$ref": "#/components/schemas/AgentActorRef"
+          },
+          "provider": {
+            "$ref": "#/components/schemas/ProviderRef"
+          },
+          "resource": {
+            "$ref": "#/components/schemas/ResourceSpec"
+          },
+          "pricing": {
+            "$ref": "#/components/schemas/ResourcePricing"
+          },
+          "budgetSource": {
+            "$ref": "#/components/schemas/BudgetSource"
+          },
+          "mandateRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "policyRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "executionMode": {
+            "$ref": "#/components/schemas/ExecutionMode"
+          },
+          "challengeState": {
+            "$ref": "#/components/schemas/ChallengeState"
+          },
+          "status": {
+            "$ref": "#/components/schemas/CommonActionStatus"
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "nonce": {
+            "type": "string"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "decisionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "challengeRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "settlementRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "usageReceiptRef": {
+            "$ref": "#/components/schemas/IdRef"
+          }
+        }
+      },
+      "ExecutePaymentSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "executePayment"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/PaymentFlowOutput"
+          }
+        }
+      },
+      "SettleResourceUsageSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "settleResourceUsage"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/ResourceFlowOutput"
+          }
+        }
+      },
+      "ErrorResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "error"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": false
+          },
+          "capability": {
+            "type": "string",
+            "enum": [
+              "executePayment",
+              "settleResourceUsage"
+            ]
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "enum": [
+              400,
+              403,
+              404,
+              409,
+              500,
+              502
+            ]
+          },
+          "error": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "code",
+              "message"
+            ],
+            "properties": {
+              "code": {
+                "type": "string",
+                "enum": [
+                  "bad-request",
+                  "not-found",
+                  "credential-verification-failed",
+                  "authorization-rejected",
+                  "authorization-expired",
+                  "authorization-cancelled",
+                  "provider-failure",
+                  "internal-error"
+                ]
+              },
+              "message": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "AuthorizationDecision": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "decisionId",
+          "schemaVersion",
+          "actionRef",
+          "actionType",
+          "subjectDid",
+          "mandateRef",
+          "result",
+          "challengeState",
+          "evaluatedAt"
+        ],
+        "properties": {
+          "decisionId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "0.1"
+          },
+          "actionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "actionType": {
+            "type": "string"
+          },
+          "subjectDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "mandateRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "policyRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "accountRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "result": {
+            "$ref": "#/components/schemas/AuthorizationResult"
+          },
+          "challengeState": {
+            "$ref": "#/components/schemas/ChallengeState"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "evaluatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "auditRef": {
+            "$ref": "#/components/schemas/IdRef"
+          }
+        }
+      },
+      "ChallengeRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "challengeId",
+          "schemaVersion",
+          "actionRef",
+          "actionType",
+          "subjectDid",
+          "state",
+          "reasonCode",
+          "riskSignals",
+          "trustedSurfaceRef",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "challengeId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "0.1"
+          },
+          "actionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "actionType": {
+            "type": "string"
+          },
+          "subjectDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "mandateRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "policyRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "state": {
+            "$ref": "#/components/schemas/ChallengeState"
+          },
+          "reasonCode": {
+            "type": "string"
+          },
+          "riskSignals": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "trustedSurfaceRef": {
+            "type": "string"
+          },
+          "approvalContextRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "expiresAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ApprovalContext": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "approvalContextId",
+          "challengeRef",
+          "actionRef",
+          "actionType",
+          "headline",
+          "summary",
+          "subjectDid",
+          "humanVisibleFields",
+          "createdAt"
+        ],
+        "properties": {
+          "approvalContextId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "challengeRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "actionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "actionType": {
+            "type": "string"
+          },
+          "headline": {
+            "type": "string"
+          },
+          "summary": {
+            "type": "string"
+          },
+          "subjectDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "humanVisibleFields": {
+            "type": "object",
+            "additionalProperties": true
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ApprovalResult": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "approvalResultId",
+          "challengeRef",
+          "actionRef",
+          "result",
+          "approvedBy",
+          "approvalChannel",
+          "stepUpAuthUsed",
+          "decidedAt"
+        ],
+        "properties": {
+          "approvalResultId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "challengeRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "actionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "approved",
+              "rejected",
+              "expired",
+              "cancelled"
+            ]
+          },
+          "approvedBy": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "approvalChannel": {
+            "type": "string"
+          },
+          "stepUpAuthUsed": {
+            "type": "boolean"
+          },
+          "comment": {
+            "type": "string"
+          },
+          "approvalReceiptRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "decidedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "SettlementDestination": {
+        "oneOf": [
+          {
+            "$ref": "#/components/schemas/CounterpartyRef"
+          },
+          {
+            "$ref": "#/components/schemas/ProviderRef"
+          }
+        ]
+      },
+      "SettlementRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "settlementId",
+          "schemaVersion",
+          "settlementType",
+          "actionRef",
+          "sourceAccountRef",
+          "destination",
+          "asset",
+          "amount",
+          "status"
+        ],
+        "properties": {
+          "settlementId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "0.1"
+          },
+          "settlementType": {
+            "type": "string",
+            "enum": [
+              "onchain-transfer",
+              "provider-settlement",
+              "internal-ledger"
+            ]
+          },
+          "actionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "decisionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "sourceAccountRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "destination": {
+            "$ref": "#/components/schemas/SettlementDestination"
+          },
+          "asset": {
+            "type": "string"
+          },
+          "amount": {
+            "$ref": "#/components/schemas/DecimalString"
+          },
+          "chain": {
+            "type": "string"
+          },
+          "txHash": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "pending",
+              "executing",
+              "settled",
+              "failed",
+              "reversed"
+            ]
+          },
+          "executedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "settledAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ActionReceipt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "receiptId",
+          "schemaVersion",
+          "receiptType",
+          "actionRef",
+          "status",
+          "issuedAt",
+          "evidence"
+        ],
+        "properties": {
+          "receiptId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "0.1"
+          },
+          "receiptType": {
+            "type": "string",
+            "enum": [
+              "payment",
+              "resource",
+              "approval"
+            ]
+          },
+          "actionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "decisionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "settlementRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "provisional",
+              "final",
+              "void"
+            ]
+          },
+          "issuedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "evidence": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
+      "CapabilityResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "responseId",
+          "schemaVersion",
+          "capability",
+          "requestRef",
+          "result",
+          "respondedAt"
+        ],
+        "properties": {
+          "responseId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "0.1"
+          },
+          "capability": {
+            "type": "string"
+          },
+          "requestRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "actionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "result": {
+            "$ref": "#/components/schemas/AuthorizationResult"
+          },
+          "decisionRef": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "challengeRef": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "settlementRef": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "receiptRef": {
+            "anyOf": [
+              {
+                "$ref": "#/components/schemas/IdRef"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "message": {
+            "type": "string"
+          },
+          "respondedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "MonetaryBudget": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "budgetId",
+          "budgetType",
+          "subjectDid",
+          "accountRef",
+          "asset",
+          "period",
+          "limitAmount",
+          "consumedAmount",
+          "availableAmount",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "budgetId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "budgetType": {
+            "type": "string",
+            "const": "monetary"
+          },
+          "subjectDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "accountRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "asset": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "limitAmount": {
+            "$ref": "#/components/schemas/DecimalString"
+          },
+          "consumedAmount": {
+            "$ref": "#/components/schemas/DecimalString"
+          },
+          "availableAmount": {
+            "$ref": "#/components/schemas/DecimalString"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "restricted",
+              "exhausted",
+              "revoked"
+            ]
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ResourceBudget": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "budgetId",
+          "budgetType",
+          "subjectDid",
+          "accountRef",
+          "resourceClass",
+          "resourceUnit",
+          "period",
+          "limitQuantity",
+          "consumedQuantity",
+          "availableQuantity",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "budgetId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "budgetType": {
+            "type": "string",
+            "const": "resource"
+          },
+          "subjectDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "accountRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "resourceClass": {
+            "type": "string"
+          },
+          "resourceUnit": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "limitQuantity": {
+            "type": "integer"
+          },
+          "consumedQuantity": {
+            "type": "integer"
+          },
+          "availableQuantity": {
+            "type": "integer"
+          },
+          "maxSpendAmount": {
+            "$ref": "#/components/schemas/DecimalString"
+          },
+          "pricingAsset": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "restricted",
+              "exhausted",
+              "revoked"
+            ]
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ResourceQuota": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "quotaId",
+          "subjectDid",
+          "providerId",
+          "providerDid",
+          "resourceClass",
+          "resourceUnit",
+          "period",
+          "maxQuantity",
+          "usedQuantity",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "quotaId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "subjectDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "providerId": {
+            "type": "string"
+          },
+          "providerDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "resourceClass": {
+            "type": "string"
+          },
+          "resourceUnit": {
+            "type": "string"
+          },
+          "period": {
+            "type": "string"
+          },
+          "maxQuantity": {
+            "type": "integer"
+          },
+          "usedQuantity": {
+            "type": "integer"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "active",
+              "restricted",
+              "exhausted",
+              "revoked"
+            ]
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ProviderUsageConfirmation": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "usageReceiptRef",
+          "providerId",
+          "providerDid",
+          "resourceClass",
+          "resourceUnit",
+          "quantity",
+          "confirmedAt"
+        ],
+        "properties": {
+          "usageReceiptRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "providerId": {
+            "type": "string"
+          },
+          "providerDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "resourceClass": {
+            "type": "string"
+          },
+          "resourceUnit": {
+            "type": "string"
+          },
+          "quantity": {
+            "type": "integer"
+          },
+          "workflowId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "taskClass": {
+            "type": "string"
+          },
+          "confirmedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "PaymentFlowOutput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "intent",
+          "initialDecision",
+          "finalDecision",
+          "settlement",
+          "paymentReceipt",
+          "capabilityResponse"
+        ],
+        "properties": {
+          "intent": {
+            "$ref": "#/components/schemas/PaymentIntent"
+          },
+          "initialDecision": {
+            "$ref": "#/components/schemas/AuthorizationDecision"
+          },
+          "challenge": {
+            "$ref": "#/components/schemas/ChallengeRecord"
+          },
+          "approvalContext": {
+            "$ref": "#/components/schemas/ApprovalContext"
+          },
+          "approvalResult": {
+            "$ref": "#/components/schemas/ApprovalResult"
+          },
+          "finalDecision": {
+            "$ref": "#/components/schemas/AuthorizationDecision"
+          },
+          "settlement": {
+            "$ref": "#/components/schemas/SettlementRecord"
+          },
+          "approvalReceipt": {
+            "$ref": "#/components/schemas/ActionReceipt"
+          },
+          "paymentReceipt": {
+            "$ref": "#/components/schemas/ActionReceipt"
+          },
+          "capabilityResponse": {
+            "$ref": "#/components/schemas/CapabilityResponse"
+          },
+          "updatedBudget": {
+            "$ref": "#/components/schemas/MonetaryBudget"
+          }
+        }
+      },
+      "ResourceFlowOutput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "intent",
+          "initialDecision",
+          "finalDecision",
+          "usageConfirmation",
+          "settlement",
+          "resourceReceipt",
+          "capabilityResponse",
+          "updatedBudget",
+          "updatedQuota"
+        ],
+        "properties": {
+          "intent": {
+            "$ref": "#/components/schemas/ResourceIntent"
+          },
+          "initialDecision": {
+            "$ref": "#/components/schemas/AuthorizationDecision"
+          },
+          "challenge": {
+            "$ref": "#/components/schemas/ChallengeRecord"
+          },
+          "approvalContext": {
+            "$ref": "#/components/schemas/ApprovalContext"
+          },
+          "approvalResult": {
+            "$ref": "#/components/schemas/ApprovalResult"
+          },
+          "finalDecision": {
+            "$ref": "#/components/schemas/AuthorizationDecision"
+          },
+          "usageConfirmation": {
+            "$ref": "#/components/schemas/ProviderUsageConfirmation"
+          },
+          "settlement": {
+            "$ref": "#/components/schemas/SettlementRecord"
+          },
+          "approvalReceipt": {
+            "$ref": "#/components/schemas/ActionReceipt"
+          },
+          "resourceReceipt": {
+            "$ref": "#/components/schemas/ActionReceipt"
+          },
+          "capabilityResponse": {
+            "$ref": "#/components/schemas/CapabilityResponse"
+          },
+          "updatedBudget": {
+            "$ref": "#/components/schemas/ResourceBudget"
+          },
+          "updatedQuota": {
+            "$ref": "#/components/schemas/ResourceQuota"
+          }
+        }
+      }
+    }
+  }
+}

@@ -20,6 +20,7 @@ The first priority of `sdk/` is to provide:
 
 This means the earliest implementation work in `sdk/` should focus on:
 - `sdk/types/`
+- `sdk/fixtures/`
 - common interfaces
 - object consistency across docs and code
 
@@ -36,6 +37,7 @@ Examples of code or artifacts that belong in `sdk/`:
 - resource intent types
 - trade intent types
 - receipt and decision object types
+- typed flow fixtures
 - lightweight client wrappers (later)
 - serialization helpers (later)
 
@@ -45,6 +47,7 @@ Suggested subfolders:
 - `sdk/ats/`
 - `sdk/afal/`
 - `sdk/types/`
+- `sdk/fixtures/`
 
 ---
 

@@ -5,6 +5,7 @@
 Phase 1 includes:
 
 - Owner DID
+- Institution DID
 - Agent DID
 - Ownership VC
 - KYC/KYB VC

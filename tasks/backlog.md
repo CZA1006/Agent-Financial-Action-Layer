@@ -14,13 +14,10 @@ These items are related to the current phase, but do not need to block the initi
 
 - improve README and repo onboarding flow
 - add diagrams for AIP / AMN / ATS relationships
-- add JSON schema versions of the markdown specs
-- add explicit receipt schema document
-- add settlement record schema document
-- add capability invocation response schema
 - refine trusted-surface flows
-- define decision log schema
-- add metadata conventions for credentials and intents
+- add JSON schema versions of the markdown specs
+- add end-to-end example payloads for the new Phase 1 schemas
+- add example approval receipts and settlement receipts
 
 ---
 

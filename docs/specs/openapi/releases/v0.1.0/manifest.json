@@ -1,0 +1,31 @@
+{
+  "artifact": "afal-openapi",
+  "version": "0.1.0",
+  "openapi": "3.1.0",
+  "title": "AFAL Phase 1 HTTP Capability Contract",
+  "generatedAt": "2026-03-25T09:00:23.791Z",
+  "source": {
+    "draftYaml": "docs/specs/afal-http-openapi-draft.yaml",
+    "draftJson": "docs/specs/afal-http-openapi-draft.json",
+    "latestYaml": "docs/specs/openapi/latest.yaml",
+    "latestJson": "docs/specs/openapi/latest.json",
+    "latestManifest": "docs/specs/openapi/manifest.json"
+  },
+  "published": {
+    "yaml": "docs/specs/openapi/releases/v0.1.0/openapi.yaml",
+    "json": "docs/specs/openapi/releases/v0.1.0/openapi.json",
+    "manifest": "docs/specs/openapi/releases/v0.1.0/manifest.json",
+    "releaseNotes": "docs/specs/openapi/releases/v0.1.0/release-notes.md"
+  },
+  "notesStatus": "finalized",
+  "notesFinalized": true,
+  "snapshot": {
+    "release": "v0.1.0",
+    "immutable": true,
+    "sourceVersion": "0.1.0-draft"
+  },
+  "git": {
+    "commit": "6c7b6da140fca52763a45a42e51b31b8ef4d7cfa",
+    "dirty": true
+  }
+}

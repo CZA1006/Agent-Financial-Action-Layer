@@ -1,0 +1,27 @@
+# AFAL HTTP Transport Contract
+
+`backend/afal/http/` defines a minimal HTTP-shaped contract above the AFAL API adapter.
+
+## Purpose
+
+- expose stable Phase 1 transport paths before choosing Express, Fastify, Hono, or another framework
+- define route names, request bodies, and response envelopes for capability execution
+- keep transport validation separate from API error mapping and orchestration logic
+
+## Phase 1 Routes
+
+- `POST /capabilities/execute-payment`
+- `POST /capabilities/settle-resource-usage`
+
+## Notes
+
+- this layer is framework-free and currently implemented as a pure router function
+- request validation is intentionally minimal: method, path, request body shape, and `requestRef` consistency
+- successful responses pass through the API adapter payloads and status codes
+- the docs-first transport draft lives at `docs/specs/afal-http-openapi-draft.yaml`
+- `npm run export:openapi` generates `docs/specs/afal-http-openapi-draft.json` from that YAML draft
+- the stable publish paths for downstream consumers are `docs/specs/openapi/latest.yaml` and `docs/specs/openapi/latest.json`
+- `docs/specs/openapi/manifest.json` captures version, generation time, and git metadata for those stable artifacts
+- `backend/afal/http/openapi-export.test.ts` verifies that the JSON export stays aligned with the current transport contract
+- `docs/specs/openapi/index.html` and `npm run preview:openapi` provide a static OpenAPI preview for human review
+- in the current Phase 1 mock transport, `challenge-required` is represented inside the returned flow payload rather than as a separate top-level HTTP response

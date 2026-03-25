@@ -426,11 +426,12 @@ Phase 1 AIP should support:
 
 ### Core identity actions
 - createOwnerDid
+- createInstitutionDid
 - createAgentDid
 - bindAgentToOwner
 - resolveIdentity
-- freezeAgent
-- revokeAgent
+- freezeIdentity
+- revokeIdentity
 - rotateIdentityKey
 
 ### Credential actions
