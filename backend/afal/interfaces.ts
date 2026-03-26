@@ -3,6 +3,7 @@ import type {
   ActionReceipt,
   ApprovalContext,
   ApprovalResult,
+  ApprovalSession,
   AuthorizationDecision,
   CapabilityResponse,
   ChallengeRecord,
@@ -56,6 +57,10 @@ export interface AtsPort {
 }
 
 export interface AmnPort {
+  getDecision(decisionRef: IdRef): Promise<AuthorizationDecision>;
+  getChallenge(challengeRef: IdRef): Promise<ChallengeRecord>;
+  getApprovalContext(approvalContextRef: IdRef): Promise<ApprovalContext>;
+  getApprovalResult(approvalResultRef: IdRef): Promise<ApprovalResult>;
   evaluateAuthorization(args: {
     actionRef: IdRef;
     actionType: "payment" | "resource";
@@ -67,6 +72,26 @@ export interface AmnPort {
   createChallengeRecord(decision: AuthorizationDecision): Promise<ChallengeRecord>;
   buildApprovalContext(challenge: ChallengeRecord): Promise<ApprovalContext>;
   recordApprovalResult(result: ApprovalResult): Promise<ApprovalResult>;
+  getApprovalSession(approvalSessionRef: IdRef): Promise<ApprovalSession>;
+  createApprovalRequest(priorDecision: AuthorizationDecision): Promise<{
+    challenge: ChallengeRecord;
+    approvalContext: ApprovalContext;
+    approvalSession: ApprovalSession;
+  }>;
+  applyApprovalResult(args: {
+    approvalSessionRef: IdRef;
+    result: ApprovalResult;
+  }): Promise<{
+    approvalResult: ApprovalResult;
+    approvalSession: ApprovalSession;
+    challenge: ChallengeRecord;
+  }>;
+  resumeAuthorizationSession(approvalSessionRef: IdRef): Promise<{
+    finalDecision: AuthorizationDecision;
+    approvalResult: ApprovalResult;
+    approvalSession: ApprovalSession;
+    challenge: ChallengeRecord;
+  }>;
   finalizeAuthorization(args: {
     priorDecision: AuthorizationDecision;
     approvalResult: ApprovalResult;
@@ -121,8 +146,23 @@ export interface CapabilityResponsePort {
 }
 
 export interface IntentStatePort {
+  getPaymentIntent(intentId: IdRef): Promise<PaymentIntent>;
+  getResourceIntent(intentId: IdRef): Promise<ResourceIntent>;
   createPaymentIntent(intent: PaymentIntent): Promise<PaymentIntent>;
   createResourceIntent(intent: ResourceIntent): Promise<ResourceIntent>;
+  getPendingExecution(approvalSessionRef: IdRef): Promise<import("./state").PendingApprovalExecution>;
+  createPendingExecution(
+    execution: import("./state").PendingApprovalExecution
+  ): Promise<import("./state").PendingApprovalExecution>;
+  markPendingExecution(args: {
+    approvalSessionRef: IdRef;
+    status: import("./state").PendingApprovalExecutionStatus;
+    updatedAt?: Timestamp;
+    finalDecisionRef?: IdRef;
+    settlementRef?: IdRef;
+    receiptRef?: IdRef;
+    usageReceiptRef?: IdRef;
+  }): Promise<import("./state").PendingApprovalExecution>;
   markPaymentChallenge(args: {
     intentId: IdRef;
     decisionRef?: IdRef;
@@ -171,6 +211,16 @@ export interface PaymentFlowOutput {
   updatedBudget?: MonetaryBudget;
 }
 
+export interface PaymentApprovalRequestOutput {
+  intent: PaymentIntent;
+  initialDecision: AuthorizationDecision;
+  challenge: ChallengeRecord;
+  approvalContext: ApprovalContext;
+  approvalSession: ApprovalSession;
+  capabilityResponse: CapabilityResponse;
+  updatedBudget?: MonetaryBudget;
+}
+
 export interface ResourceFlowOutput {
   intent: ResourceIntent;
   initialDecision: AuthorizationDecision;
@@ -187,12 +237,33 @@ export interface ResourceFlowOutput {
   updatedQuota: ResourceQuota;
 }
 
+export interface ResourceApprovalRequestOutput {
+  intent: ResourceIntent;
+  initialDecision: AuthorizationDecision;
+  challenge: ChallengeRecord;
+  approvalContext: ApprovalContext;
+  approvalSession: ApprovalSession;
+  capabilityResponse: CapabilityResponse;
+  updatedBudget: ResourceBudget;
+  updatedQuota: ResourceQuota;
+}
+
+export type ResumeApprovedActionOutput = PaymentFlowOutput | ResourceFlowOutput;
+
 export interface PaymentFlowOrchestrator {
   executePaymentFlow(input: PaymentFlowInput): Promise<PaymentFlowOutput>;
 }
 
 export interface ResourceFlowOrchestrator {
   executeResourceSettlementFlow(input: ResourceFlowInput): Promise<ResourceFlowOutput>;
+}
+
+export interface PaymentApprovalRequestOrchestrator {
+  requestPaymentApproval(input: PaymentFlowInput): Promise<PaymentApprovalRequestOutput>;
+}
+
+export interface ResourceApprovalRequestOrchestrator {
+  requestResourceApproval(input: ResourceFlowInput): Promise<ResourceApprovalRequestOutput>;
 }
 
 export interface AfalOrchestrationPorts {

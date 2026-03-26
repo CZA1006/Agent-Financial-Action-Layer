@@ -93,6 +93,8 @@ Required callback behavior:
 - on reject: mark challenge `rejected`, emit `ApprovalResult`, stop execution
 - on expiry: mark challenge `expired`, stop execution
 
+Phase 1 local runtime now persists this state in an AMN approval session so the challenge can survive process restarts and later be resumed.
+
 ## Phase 1 UX Rules
 
 The first implementation should optimize for:

@@ -48,6 +48,7 @@ export interface MonetaryBudget {
   period: string;
   limitAmount: DecimalString;
   consumedAmount: DecimalString;
+  reservedAmount?: DecimalString;
   availableAmount: DecimalString;
   status: "active" | "restricted" | "exhausted" | "revoked";
   createdAt: Timestamp;
@@ -64,6 +65,7 @@ export interface ResourceBudget {
   period: string;
   limitQuantity: number;
   consumedQuantity: number;
+  reservedQuantity?: number;
   availableQuantity: number;
   maxSpendAmount?: DecimalString;
   pricingAsset?: string;
@@ -82,9 +84,41 @@ export interface ResourceQuota {
   period: string;
   maxQuantity: number;
   usedQuantity: number;
+  reservedQuantity?: number;
   status: "active" | "restricted" | "exhausted" | "revoked";
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+export interface MonetaryReservation {
+  reservationId: IdRef;
+  reservationType: "monetary";
+  budgetRef: IdRef;
+  accountRef: IdRef;
+  actionRef: IdRef;
+  amount: DecimalString;
+  status: "reserved" | "settled" | "released";
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  settledAt?: Timestamp;
+  releasedAt?: Timestamp;
+  releaseReasonCode?: string;
+}
+
+export interface ResourceReservation {
+  reservationId: IdRef;
+  reservationType: "resource";
+  budgetRef: IdRef;
+  quotaRef: IdRef;
+  accountRef: IdRef;
+  actionRef: IdRef;
+  quantity: number;
+  status: "reserved" | "settled" | "released";
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  settledAt?: Timestamp;
+  releasedAt?: Timestamp;
+  releaseReasonCode?: string;
 }
 
 export interface ReplenishmentPolicy {

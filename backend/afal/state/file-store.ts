@@ -3,6 +3,7 @@ import { dirname } from "node:path";
 
 import type { IdRef, PaymentIntent, ResourceIntent } from "../../../sdk/types";
 import type { AfalIntentStore } from "./store";
+import type { PendingApprovalExecution } from "./interfaces";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -11,6 +12,7 @@ function clone<T>(value: T): T {
 interface AfalIntentStoreSnapshot {
   paymentIntents: PaymentIntent[];
   resourceIntents: ResourceIntent[];
+  pendingExecutions: PendingApprovalExecution[];
 }
 
 async function fileExists(path: string): Promise<boolean> {
@@ -70,6 +72,30 @@ export class JsonFileAfalIntentStore implements AfalIntentStore {
     return snapshot.resourceIntents.map((entry) => clone(entry));
   }
 
+  async getPendingExecution(
+    approvalSessionRef: IdRef
+  ): Promise<PendingApprovalExecution | undefined> {
+    const snapshot = await this.readSnapshot();
+    const execution = snapshot.pendingExecutions.find(
+      (entry) => entry.approvalSessionRef === approvalSessionRef
+    );
+    return execution ? clone(execution) : undefined;
+  }
+
+  async putPendingExecution(execution: PendingApprovalExecution): Promise<void> {
+    const snapshot = await this.readSnapshot();
+    const next = snapshot.pendingExecutions.filter(
+      (entry) => entry.approvalSessionRef !== execution.approvalSessionRef
+    );
+    next.push(clone(execution));
+    await this.writeSnapshot({ ...snapshot, pendingExecutions: next });
+  }
+
+  async listPendingExecutions(): Promise<PendingApprovalExecution[]> {
+    const snapshot = await this.readSnapshot();
+    return snapshot.pendingExecutions.map((entry) => clone(entry));
+  }
+
   private async ensureSnapshotFile(): Promise<void> {
     if (await fileExists(this.options.filePath)) {
       return;
@@ -79,6 +105,8 @@ export class JsonFileAfalIntentStore implements AfalIntentStore {
     await this.writeSnapshot({
       paymentIntents: this.options.seed?.paymentIntents.map((entry) => clone(entry)) ?? [],
       resourceIntents: this.options.seed?.resourceIntents.map((entry) => clone(entry)) ?? [],
+      pendingExecutions:
+        this.options.seed?.pendingExecutions.map((entry) => clone(entry)) ?? [],
     });
   }
 
@@ -90,6 +118,7 @@ export class JsonFileAfalIntentStore implements AfalIntentStore {
     return {
       paymentIntents: parsed.paymentIntents.map((entry) => clone(entry)),
       resourceIntents: parsed.resourceIntents.map((entry) => clone(entry)),
+      pendingExecutions: (parsed.pendingExecutions ?? []).map((entry) => clone(entry)),
     };
   }
 
@@ -101,6 +130,7 @@ export class JsonFileAfalIntentStore implements AfalIntentStore {
         {
           paymentIntents: snapshot.paymentIntents.map((entry) => clone(entry)),
           resourceIntents: snapshot.resourceIntents.map((entry) => clone(entry)),
+          pendingExecutions: snapshot.pendingExecutions.map((entry) => clone(entry)),
         },
         null,
         2

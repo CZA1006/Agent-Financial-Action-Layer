@@ -1,6 +1,7 @@
 import type {
   ApprovalContext,
   ApprovalResult,
+  ApprovalSession,
   AuthorizationDecision,
   ChallengeRecord,
   Did,
@@ -42,6 +43,19 @@ function overlayDecision(
     policyRef: args.policyRef,
     accountRef: args.accountRef,
   };
+}
+
+function createApprovalSessionId(challengeRef: IdRef): IdRef {
+  return `aps-${challengeRef}`;
+}
+
+function mapApprovalResultToSessionStatus(
+  result: ApprovalResult["result"]
+): ApprovalSession["status"] {
+  if (result === "approved") return "approved";
+  if (result === "rejected") return "rejected";
+  if (result === "expired") return "expired";
+  return "cancelled";
 }
 
 export interface InMemoryAmnServiceOptions {
@@ -119,6 +133,19 @@ export class InMemoryAmnService implements AmnPort, AmnAdminPort {
     return this.store.listApprovalResults();
   }
 
+  async getApprovalSession(approvalSessionRef: IdRef): Promise<ApprovalSession> {
+    return clone(
+      assertFound(
+        await this.store.getApprovalSession(approvalSessionRef),
+        `Unknown approvalSessionRef "${approvalSessionRef}"`
+      )
+    );
+  }
+
+  async listApprovalSessions(): Promise<ApprovalSession[]> {
+    return this.store.listApprovalSessions();
+  }
+
   async evaluateAuthorization(args: {
     actionRef: IdRef;
     actionType: "payment" | "resource";
@@ -179,6 +206,129 @@ export class InMemoryAmnService implements AmnPort, AmnAdminPort {
       : clone(result);
     await this.store.putApprovalResult(approvalResult);
     return approvalResult;
+  }
+
+  async createApprovalRequest(priorDecision: AuthorizationDecision): Promise<{
+    challenge: ChallengeRecord;
+    approvalContext: ApprovalContext;
+    approvalSession: ApprovalSession;
+  }> {
+    const createdChallenge = await this.createChallengeRecord(priorDecision);
+    const approvalContext = await this.buildApprovalContext(createdChallenge);
+    const challenge: ChallengeRecord = {
+      ...createdChallenge,
+      state: "pending-approval",
+      approvalContextRef: approvalContext.approvalContextId,
+      updatedAt: approvalContext.createdAt,
+    };
+    await this.store.putChallenge(challenge);
+
+    const approvalSession: ApprovalSession = {
+      approvalSessionId: createApprovalSessionId(challenge.challengeId),
+      schemaVersion: "0.1",
+      actionRef: priorDecision.actionRef,
+      actionType: priorDecision.actionType,
+      subjectDid: priorDecision.subjectDid,
+      mandateRef: priorDecision.mandateRef,
+      policyRef: priorDecision.policyRef,
+      priorDecisionRef: priorDecision.decisionId,
+      challengeRef: challenge.challengeId,
+      approvalContextRef: approvalContext.approvalContextId,
+      trustedSurfaceRef: challenge.trustedSurfaceRef,
+      status: "pending",
+      createdAt: challenge.createdAt,
+      updatedAt: approvalContext.createdAt,
+      expiresAt: challenge.expiresAt,
+    };
+    await this.store.putApprovalSession(approvalSession);
+
+    return {
+      challenge,
+      approvalContext,
+      approvalSession,
+    };
+  }
+
+  async applyApprovalResult(args: {
+    approvalSessionRef: IdRef;
+    result: ApprovalResult;
+  }): Promise<{
+    approvalResult: ApprovalResult;
+    approvalSession: ApprovalSession;
+    challenge: ChallengeRecord;
+  }> {
+    const approvalSession = await this.getApprovalSession(args.approvalSessionRef);
+    const existingChallenge = await this.getChallenge(approvalSession.challengeRef);
+    const approvalResult = await this.recordApprovalResult({
+      ...clone(args.result),
+      challengeRef: approvalSession.challengeRef,
+      actionRef: approvalSession.actionRef,
+    });
+    const challenge: ChallengeRecord = {
+      ...existingChallenge,
+      state: approvalResult.result,
+      updatedAt: approvalResult.decidedAt,
+    };
+    const nextSession: ApprovalSession = {
+      ...approvalSession,
+      approvalResultRef: approvalResult.approvalResultId,
+      status: mapApprovalResultToSessionStatus(approvalResult.result),
+      updatedAt: approvalResult.decidedAt,
+    };
+
+    await this.store.putChallenge(challenge);
+    await this.store.putApprovalSession(nextSession);
+
+    return {
+      approvalResult,
+      approvalSession: nextSession,
+      challenge,
+    };
+  }
+
+  async resumeAuthorizationSession(approvalSessionRef: IdRef): Promise<{
+    finalDecision: AuthorizationDecision;
+    approvalResult: ApprovalResult;
+    approvalSession: ApprovalSession;
+    challenge: ChallengeRecord;
+  }> {
+    const approvalSession = await this.getApprovalSession(approvalSessionRef);
+    const challenge = await this.getChallenge(approvalSession.challengeRef);
+    const approvalResult = assertFound(
+      approvalSession.approvalResultRef
+        ? await this.store.getApprovalResult(approvalSession.approvalResultRef)
+        : undefined,
+      `Approval session "${approvalSessionRef}" has no persisted approval result`
+    );
+
+    if (approvalSession.finalDecisionRef) {
+      return {
+        finalDecision: await this.getDecision(approvalSession.finalDecisionRef),
+        approvalResult: clone(approvalResult),
+        approvalSession,
+        challenge,
+      };
+    }
+
+    const priorDecision = await this.getDecision(approvalSession.priorDecisionRef);
+    const finalDecision = await this.finalizeAuthorization({
+      priorDecision,
+      approvalResult,
+    });
+    const nextSession: ApprovalSession = {
+      ...approvalSession,
+      finalDecisionRef: finalDecision.decisionId,
+      status: "finalized",
+      updatedAt: approvalResult.decidedAt,
+    };
+    await this.store.putApprovalSession(nextSession);
+
+    return {
+      finalDecision,
+      approvalResult: clone(approvalResult),
+      approvalSession: nextSession,
+      challenge,
+    };
   }
 
   async finalizeAuthorization(args: {

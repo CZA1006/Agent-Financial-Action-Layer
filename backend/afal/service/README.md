@@ -9,6 +9,8 @@
 - centralize default wiring of seeded module ports and flow orchestrators
 - expose module-level command entrypoints separate from the HTTP capability envelope
 - provide a seeded durable local mode that swaps JSON file stores in for the default in-memory stores
+- expose approval-session lookup, callback application, and resume operations above AMN persistence
+- resume persisted approved actions into final AFAL settlement, receipt, and output generation
 
 ## Notes
 

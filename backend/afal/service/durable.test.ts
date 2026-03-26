@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import { test } from "node:test";
 
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
+import { JsonFileAmnStore } from "../../amn";
 import { JsonFileAtsStore } from "../../ats";
 import { JsonFileAfalIntentStore } from "../state/file-store";
 import { JsonFileAfalSettlementStore } from "../settlement/file-store";
@@ -41,6 +42,7 @@ test("seeded durable AFAL runtime persists module and AFAL-owned state across re
     const paths = getSeededDurableAfalPaths(dir);
 
     const atsStore = new JsonFileAtsStore({ filePath: paths.ats });
+    const amnStore = new JsonFileAmnStore({ filePath: paths.amn });
     const intentStore = new JsonFileAfalIntentStore({ filePath: paths.afalIntents });
     const settlementStore = new JsonFileAfalSettlementStore({ filePath: paths.afalSettlement });
     const outputStore = new JsonFileAfalOutputStore({ filePath: paths.afalOutputs });
@@ -48,6 +50,7 @@ test("seeded durable AFAL runtime persists module and AFAL-owned state across re
     const paymentBudget = await atsStore.getMonetaryBudget(
       paymentFlowFixtures.monetaryBudgetInitial.budgetId
     );
+    const approvalSessions = await amnStore.listApprovalSessions();
     const paymentIntent = await intentStore.getPaymentIntent(
       paymentFlowFixtures.paymentIntentCreated.intentId
     );
@@ -72,6 +75,8 @@ test("seeded durable AFAL runtime persists module and AFAL-owned state across re
       paymentBudget?.consumedAmount,
       paymentFlowFixtures.monetaryBudgetFinal.consumedAmount
     );
+    assert.equal(approvalSessions.length, 2);
+    assert.ok(approvalSessions.every((session) => session.status === "finalized"));
     assert.equal(paymentIntent?.status, "settled");
     assert.equal(paymentIntent?.receiptRef, paymentFlowFixtures.paymentReceipt.receiptId);
     assert.equal(resourceIntent?.status, "settled");

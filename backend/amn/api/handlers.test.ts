@@ -4,13 +4,17 @@ import { describe, test } from "node:test";
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
 import { createSeededInMemoryAmnService } from "../bootstrap";
 import {
+  handleApplyApprovalResult,
   createAmnApiHandlers,
   handleBuildApprovalContext,
+  handleCreateApprovalRequest,
   handleCreateChallengeRecord,
   handleEvaluateAuthorization,
   handleFinalizeAuthorization,
+  handleGetApprovalSession,
   handleGetMandate,
   handleRecordApprovalResult,
+  handleResumeAuthorizationSession,
 } from "./handlers";
 
 describe("AMN API adapter", () => {
@@ -106,6 +110,72 @@ describe("AMN API adapter", () => {
     assert.equal(approvalResponse.ok, true);
   });
 
+  test("returns success envelopes for approval session lifecycle handlers", async () => {
+    const amn = createSeededInMemoryAmnService();
+    const decision = await amn.evaluateAuthorization({
+      actionRef: paymentFlowFixtures.paymentIntentCreated.intentId,
+      actionType: "payment",
+      subjectDid: paymentFlowFixtures.paymentIntentCreated.payer.agentDid,
+      mandateRef: paymentFlowFixtures.paymentMandate.mandateId,
+      policyRef: paymentFlowFixtures.paymentIntentCreated.policyRef,
+      accountRef: paymentFlowFixtures.paymentIntentCreated.payer.accountId,
+    });
+
+    const approvalRequestResponse = await handleCreateApprovalRequest(
+      {
+        capability: "createApprovalRequest",
+        requestRef: "req-amn-approval-request-001",
+        input: {
+          priorDecision: decision,
+        },
+      },
+      amn
+    );
+
+    assert.equal(approvalRequestResponse.ok, true);
+    if (!approvalRequestResponse.ok) return;
+
+    const sessionResponse = await handleGetApprovalSession(
+      {
+        capability: "getApprovalSession",
+        requestRef: "req-amn-approval-session-001",
+        input: {
+          approvalSessionRef: approvalRequestResponse.data.approvalSession.approvalSessionId,
+        },
+      },
+      amn
+    );
+    const appliedResponse = await handleApplyApprovalResult(
+      {
+        capability: "applyApprovalResult",
+        requestRef: "req-amn-approval-apply-001",
+        input: {
+          approvalSessionRef: approvalRequestResponse.data.approvalSession.approvalSessionId,
+          result: paymentFlowFixtures.approvalResult,
+        },
+      },
+      amn
+    );
+    const resumedResponse = await handleResumeAuthorizationSession(
+      {
+        capability: "resumeAuthorizationSession",
+        requestRef: "req-amn-approval-resume-001",
+        input: {
+          approvalSessionRef: approvalRequestResponse.data.approvalSession.approvalSessionId,
+        },
+      },
+      amn
+    );
+
+    assert.equal(sessionResponse.ok, true);
+    assert.equal(appliedResponse.ok, true);
+    assert.equal(resumedResponse.ok, true);
+    if (resumedResponse.ok) {
+      assert.equal(resumedResponse.data.finalDecision.result, "approved");
+      assert.equal(resumedResponse.data.approvalSession.status, "finalized");
+    }
+  });
+
   test("returns a success envelope for finalizeAuthorization", async () => {
     const amn = createSeededInMemoryAmnService();
     const prior = await amn.evaluateAuthorization({
@@ -196,7 +266,16 @@ describe("AMN API adapter", () => {
       },
     });
 
+    const approvalRequestResponse = await handlers.invokeCapability({
+      capability: "createApprovalRequest",
+      requestRef: "req-amn-dispatch-003",
+      input: {
+        priorDecision: paymentFlowFixtures.authorizationDecisionInitial,
+      },
+    });
+
     assert.equal(mandateResponse.ok, true);
     assert.equal(evalResponse.ok, true);
+    assert.equal(approvalRequestResponse.ok, true);
   });
 });

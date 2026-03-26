@@ -23,6 +23,7 @@ test("AMN JSON file store persists seeded records across store re-instantiation"
         challenges: [],
         approvalContexts: [],
         approvalResults: [],
+        approvalSessions: [],
       },
     });
 
@@ -53,6 +54,7 @@ test("AMN service state survives re-instantiation when backed by the JSON file s
         challenges: [],
         approvalContexts: [],
         approvalResults: [],
+        approvalSessions: [],
       },
     });
 
@@ -73,13 +75,14 @@ test("AMN service state survives re-instantiation when backed by the JSON file s
       policyRef: resourceFlowFixtures.resourceIntentCreated.policyRef,
       accountRef: resourceFlowFixtures.resourceIntentCreated.requester.accountId,
     });
-    const challenge = await firstService.createChallengeRecord(decision);
-    const context = await firstService.buildApprovalContext(challenge);
-    const result = await firstService.recordApprovalResult(resourceFlowFixtures.approvalResult);
-    const finalDecision = await firstService.finalizeAuthorization({
-      priorDecision: decision,
-      approvalResult: result,
+    const approvalRequest = await firstService.createApprovalRequest(decision);
+    const applied = await firstService.applyApprovalResult({
+      approvalSessionRef: approvalRequest.approvalSession.approvalSessionId,
+      result: resourceFlowFixtures.approvalResult,
     });
+    const resumed = await firstService.resumeAuthorizationSession(
+      approvalRequest.approvalSession.approvalSessionId
+    );
 
     const secondService = new InMemoryAmnService({
       store: new JsonFileAmnStore({ filePath }),
@@ -90,16 +93,26 @@ test("AMN service state survives re-instantiation when backed by the JSON file s
       approvalResultTemplates: seeded.approvalResultTemplates,
     });
 
-    const persistedDecision = await secondService.getDecision(finalDecision.decisionId);
-    const persistedChallenge = await secondService.getChallenge(challenge.challengeId);
-    const persistedContext = await secondService.getApprovalContext(context.approvalContextId);
-    const persistedResult = await secondService.getApprovalResult(result.approvalResultId);
+    const persistedDecision = await secondService.getDecision(resumed.finalDecision.decisionId);
+    const persistedChallenge = await secondService.getChallenge(approvalRequest.challenge.challengeId);
+    const persistedContext = await secondService.getApprovalContext(
+      approvalRequest.approvalContext.approvalContextId
+    );
+    const persistedResult = await secondService.getApprovalResult(
+      applied.approvalResult.approvalResultId
+    );
+    const persistedSession = await secondService.getApprovalSession(
+      approvalRequest.approvalSession.approvalSessionId
+    );
 
-    assert.equal(persistedDecision.decisionId, finalDecision.decisionId);
+    assert.equal(persistedDecision.decisionId, resumed.finalDecision.decisionId);
     assert.equal(persistedDecision.result, "approved");
-    assert.equal(persistedChallenge.challengeId, challenge.challengeId);
-    assert.equal(persistedContext.approvalContextId, context.approvalContextId);
-    assert.equal(persistedResult.approvalResultId, result.approvalResultId);
+    assert.equal(persistedChallenge.challengeId, approvalRequest.challenge.challengeId);
+    assert.equal(persistedChallenge.state, "approved");
+    assert.equal(persistedContext.approvalContextId, approvalRequest.approvalContext.approvalContextId);
+    assert.equal(persistedResult.approvalResultId, applied.approvalResult.approvalResultId);
+    assert.equal(persistedSession.status, "finalized");
+    assert.equal(persistedSession.finalDecisionRef, resumed.finalDecision.decisionId);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

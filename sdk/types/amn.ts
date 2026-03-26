@@ -84,3 +84,31 @@ export interface ApprovalResult {
   approvalReceiptRef?: IdRef;
   decidedAt: Timestamp;
 }
+
+export type ApprovalSessionStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "expired"
+  | "cancelled"
+  | "finalized";
+
+export interface ApprovalSession {
+  approvalSessionId: IdRef;
+  schemaVersion: "0.1";
+  actionRef: IdRef;
+  actionType: string;
+  subjectDid: Did;
+  mandateRef?: IdRef;
+  policyRef?: IdRef;
+  priorDecisionRef: IdRef;
+  challengeRef: IdRef;
+  approvalContextRef: IdRef;
+  approvalResultRef?: IdRef;
+  finalDecisionRef?: IdRef;
+  trustedSurfaceRef: string;
+  status: ApprovalSessionStatus;
+  createdAt: Timestamp;
+  updatedAt: Timestamp;
+  expiresAt?: Timestamp;
+}

@@ -4,6 +4,7 @@ import { dirname } from "node:path";
 import type {
   ApprovalContext,
   ApprovalResult,
+  ApprovalSession,
   AuthorizationDecision,
   ChallengeRecord,
   IdRef,
@@ -21,6 +22,7 @@ interface AmnStoreSnapshot {
   challenges: ChallengeRecord[];
   approvalContexts: ApprovalContext[];
   approvalResults: ApprovalResult[];
+  approvalSessions: ApprovalSession[];
 }
 
 async function fileExists(path: string): Promise<boolean> {
@@ -142,6 +144,28 @@ export class JsonFileAmnStore implements AmnStore {
     return snapshot.approvalResults.map((entry) => clone(entry));
   }
 
+  async getApprovalSession(approvalSessionRef: IdRef): Promise<ApprovalSession | undefined> {
+    const snapshot = await this.readSnapshot();
+    const value = snapshot.approvalSessions.find(
+      (entry) => entry.approvalSessionId === approvalSessionRef
+    );
+    return value ? clone(value) : undefined;
+  }
+
+  async putApprovalSession(session: ApprovalSession): Promise<void> {
+    const snapshot = await this.readSnapshot();
+    const next = snapshot.approvalSessions.filter(
+      (entry) => entry.approvalSessionId !== session.approvalSessionId
+    );
+    next.push(clone(session));
+    await this.writeSnapshot({ ...snapshot, approvalSessions: next });
+  }
+
+  async listApprovalSessions(): Promise<ApprovalSession[]> {
+    const snapshot = await this.readSnapshot();
+    return snapshot.approvalSessions.map((entry) => clone(entry));
+  }
+
   private async ensureSnapshotFile(): Promise<void> {
     if (await fileExists(this.options.filePath)) {
       return;
@@ -156,6 +180,8 @@ export class JsonFileAmnStore implements AmnStore {
         this.options.seed?.approvalContexts.map((entry) => clone(entry)) ?? [],
       approvalResults:
         this.options.seed?.approvalResults.map((entry) => clone(entry)) ?? [],
+      approvalSessions:
+        this.options.seed?.approvalSessions.map((entry) => clone(entry)) ?? [],
     });
   }
 
@@ -170,6 +196,7 @@ export class JsonFileAmnStore implements AmnStore {
       challenges: parsed.challenges.map((entry) => clone(entry)),
       approvalContexts: parsed.approvalContexts.map((entry) => clone(entry)),
       approvalResults: parsed.approvalResults.map((entry) => clone(entry)),
+      approvalSessions: (parsed.approvalSessions ?? []).map((entry) => clone(entry)),
     };
   }
 
@@ -184,6 +211,7 @@ export class JsonFileAmnStore implements AmnStore {
           challenges: snapshot.challenges.map((entry) => clone(entry)),
           approvalContexts: snapshot.approvalContexts.map((entry) => clone(entry)),
           approvalResults: snapshot.approvalResults.map((entry) => clone(entry)),
+          approvalSessions: snapshot.approvalSessions.map((entry) => clone(entry)),
         },
         null,
         2

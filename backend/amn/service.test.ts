@@ -46,6 +46,25 @@ test("AMN service creates challenge and approval context", async () => {
   assert.equal(context.approvalContextId, resourceFlowFixtures.approvalContext.approvalContextId);
 });
 
+test("AMN service creates a persistent approval request session", async () => {
+  const service = createSeededInMemoryAmnService();
+  const priorDecision = await service.evaluateAuthorization({
+    actionRef: paymentFlowFixtures.paymentIntentCreated.intentId,
+    actionType: "payment",
+    subjectDid: paymentFlowFixtures.paymentIntentCreated.payer.agentDid,
+    mandateRef: paymentFlowFixtures.paymentMandate.mandateId,
+    policyRef: paymentFlowFixtures.paymentIntentCreated.policyRef,
+    accountRef: paymentFlowFixtures.paymentIntentCreated.payer.accountId,
+  });
+
+  const approvalRequest = await service.createApprovalRequest(priorDecision);
+
+  assert.equal(approvalRequest.challenge.state, "pending-approval");
+  assert.equal(approvalRequest.challenge.approvalContextRef, approvalRequest.approvalContext.approvalContextId);
+  assert.equal(approvalRequest.approvalSession.priorDecisionRef, priorDecision.decisionId);
+  assert.equal(approvalRequest.approvalSession.status, "pending");
+});
+
 test("AMN service records approval result and finalizes approved authorization", async () => {
   const service = createSeededInMemoryAmnService();
   const priorDecision = await service.evaluateAuthorization({
@@ -87,6 +106,32 @@ test("AMN service finalizes expired approval without approved template", async (
 
   assert.equal(finalDecision.result, "expired");
   assert.equal(finalDecision.challengeState, "expired");
+});
+
+test("AMN service records approval callback and resumes authorization session", async () => {
+  const service = createSeededInMemoryAmnService();
+  const priorDecision = await service.evaluateAuthorization({
+    actionRef: paymentFlowFixtures.paymentIntentCreated.intentId,
+    actionType: "payment",
+    subjectDid: paymentFlowFixtures.paymentIntentCreated.payer.agentDid,
+    mandateRef: paymentFlowFixtures.paymentMandate.mandateId,
+    policyRef: paymentFlowFixtures.paymentIntentCreated.policyRef,
+    accountRef: paymentFlowFixtures.paymentIntentCreated.payer.accountId,
+  });
+  const approvalRequest = await service.createApprovalRequest(priorDecision);
+
+  const applied = await service.applyApprovalResult({
+    approvalSessionRef: approvalRequest.approvalSession.approvalSessionId,
+    result: paymentFlowFixtures.approvalResult,
+  });
+  const resumed = await service.resumeAuthorizationSession(
+    approvalRequest.approvalSession.approvalSessionId
+  );
+
+  assert.equal(applied.approvalSession.status, "approved");
+  assert.equal(applied.challenge.state, "approved");
+  assert.equal(resumed.finalDecision.result, "approved");
+  assert.equal(resumed.approvalSession.status, "finalized");
 });
 
 test("AMN service persists decisions through injected store", async () => {

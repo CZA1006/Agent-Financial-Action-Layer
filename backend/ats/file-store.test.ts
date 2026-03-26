@@ -98,3 +98,54 @@ test("ATS service state survives re-instantiation when backed by the JSON file s
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("ATS reservation state survives re-instantiation when backed by the JSON file store", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "afal-ats-reservation-"));
+
+  try {
+    const filePath = join(dir, "ats-store.json");
+    const firstService = new InMemoryAtsService({
+      store: new JsonFileAtsStore({
+        filePath,
+        seed: createSeededAtsRecords(),
+      }),
+    });
+
+    await firstService.reserveMonetaryBudget({
+      reservationId: "resv-money-persist-001",
+      budgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+      accountRef: paymentFlowFixtures.operatingAccount.accountId,
+      actionRef: paymentFlowFixtures.paymentIntentCreated.intentId,
+      amount: "10.00",
+      createdAt: "2026-03-25T11:45:00Z",
+    });
+    await firstService.reserveResourceCapacity({
+      reservationId: "resv-resource-persist-001",
+      budgetRef: resourceFlowFixtures.resourceBudgetInitial.budgetId,
+      quotaRef: resourceFlowFixtures.resourceQuotaInitial.quotaId,
+      accountRef: resourceFlowFixtures.operatingAccount.accountId,
+      actionRef: resourceFlowFixtures.resourceIntentCreated.intentId,
+      quantity: 2048,
+      createdAt: "2026-03-25T11:46:00Z",
+    });
+
+    const secondService = new InMemoryAtsService({
+      store: new JsonFileAtsStore({ filePath }),
+    });
+
+    const moneyReservation = await secondService.getMonetaryReservationState("resv-money-persist-001");
+    const resourceReservation = await secondService.getResourceReservationState(
+      "resv-resource-persist-001"
+    );
+    const budget = await secondService.getMonetaryBudgetState(
+      paymentFlowFixtures.monetaryBudgetInitial.budgetId
+    );
+
+    assert.equal(moneyReservation.status, "reserved");
+    assert.equal(resourceReservation.status, "reserved");
+    assert.equal(budget.reservedAmount, "10.00");
+    assert.equal(budget.availableAmount, "990.00");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

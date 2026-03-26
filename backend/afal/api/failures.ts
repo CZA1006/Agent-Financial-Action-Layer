@@ -1,5 +1,11 @@
 import type {
+  ApplyApprovalResultRequest,
+  GetApprovalSessionRequest,
+  RequestPaymentApprovalRequest,
   PaymentCapabilityRequest,
+  ResumeApprovedActionRequest,
+  RequestResourceApprovalRequest,
+  ResumeApprovalSessionRequest,
   ResourceCapabilityRequest,
   AfalApiFailure,
 } from "./types";
@@ -13,7 +19,15 @@ function toErrorMessage(error: unknown): string {
 }
 
 export function mapAfalFailure(
-  capability: PaymentCapabilityRequest["capability"] | ResourceCapabilityRequest["capability"],
+  capability:
+    | PaymentCapabilityRequest["capability"]
+    | RequestPaymentApprovalRequest["capability"]
+    | ResourceCapabilityRequest["capability"]
+    | RequestResourceApprovalRequest["capability"]
+    | GetApprovalSessionRequest["capability"]
+    | ApplyApprovalResultRequest["capability"]
+    | ResumeApprovalSessionRequest["capability"]
+    | ResumeApprovedActionRequest["capability"],
   requestRef: string,
   error: unknown
 ): AfalApiFailure {
@@ -25,7 +39,8 @@ export function mapAfalFailure(
     message.includes("Unknown resource budget") ||
     message.includes("Unknown resource quota") ||
     message.includes("Unknown monetary budget") ||
-    message.includes("Unknown actionRef")
+    message.includes("Unknown actionRef") ||
+    message.includes("Unknown approvalSessionRef")
   ) {
     return {
       ok: false,

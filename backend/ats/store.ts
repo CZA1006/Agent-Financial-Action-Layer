@@ -2,7 +2,9 @@ import type {
   AccountRecord,
   IdRef,
   MonetaryBudget,
+  MonetaryReservation,
   ResourceBudget,
+  ResourceReservation,
   ResourceQuota,
 } from "../../sdk/types";
 
@@ -23,6 +25,12 @@ export interface AtsStore {
   getResourceQuota(quotaRef: IdRef): Promise<ResourceQuota | undefined>;
   putResourceQuota(quota: ResourceQuota): Promise<void>;
   listResourceQuotas(): Promise<ResourceQuota[]>;
+  getMonetaryReservation(reservationRef: IdRef): Promise<MonetaryReservation | undefined>;
+  putMonetaryReservation(reservation: MonetaryReservation): Promise<void>;
+  listMonetaryReservations(): Promise<MonetaryReservation[]>;
+  getResourceReservation(reservationRef: IdRef): Promise<ResourceReservation | undefined>;
+  putResourceReservation(reservation: ResourceReservation): Promise<void>;
+  listResourceReservations(): Promise<ResourceReservation[]>;
 }
 
 export interface InMemoryAtsStoreOptions {
@@ -30,6 +38,8 @@ export interface InMemoryAtsStoreOptions {
   monetaryBudgets?: MonetaryBudget[];
   resourceBudgets?: ResourceBudget[];
   resourceQuotas?: ResourceQuota[];
+  monetaryReservations?: MonetaryReservation[];
+  resourceReservations?: ResourceReservation[];
 }
 
 export class InMemoryAtsStore implements AtsStore {
@@ -37,6 +47,8 @@ export class InMemoryAtsStore implements AtsStore {
   private readonly monetaryBudgets = new Map<IdRef, MonetaryBudget>();
   private readonly resourceBudgets = new Map<IdRef, ResourceBudget>();
   private readonly resourceQuotas = new Map<IdRef, ResourceQuota>();
+  private readonly monetaryReservations = new Map<IdRef, MonetaryReservation>();
+  private readonly resourceReservations = new Map<IdRef, ResourceReservation>();
 
   constructor(options: InMemoryAtsStoreOptions = {}) {
     for (const account of options.accounts ?? []) {
@@ -50,6 +62,12 @@ export class InMemoryAtsStore implements AtsStore {
     }
     for (const quota of options.resourceQuotas ?? []) {
       this.resourceQuotas.set(quota.quotaId, clone(quota));
+    }
+    for (const reservation of options.monetaryReservations ?? []) {
+      this.monetaryReservations.set(reservation.reservationId, clone(reservation));
+    }
+    for (const reservation of options.resourceReservations ?? []) {
+      this.resourceReservations.set(reservation.reservationId, clone(reservation));
     }
   }
 
@@ -103,5 +121,31 @@ export class InMemoryAtsStore implements AtsStore {
 
   async listResourceQuotas(): Promise<ResourceQuota[]> {
     return Array.from(this.resourceQuotas.values()).map((quota) => clone(quota));
+  }
+
+  async getMonetaryReservation(reservationRef: IdRef): Promise<MonetaryReservation | undefined> {
+    const reservation = this.monetaryReservations.get(reservationRef);
+    return reservation ? clone(reservation) : undefined;
+  }
+
+  async putMonetaryReservation(reservation: MonetaryReservation): Promise<void> {
+    this.monetaryReservations.set(reservation.reservationId, clone(reservation));
+  }
+
+  async listMonetaryReservations(): Promise<MonetaryReservation[]> {
+    return Array.from(this.monetaryReservations.values()).map((reservation) => clone(reservation));
+  }
+
+  async getResourceReservation(reservationRef: IdRef): Promise<ResourceReservation | undefined> {
+    const reservation = this.resourceReservations.get(reservationRef);
+    return reservation ? clone(reservation) : undefined;
+  }
+
+  async putResourceReservation(reservation: ResourceReservation): Promise<void> {
+    this.resourceReservations.set(reservation.reservationId, clone(reservation));
+  }
+
+  async listResourceReservations(): Promise<ResourceReservation[]> {
+    return Array.from(this.resourceReservations.values()).map((reservation) => clone(reservation));
   }
 }

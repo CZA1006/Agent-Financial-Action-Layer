@@ -15,6 +15,10 @@
 - `createChallengeRecord`
 - `buildApprovalContext`
 - `recordApprovalResult`
+- `getApprovalSession`
+- `createApprovalRequest`
+- `applyApprovalResult`
+- `resumeAuthorizationSession`
 - `finalizeAuthorization`
 
 ## Notes
@@ -22,3 +26,8 @@
 - this layer defaults to the seeded in-memory AMN service
 - unknown mandate or action references map to `404 not-found`
 - approval and challenge handling remains callback-shaped and off-chain first
+- the preferred approval flow is now:
+  - `createApprovalRequest`
+  - trusted-surface review
+  - `applyApprovalResult`
+  - `resumeAuthorizationSession`

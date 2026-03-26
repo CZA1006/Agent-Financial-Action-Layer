@@ -70,15 +70,31 @@ test("exports the AFAL OpenAPI draft to stable YAML and JSON artifacts", () => {
   assert.equal(document.openapi, "3.1.0");
   assert.equal(document.info.title, "AFAL Phase 1 HTTP Capability Contract");
   assert.deepEqual(Object.keys(document.paths).sort(), [
+    "/approval-sessions/apply-result",
+    "/approval-sessions/get",
+    "/approval-sessions/resume",
+    "/approval-sessions/resume-action",
     "/capabilities/execute-payment",
+    "/capabilities/request-payment-approval",
+    "/capabilities/request-resource-approval",
     "/capabilities/settle-resource-usage",
   ]);
 
+  assert.ok(document.components.schemas.RequestPaymentApprovalHttpRequest);
   assert.ok(document.components.schemas.ExecutePaymentHttpRequest);
+  assert.ok(document.components.schemas.RequestResourceApprovalHttpRequest);
   assert.ok(document.components.schemas.SettleResourceUsageHttpRequest);
+  assert.ok(document.components.schemas.GetApprovalSessionHttpRequest);
+  assert.ok(document.components.schemas.ApplyApprovalResultHttpRequest);
+  assert.ok(document.components.schemas.ResumeApprovalSessionHttpRequest);
+  assert.ok(document.components.schemas.ResumeApprovedActionHttpRequest);
+  assert.ok(document.components.schemas.PaymentApprovalRequestOutput);
   assert.ok(document.components.schemas.PaymentFlowOutput);
+  assert.ok(document.components.schemas.ResourceApprovalRequestOutput);
   assert.ok(document.components.schemas.ResourceFlowOutput);
+  assert.ok(document.components.schemas.ResumeApprovedActionSuccessResponse);
   assert.ok(document.components.schemas.AuthorizationDecision);
+  assert.ok(document.components.schemas.ApprovalSession);
   assert.ok(document.components.schemas.CapabilityResponse);
 
   const forbiddenResponse = document.components.responses.ForbiddenResponse as {

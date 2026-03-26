@@ -1,6 +1,7 @@
 import type {
   ApprovalContext,
   ApprovalResult,
+  ApprovalSession,
   AuthorizationDecision,
   ChallengeRecord,
   IdRef,
@@ -27,6 +28,9 @@ export interface AmnStore {
   getApprovalResult(approvalResultRef: IdRef): Promise<ApprovalResult | undefined>;
   putApprovalResult(result: ApprovalResult): Promise<void>;
   listApprovalResults(): Promise<ApprovalResult[]>;
+  getApprovalSession(approvalSessionRef: IdRef): Promise<ApprovalSession | undefined>;
+  putApprovalSession(session: ApprovalSession): Promise<void>;
+  listApprovalSessions(): Promise<ApprovalSession[]>;
 }
 
 export interface InMemoryAmnStoreOptions {
@@ -35,6 +39,7 @@ export interface InMemoryAmnStoreOptions {
   challenges?: ChallengeRecord[];
   approvalContexts?: ApprovalContext[];
   approvalResults?: ApprovalResult[];
+  approvalSessions?: ApprovalSession[];
 }
 
 export class InMemoryAmnStore implements AmnStore {
@@ -43,6 +48,7 @@ export class InMemoryAmnStore implements AmnStore {
   private readonly challenges = new Map<IdRef, ChallengeRecord>();
   private readonly approvalContexts = new Map<IdRef, ApprovalContext>();
   private readonly approvalResults = new Map<IdRef, ApprovalResult>();
+  private readonly approvalSessions = new Map<IdRef, ApprovalSession>();
 
   constructor(options: InMemoryAmnStoreOptions = {}) {
     for (const mandate of options.mandates ?? []) this.mandates.set(mandate.mandateId, clone(mandate));
@@ -53,6 +59,9 @@ export class InMemoryAmnStore implements AmnStore {
     }
     for (const result of options.approvalResults ?? []) {
       this.approvalResults.set(result.approvalResultId, clone(result));
+    }
+    for (const session of options.approvalSessions ?? []) {
+      this.approvalSessions.set(session.approvalSessionId, clone(session));
     }
   }
 
@@ -71,4 +80,7 @@ export class InMemoryAmnStore implements AmnStore {
   async getApprovalResult(approvalResultRef: IdRef) { const value = this.approvalResults.get(approvalResultRef); return value ? clone(value) : undefined; }
   async putApprovalResult(result: ApprovalResult) { this.approvalResults.set(result.approvalResultId, clone(result)); }
   async listApprovalResults() { return Array.from(this.approvalResults.values()).map(clone); }
+  async getApprovalSession(approvalSessionRef: IdRef) { const value = this.approvalSessions.get(approvalSessionRef); return value ? clone(value) : undefined; }
+  async putApprovalSession(session: ApprovalSession) { this.approvalSessions.set(session.approvalSessionId, clone(session)); }
+  async listApprovalSessions() { return Array.from(this.approvalSessions.values()).map(clone); }
 }

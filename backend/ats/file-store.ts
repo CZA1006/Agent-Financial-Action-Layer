@@ -5,7 +5,9 @@ import type {
   AccountRecord,
   IdRef,
   MonetaryBudget,
+  MonetaryReservation,
   ResourceBudget,
+  ResourceReservation,
   ResourceQuota,
 } from "../../sdk/types";
 import type { AtsStore } from "./store";
@@ -19,6 +21,8 @@ interface AtsStoreSnapshot {
   monetaryBudgets: MonetaryBudget[];
   resourceBudgets: ResourceBudget[];
   resourceQuotas: ResourceQuota[];
+  monetaryReservations: MonetaryReservation[];
+  resourceReservations: ResourceReservation[];
 }
 
 async function fileExists(path: string): Promise<boolean> {
@@ -114,6 +118,50 @@ export class JsonFileAtsStore implements AtsStore {
     return snapshot.resourceQuotas.map((quota) => clone(quota));
   }
 
+  async getMonetaryReservation(reservationRef: IdRef): Promise<MonetaryReservation | undefined> {
+    const snapshot = await this.readSnapshot();
+    const reservation = snapshot.monetaryReservations.find(
+      (entry) => entry.reservationId === reservationRef
+    );
+    return reservation ? clone(reservation) : undefined;
+  }
+
+  async putMonetaryReservation(reservation: MonetaryReservation): Promise<void> {
+    const snapshot = await this.readSnapshot();
+    const next = snapshot.monetaryReservations.filter(
+      (entry) => entry.reservationId !== reservation.reservationId
+    );
+    next.push(clone(reservation));
+    await this.writeSnapshot({ ...snapshot, monetaryReservations: next });
+  }
+
+  async listMonetaryReservations(): Promise<MonetaryReservation[]> {
+    const snapshot = await this.readSnapshot();
+    return snapshot.monetaryReservations.map((reservation) => clone(reservation));
+  }
+
+  async getResourceReservation(reservationRef: IdRef): Promise<ResourceReservation | undefined> {
+    const snapshot = await this.readSnapshot();
+    const reservation = snapshot.resourceReservations.find(
+      (entry) => entry.reservationId === reservationRef
+    );
+    return reservation ? clone(reservation) : undefined;
+  }
+
+  async putResourceReservation(reservation: ResourceReservation): Promise<void> {
+    const snapshot = await this.readSnapshot();
+    const next = snapshot.resourceReservations.filter(
+      (entry) => entry.reservationId !== reservation.reservationId
+    );
+    next.push(clone(reservation));
+    await this.writeSnapshot({ ...snapshot, resourceReservations: next });
+  }
+
+  async listResourceReservations(): Promise<ResourceReservation[]> {
+    const snapshot = await this.readSnapshot();
+    return snapshot.resourceReservations.map((reservation) => clone(reservation));
+  }
+
   private async ensureSnapshotFile(): Promise<void> {
     if (await fileExists(this.options.filePath)) {
       return;
@@ -128,6 +176,10 @@ export class JsonFileAtsStore implements AtsStore {
         this.options.seed?.resourceBudgets.map((budget) => clone(budget)) ?? [],
       resourceQuotas:
         this.options.seed?.resourceQuotas.map((quota) => clone(quota)) ?? [],
+      monetaryReservations:
+        this.options.seed?.monetaryReservations.map((reservation) => clone(reservation)) ?? [],
+      resourceReservations:
+        this.options.seed?.resourceReservations.map((reservation) => clone(reservation)) ?? [],
     });
   }
 
@@ -141,6 +193,8 @@ export class JsonFileAtsStore implements AtsStore {
       monetaryBudgets: parsed.monetaryBudgets.map((budget) => clone(budget)),
       resourceBudgets: parsed.resourceBudgets.map((budget) => clone(budget)),
       resourceQuotas: parsed.resourceQuotas.map((quota) => clone(quota)),
+      monetaryReservations: (parsed.monetaryReservations ?? []).map((reservation) => clone(reservation)),
+      resourceReservations: (parsed.resourceReservations ?? []).map((reservation) => clone(reservation)),
     };
   }
 
@@ -154,6 +208,12 @@ export class JsonFileAtsStore implements AtsStore {
           monetaryBudgets: snapshot.monetaryBudgets.map((budget) => clone(budget)),
           resourceBudgets: snapshot.resourceBudgets.map((budget) => clone(budget)),
           resourceQuotas: snapshot.resourceQuotas.map((quota) => clone(quota)),
+          monetaryReservations: snapshot.monetaryReservations.map((reservation) =>
+            clone(reservation)
+          ),
+          resourceReservations: snapshot.resourceReservations.map((reservation) =>
+            clone(reservation)
+          ),
         },
         null,
         2

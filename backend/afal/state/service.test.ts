@@ -82,3 +82,31 @@ test("AFAL intent bootstrap exposes canonical templates", () => {
   assert.ok(records.paymentIntentTemplates[paymentFlowFixtures.paymentIntentCreated.intentId]);
   assert.ok(records.resourceIntentTemplates[resourceFlowFixtures.resourceIntentCreated.intentId]);
 });
+
+test("AFAL intent state service persists pending approval executions", async () => {
+  const service = createSeededAfalIntentStateService();
+
+  await service.createPendingExecution({
+    approvalSessionRef: "asess-payment-001",
+    actionRef: paymentFlowFixtures.paymentIntentCreated.intentId,
+    actionType: "payment",
+    requestRef: "req-payment-pending-001",
+    reservationRef: "resv-pay-001",
+    monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+    status: "pending",
+    createdAt: paymentFlowFixtures.paymentIntentCreated.createdAt,
+    updatedAt: paymentFlowFixtures.paymentIntentCreated.createdAt,
+  });
+  const resumed = await service.markPendingExecution({
+    approvalSessionRef: "asess-payment-001",
+    status: "resumed",
+    finalDecisionRef: paymentFlowFixtures.authorizationDecisionFinal.decisionId,
+    settlementRef: paymentFlowFixtures.settlementRecord.settlementId,
+    receiptRef: paymentFlowFixtures.paymentReceipt.receiptId,
+    updatedAt: paymentFlowFixtures.settlementRecord.settledAt,
+  });
+
+  assert.equal(resumed.status, "resumed");
+  assert.equal(resumed.finalDecisionRef, paymentFlowFixtures.authorizationDecisionFinal.decisionId);
+  assert.equal(resumed.receiptRef, paymentFlowFixtures.paymentReceipt.receiptId);
+});

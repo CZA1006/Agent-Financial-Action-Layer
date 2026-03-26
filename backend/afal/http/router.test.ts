@@ -2,14 +2,63 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
+import { createAfalRuntimeService } from "../service";
 import {
   createMockAfalPorts,
   createMockPaymentFlowOrchestrator,
   createMockResourceFlowOrchestrator,
 } from "../mock";
+import { createAfalApiHandlers } from "../api";
 import { createAfalHttpRouter, AFAL_HTTP_ROUTES } from "./index";
 
 describe("AFAL HTTP transport contract", () => {
+  test("routes top-level pending approval capability requests", async () => {
+    const router = createAfalHttpRouter();
+
+    const paymentResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.requestPaymentApproval,
+      body: {
+        requestRef: "req-http-pending-payment-001",
+        input: {
+          requestRef: "req-http-pending-payment-001",
+          intent: paymentFlowFixtures.paymentIntentCreated,
+          monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+        },
+      },
+    });
+    const resourceResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.requestResourceApproval,
+      body: {
+        requestRef: "req-http-pending-resource-001",
+        input: {
+          requestRef: "req-http-pending-resource-001",
+          intent: resourceFlowFixtures.resourceIntentCreated,
+          resourceBudgetRef: resourceFlowFixtures.resourceBudgetInitial.budgetId,
+          resourceQuotaRef: resourceFlowFixtures.resourceQuotaInitial.quotaId,
+        },
+      },
+    });
+
+    assert.equal(paymentResponse.statusCode, 200);
+    assert.equal(resourceResponse.statusCode, 200);
+    assert.equal(paymentResponse.body.ok, true);
+    assert.equal(resourceResponse.body.ok, true);
+    if (paymentResponse.body.ok && "capabilityResponse" in paymentResponse.body.data) {
+      assert.equal(paymentResponse.body.capability, "requestPaymentApproval");
+      assert.equal(paymentResponse.body.data.capabilityResponse.result, "pending-approval");
+    } else {
+      assert.fail("expected requestPaymentApproval success response");
+    }
+    if (resourceResponse.body.ok && "capabilityResponse" in resourceResponse.body.data) {
+      assert.equal(resourceResponse.body.capability, "requestResourceApproval");
+      assert.equal(resourceResponse.body.data.capabilityResponse.result, "pending-approval");
+    } else {
+      assert.fail("expected requestResourceApproval success response");
+    }
+  });
+
   test("routes execute-payment POST requests to the payment capability", async () => {
     const router = createAfalHttpRouter();
 
@@ -164,6 +213,78 @@ describe("AFAL HTTP transport contract", () => {
     assert.equal(response.body.ok, false);
     if (!response.body.ok) {
       assert.equal(response.body.error.code, "authorization-expired");
+    }
+  });
+
+  test("routes approval session apply-result and resume POST requests", async () => {
+    const runtime = createAfalRuntimeService();
+    const router = createAfalHttpRouter({ handlers: createAfalApiHandlers({ service: runtime }) });
+    const pending = await runtime.requestPaymentApproval({
+      capability: "requestPaymentApproval",
+      requestRef: "req-http-pending-router-001",
+      input: {
+        requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+        intent: paymentFlowFixtures.paymentIntentCreated,
+        monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+      },
+    });
+
+    const applyResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.applyApprovalResult,
+      body: {
+        requestRef: "req-http-apply-001",
+        input: {
+          approvalSessionRef: pending.approvalSession.approvalSessionId,
+          result: paymentFlowFixtures.approvalResult,
+        },
+      },
+    });
+    const resumeResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.resumeApprovalSession,
+      body: {
+        requestRef: "req-http-resume-001",
+        input: {
+          approvalSessionRef: pending.approvalSession.approvalSessionId,
+        },
+      },
+    });
+    const resumeActionResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.resumeApprovedAction,
+      body: {
+        requestRef: "req-http-resume-action-001",
+        input: {
+          approvalSessionRef: pending.approvalSession.approvalSessionId,
+        },
+      },
+    });
+
+    assert.equal(applyResponse.statusCode, 200);
+    assert.equal(resumeResponse.statusCode, 200);
+    assert.equal(resumeActionResponse.statusCode, 200);
+    assert.equal(applyResponse.body.ok, true);
+    assert.equal(resumeResponse.body.ok, true);
+    assert.equal(resumeActionResponse.body.ok, true);
+    if (
+      resumeResponse.body.ok &&
+      resumeResponse.body.capability === "resumeApprovalSession" &&
+      "finalDecision" in resumeResponse.body.data
+    ) {
+      assert.equal(resumeResponse.body.capability, "resumeApprovalSession");
+      assert.equal(resumeResponse.body.data.finalDecision.result, "approved");
+    } else {
+      assert.fail("expected resumeApprovalSession success response");
+    }
+    if (
+      resumeActionResponse.body.ok &&
+      resumeActionResponse.body.capability === "resumeApprovedAction" &&
+      "finalDecision" in resumeActionResponse.body.data
+    ) {
+      assert.equal(resumeActionResponse.body.data.finalDecision.result, "approved");
+    } else {
+      assert.fail("expected resumeApprovedAction success response");
     }
   });
 });

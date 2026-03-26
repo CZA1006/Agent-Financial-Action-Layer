@@ -1,11 +1,44 @@
-import type { PaymentFlowInput, PaymentFlowOutput, ResourceFlowInput, ResourceFlowOutput } from "../interfaces";
+import type { ApprovalResult } from "../../../sdk/types";
+import type {
+  PaymentFlowInput,
+  PaymentFlowOutput,
+  PaymentApprovalRequestOutput,
+  ResourceFlowInput,
+  ResourceFlowOutput,
+  ResourceApprovalRequestOutput,
+} from "../interfaces";
+import type {
+  ApplyApprovalResultOutput,
+  AfalModuleService,
+  ResumeApprovalSessionOutput,
+} from "../service";
 
-export type AfalCapability = "executePayment" | "settleResourceUsage";
+export type AfalCapability =
+  | "requestPaymentApproval"
+  | "executePayment"
+  | "requestResourceApproval"
+  | "settleResourceUsage"
+  | "getApprovalSession"
+  | "applyApprovalResult"
+  | "resumeApprovalSession"
+  | "resumeApprovedAction";
+
+export interface RequestPaymentApprovalRequest {
+  capability: "requestPaymentApproval";
+  requestRef: string;
+  input: PaymentFlowInput;
+}
 
 export interface PaymentCapabilityRequest {
   capability: "executePayment";
   requestRef: string;
   input: PaymentFlowInput;
+}
+
+export interface RequestResourceApprovalRequest {
+  capability: "requestResourceApproval";
+  requestRef: string;
+  input: ResourceFlowInput;
 }
 
 export interface ResourceCapabilityRequest {
@@ -14,7 +47,48 @@ export interface ResourceCapabilityRequest {
   input: ResourceFlowInput;
 }
 
-export type AfalCapabilityRequest = PaymentCapabilityRequest | ResourceCapabilityRequest;
+export interface GetApprovalSessionRequest {
+  capability: "getApprovalSession";
+  requestRef: string;
+  input: {
+    approvalSessionRef: string;
+  };
+}
+
+export interface ApplyApprovalResultRequest {
+  capability: "applyApprovalResult";
+  requestRef: string;
+  input: {
+    approvalSessionRef: string;
+    result: ApprovalResult;
+  };
+}
+
+export interface ResumeApprovalSessionRequest {
+  capability: "resumeApprovalSession";
+  requestRef: string;
+  input: {
+    approvalSessionRef: string;
+  };
+}
+
+export interface ResumeApprovedActionRequest {
+  capability: "resumeApprovedAction";
+  requestRef: string;
+  input: {
+    approvalSessionRef: string;
+  };
+}
+
+export type AfalCapabilityRequest =
+  | RequestPaymentApprovalRequest
+  | PaymentCapabilityRequest
+  | RequestResourceApprovalRequest
+  | ResourceCapabilityRequest
+  | GetApprovalSessionRequest
+  | ApplyApprovalResultRequest
+  | ResumeApprovalSessionRequest
+  | ResumeApprovedActionRequest;
 
 export interface AfalApiError {
   code:
@@ -45,8 +119,35 @@ export interface AfalApiFailure {
   error: AfalApiError;
 }
 
+export type RequestPaymentApprovalResponse =
+  | AfalApiSuccess<PaymentApprovalRequestOutput>
+  | AfalApiFailure;
 export type PaymentCapabilityResponse = AfalApiSuccess<PaymentFlowOutput> | AfalApiFailure;
+export type RequestResourceApprovalResponse =
+  | AfalApiSuccess<ResourceApprovalRequestOutput>
+  | AfalApiFailure;
 export type ResourceCapabilityResponse = AfalApiSuccess<ResourceFlowOutput> | AfalApiFailure;
+export type GetApprovalSessionResponse =
+  | AfalApiSuccess<Awaited<ReturnType<import("../service").AfalModuleService["getApprovalSession"]>>>
+  | AfalApiFailure;
+export type ApplyApprovalResultResponse =
+  | AfalApiSuccess<ApplyApprovalResultOutput>
+  | AfalApiFailure;
+export type ResumeApprovalSessionResponse =
+  | AfalApiSuccess<ResumeApprovalSessionOutput>
+  | AfalApiFailure;
+export type ResumeApprovedActionResponse =
+  | AfalApiSuccess<Awaited<ReturnType<AfalModuleService["resumeApprovedAction"]>>>
+  | AfalApiFailure;
 export type AfalCapabilityResponse =
-  | AfalApiSuccess<PaymentFlowOutput | ResourceFlowOutput>
+  | AfalApiSuccess<
+      | PaymentFlowOutput
+      | PaymentApprovalRequestOutput
+      | ResourceFlowOutput
+      | ResourceApprovalRequestOutput
+      | Awaited<ReturnType<import("../service").AfalModuleService["getApprovalSession"]>>
+      | ApplyApprovalResultOutput
+      | ResumeApprovalSessionOutput
+      | Awaited<ReturnType<AfalModuleService["resumeApprovedAction"]>>
+    >
   | AfalApiFailure;

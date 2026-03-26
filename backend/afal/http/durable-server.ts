@@ -53,9 +53,37 @@ function stringifyNodeResponse(
   };
 }
 
-function inferCapability(pathname: string): "executePayment" | "settleResourceUsage" {
+function inferCapability(
+  pathname: string
+):
+  | "requestPaymentApproval"
+  | "executePayment"
+  | "requestResourceApproval"
+  | "settleResourceUsage"
+  | "getApprovalSession"
+  | "applyApprovalResult"
+  | "resumeApprovalSession"
+  | "resumeApprovedAction" {
+  if (pathname === AFAL_HTTP_ROUTES.requestPaymentApproval) {
+    return "requestPaymentApproval";
+  }
   if (pathname === AFAL_HTTP_ROUTES.settleResourceUsage) {
     return "settleResourceUsage";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.requestResourceApproval) {
+    return "requestResourceApproval";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.getApprovalSession) {
+    return "getApprovalSession";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.applyApprovalResult) {
+    return "applyApprovalResult";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.resumeApprovalSession) {
+    return "resumeApprovalSession";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.resumeApprovedAction) {
+    return "resumeApprovedAction";
   }
   return "executePayment";
 }

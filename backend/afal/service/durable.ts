@@ -108,6 +108,7 @@ export function createSeededDurableAfalBundle(dataDir: string): SeededDurableAfa
         challenges: [],
         approvalContexts: [],
         approvalResults: [],
+        approvalSessions: [],
       },
     }),
     initialDecisionTemplates: amnSeed.initialDecisionTemplates,
@@ -122,6 +123,7 @@ export function createSeededDurableAfalBundle(dataDir: string): SeededDurableAfa
       seed: {
         paymentIntents: [],
         resourceIntents: [],
+        pendingExecutions: [],
       },
     }),
     templateResolver: createSeededAfalIntentTemplateResolver(),

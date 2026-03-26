@@ -5,13 +5,18 @@
   "type": "module",
   "description": "AFAL Phase 1 schema-aligned mock orchestration workspace",
   "scripts": {
+    "accept:local": "bash scripts/check-local-acceptance.sh",
     "demo:durable": "node --import tsx/esm backend/afal/service/durable-demo.ts",
+    "demo:http": "bash scripts/demo-http.sh payment",
+    "demo:http-async": "bash scripts/demo-http-async.sh",
+    "demo:http-payment": "node --import tsx/esm backend/afal/http/durable-demo.ts",
+    "demo:http-resource": "bash scripts/demo-http.sh resource",
     "demo:mock": "node --import tsx/esm backend/afal/mock/demo.ts",
     "export:openapi": "node scripts/export-openapi.mjs",
     "preview:openapi": "node scripts/serve-openapi-preview.mjs",
     "serve:durable-http": "node --import tsx/esm backend/afal/http/durable-server.ts",
     "snapshot:openapi": "node scripts/publish-openapi-snapshot.mjs",
-    "test:mock": "node --import tsx/esm --test backend/aip/service.test.ts backend/aip/file-store.test.ts backend/aip/api/handlers.test.ts backend/ats/service.test.ts backend/ats/file-store.test.ts backend/ats/api/handlers.test.ts backend/amn/service.test.ts backend/amn/file-store.test.ts backend/amn/api/handlers.test.ts backend/afal/state/service.test.ts backend/afal/settlement/service.test.ts backend/afal/outputs/service.test.ts backend/afal/service/runtime.test.ts backend/afal/service/durable.test.ts backend/afal/service/durable-demo.test.ts backend/afal/mock/demo.test.ts backend/afal/api/service-adapter.test.ts backend/afal/api/handlers.test.ts backend/afal/http/durable.test.ts backend/afal/http/durable-server.test.ts backend/afal/http/router.test.ts backend/afal/http/openapi-export.test.ts backend/afal/http/openapi-preview.test.ts backend/afal/http/openapi-snapshot.test.ts",
+    "test:mock": "node --import tsx/esm --test backend/aip/service.test.ts backend/aip/file-store.test.ts backend/aip/api/handlers.test.ts backend/ats/service.test.ts backend/ats/file-store.test.ts backend/ats/api/handlers.test.ts backend/amn/service.test.ts backend/amn/file-store.test.ts backend/amn/api/handlers.test.ts backend/afal/state/service.test.ts backend/afal/settlement/service.test.ts backend/afal/outputs/service.test.ts backend/afal/service/runtime.test.ts backend/afal/service/durable.test.ts backend/afal/service/durable-demo.test.ts backend/afal/mock/demo.test.ts backend/afal/api/service-adapter.test.ts backend/afal/api/handlers.test.ts backend/afal/http/durable.test.ts backend/afal/http/durable-demo.test.ts backend/afal/http/durable-server.test.ts backend/afal/http/router.test.ts backend/afal/http/openapi-export.test.ts backend/afal/http/openapi-preview.test.ts backend/afal/http/openapi-snapshot.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "devDependencies": {

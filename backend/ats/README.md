@@ -33,6 +33,10 @@
 - do not build a full ledger before the schema stabilizes
 - resource budgets are ATS objects, not required VC extensions in Phase 1
 - the current next-stage implementation is an in-memory, storage-backed service skeleton
+- the ATS layer now supports minimal Phase 1 reservation semantics:
+  - reserve before execution
+  - settle on success
+  - release on failure
 - the ATS layer is now split into:
   - `interfaces.ts` for reader, lifecycle, and budget mutation ports
   - `api/` for request/response handlers above the ATS ports

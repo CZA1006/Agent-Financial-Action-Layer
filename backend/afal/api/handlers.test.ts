@@ -3,7 +3,18 @@ import { describe, test } from "node:test";
 
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
 import { createMockAfalPorts, createMockPaymentFlowOrchestrator, createMockResourceFlowOrchestrator } from "../mock";
-import { createAfalApiHandlers, handleExecutePayment, handleSettleResourceUsage } from "./handlers";
+import { createAfalRuntimeService } from "../service";
+import {
+  createAfalApiHandlers,
+  handleApplyApprovalResult,
+  handleExecutePayment,
+  handleGetApprovalSession,
+  handleRequestPaymentApproval,
+  handleRequestResourceApproval,
+  handleResumeApprovedAction,
+  handleResumeApprovalSession,
+  handleSettleResourceUsage,
+} from "./handlers";
 
 describe("AFAL API adapter", () => {
   test("returns a success envelope for executePayment", async () => {
@@ -22,6 +33,37 @@ describe("AFAL API adapter", () => {
       assert.equal(response.statusCode, 200);
       assert.equal(response.data.finalDecision.result, "approved");
       assert.equal(response.data.paymentReceipt.receiptId, paymentFlowFixtures.paymentReceipt.receiptId);
+    }
+  });
+
+  test("returns success envelopes for top-level pending approval capability handlers", async () => {
+    const paymentPending = await handleRequestPaymentApproval({
+      capability: "requestPaymentApproval",
+      requestRef: "req-handler-pending-payment-001",
+      input: {
+        requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+        intent: paymentFlowFixtures.paymentIntentCreated,
+        monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+      },
+    });
+    const resourcePending = await handleRequestResourceApproval({
+      capability: "requestResourceApproval",
+      requestRef: "req-handler-pending-resource-001",
+      input: {
+        requestRef: resourceFlowFixtures.capabilityResponse.requestRef,
+        intent: resourceFlowFixtures.resourceIntentCreated,
+        resourceBudgetRef: resourceFlowFixtures.resourceBudgetInitial.budgetId,
+        resourceQuotaRef: resourceFlowFixtures.resourceQuotaInitial.quotaId,
+      },
+    });
+
+    assert.equal(paymentPending.ok, true);
+    assert.equal(resourcePending.ok, true);
+    if (paymentPending.ok) {
+      assert.equal(paymentPending.data.capabilityResponse.result, "pending-approval");
+    }
+    if (resourcePending.ok) {
+      assert.equal(resourcePending.data.capabilityResponse.result, "pending-approval");
     }
   });
 
@@ -155,5 +197,71 @@ describe("AFAL API adapter", () => {
 
     assert.equal(paymentResponse.ok, true);
     assert.equal(resourceResponse.ok, true);
+  });
+
+  test("returns success envelopes for approval session handlers", async () => {
+    const runtime = createAfalRuntimeService();
+    const pending = await runtime.requestPaymentApproval({
+      capability: "requestPaymentApproval",
+      requestRef: "req-afal-request-payment-approval-001",
+      input: {
+        requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+        intent: paymentFlowFixtures.paymentIntentCreated,
+        monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+      },
+    });
+
+    const sessionResponse = await handleGetApprovalSession(
+      {
+        capability: "getApprovalSession",
+        requestRef: "req-afal-session-001",
+        input: {
+          approvalSessionRef: pending.approvalSession.approvalSessionId,
+        },
+      },
+      runtime
+    );
+    const appliedResponse = await handleApplyApprovalResult(
+      {
+        capability: "applyApprovalResult",
+        requestRef: "req-afal-apply-001",
+        input: {
+          approvalSessionRef: pending.approvalSession.approvalSessionId,
+          result: paymentFlowFixtures.approvalResult,
+        },
+      },
+      runtime
+    );
+    const resumedResponse = await handleResumeApprovalSession(
+      {
+        capability: "resumeApprovalSession",
+        requestRef: "req-afal-resume-001",
+        input: {
+          approvalSessionRef: pending.approvalSession.approvalSessionId,
+        },
+      },
+      runtime
+    );
+    const resumedActionResponse = await handleResumeApprovedAction(
+      {
+        capability: "resumeApprovedAction",
+        requestRef: "req-afal-resume-action-001",
+        input: {
+          approvalSessionRef: pending.approvalSession.approvalSessionId,
+        },
+      },
+      runtime
+    );
+
+    assert.equal(sessionResponse.ok, true);
+    assert.equal(appliedResponse.ok, true);
+    assert.equal(resumedResponse.ok, true);
+    assert.equal(resumedActionResponse.ok, true);
+    if (resumedResponse.ok) {
+      assert.equal(resumedResponse.data.finalDecision.result, "approved");
+    }
+    if (resumedActionResponse.ok) {
+      assert.equal(resumedActionResponse.data.finalDecision.result, "approved");
+    }
   });
 });

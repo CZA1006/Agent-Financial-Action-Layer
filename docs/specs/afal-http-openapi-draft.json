@@ -4,7 +4,7 @@
     "title": "AFAL Phase 1 HTTP Capability Contract",
     "version": "0.1.0-draft",
     "summary": "OpenAPI-style draft for the framework-free AFAL capability transport layer",
-    "description": "This draft describes the Phase 1 HTTP surface above the AFAL API adapter.\n\nIt is intentionally narrow and tracks the current implementation under `backend/afal/http/`.\nThe goal is to freeze route names, request envelopes, status-code behavior, and top-level\nresponse semantics before choosing an HTTP server framework.\n\nPhase 1 scope in this draft:\n- execute payment capability\n- settle resource usage capability\n- stable requestRef handling\n- structured success/error envelopes\n\nCurrent behavior note:\n- `challenge-required` is not emitted as a separate top-level HTTP response in the current mock transport\n- the current Phase 1 flow resolves challenge inside orchestration and surfaces it within the successful flow payload\n  via `initialDecision.result`, `challenge`, `approvalContext`, and `approvalResult`\n- explicit top-level `challenge-required` HTTP semantics can be added later if AFAL exposes mid-flow transport states\n"
+    "description": "This draft describes the Phase 1 HTTP surface above the AFAL API adapter.\n\nIt is intentionally narrow and tracks the current implementation under `backend/afal/http/`.\nThe goal is to freeze route names, request envelopes, status-code behavior, and top-level\nresponse semantics before choosing an HTTP server framework.\n\nPhase 1 scope in this draft:\n- request payment approval capability\n- execute payment capability\n- request resource approval capability\n- settle resource usage capability\n- approval session lookup, callback result application, authorization resume, and AFAL action resume\n- stable requestRef handling\n- structured success/error envelopes\n\nCurrent behavior note:\n- `request-payment-approval` and `request-resource-approval` expose top-level `pending-approval` AFAL responses\n- `resume-approved-action` resumes a persisted approved action into settlement and receipt creation\n- `execute-payment` and `settle-resource-usage` still represent the synchronous seeded flow path\n"
   },
   "servers": [
     {
@@ -16,9 +16,56 @@
     {
       "name": "Capabilities",
       "description": "AFAL machine-invokable financial capabilities"
+    },
+    {
+      "name": "Approvals",
+      "description": "AFAL trusted-surface approval session operations"
     }
   ],
   "paths": {
+    "/capabilities/request-payment-approval": {
+      "post": {
+        "tags": [
+          "Capabilities"
+        ],
+        "operationId": "requestPaymentApproval",
+        "summary": "Create a top-level pending payment approval request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestPaymentApprovalHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Payment request entered pending approval state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestPaymentApprovalSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
     "/capabilities/execute-payment": {
       "post": {
         "tags": [
@@ -141,6 +188,49 @@
           },
           "409": {
             "$ref": "#/components/responses/ConflictResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/capabilities/request-resource-approval": {
+      "post": {
+        "tags": [
+          "Capabilities"
+        ],
+        "operationId": "requestResourceApproval",
+        "summary": "Create a top-level pending resource approval request",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestResourceApprovalHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Resource request entered pending approval state",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RequestResourceApprovalSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
           },
           "500": {
             "$ref": "#/components/responses/InternalErrorResponse"
@@ -288,6 +378,185 @@
           }
         }
       }
+    },
+    "/approval-sessions/get": {
+      "post": {
+        "tags": [
+          "Approvals"
+        ],
+        "operationId": "getApprovalSession",
+        "summary": "Read a persisted approval session",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetApprovalSessionHttpRequest"
+              },
+              "examples": {
+                "canonical-get-approval-session": {
+                  "value": {
+                    "requestRef": "req-approval-session-001",
+                    "input": {
+                      "approvalSessionRef": "aps-chall-0001"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Approval session resolved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetApprovalSessionSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/approval-sessions/apply-result": {
+      "post": {
+        "tags": [
+          "Approvals"
+        ],
+        "operationId": "applyApprovalResult",
+        "summary": "Apply a trusted-surface approval callback result",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyApprovalResultHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Approval result was persisted against the approval session",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApplyApprovalResultSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/approval-sessions/resume": {
+      "post": {
+        "tags": [
+          "Approvals"
+        ],
+        "operationId": "resumeApprovalSession",
+        "summary": "Resume authorization after an approval result is present",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeApprovalSessionHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Approval session resumed and final authorization was produced",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeApprovalSessionSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/approval-sessions/resume-action": {
+      "post": {
+        "tags": [
+          "Approvals"
+        ],
+        "operationId": "resumeApprovedAction",
+        "summary": "Resume an approved AFAL action into settlement, receipt, and final response creation",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ResumeApprovedActionHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Approved action resumed to final AFAL settlement output",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ResumeApprovedActionSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "409": {
+            "$ref": "#/components/responses/ConflictResponse"
+          },
+          "502": {
+            "$ref": "#/components/responses/ProviderFailureResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
     }
   },
   "components": {
@@ -401,6 +670,19 @@
                     "message": "Unknown resource budget \"budg-res-missing\" for mock ATS state"
                   }
                 }
+              },
+              "unknown-approval-session": {
+                "summary": "approval session reference is not known",
+                "value": {
+                  "ok": false,
+                  "capability": "getApprovalSession",
+                  "requestRef": "req-approval-session-001",
+                  "statusCode": 404,
+                  "error": {
+                    "code": "not-found",
+                    "message": "Unknown approvalSessionRef \"aps-missing-001\""
+                  }
+                }
               }
             }
           }
@@ -496,6 +778,9 @@
       }
     },
     "schemas": {
+      "RequestPaymentApprovalHttpRequest": {
+        "$ref": "#/components/schemas/ExecutePaymentHttpRequest"
+      },
       "ExecutePaymentHttpRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -527,6 +812,91 @@
             "$ref": "#/components/schemas/ResourceFlowInput"
           }
         }
+      },
+      "RequestResourceApprovalHttpRequest": {
+        "$ref": "#/components/schemas/SettleResourceUsageHttpRequest"
+      },
+      "GetApprovalSessionHttpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "input"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "approvalSessionRef"
+            ],
+            "properties": {
+              "approvalSessionRef": {
+                "$ref": "#/components/schemas/IdRef"
+              }
+            }
+          }
+        }
+      },
+      "ApplyApprovalResultHttpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "input"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "approvalSessionRef",
+              "result"
+            ],
+            "properties": {
+              "approvalSessionRef": {
+                "$ref": "#/components/schemas/IdRef"
+              },
+              "result": {
+                "$ref": "#/components/schemas/ApprovalResult"
+              }
+            }
+          }
+        }
+      },
+      "ResumeApprovalSessionHttpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "input"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "approvalSessionRef"
+            ],
+            "properties": {
+              "approvalSessionRef": {
+                "$ref": "#/components/schemas/IdRef"
+              }
+            }
+          }
+        }
+      },
+      "ResumeApprovedActionHttpRequest": {
+        "$ref": "#/components/schemas/ResumeApprovalSessionHttpRequest"
       },
       "PaymentFlowInput": {
         "type": "object",
@@ -955,6 +1325,37 @@
           }
         }
       },
+      "RequestPaymentApprovalSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "requestPaymentApproval"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/PaymentApprovalRequestOutput"
+          }
+        }
+      },
       "SettleResourceUsageSuccessResponse": {
         "type": "object",
         "additionalProperties": false,
@@ -986,6 +1387,37 @@
           }
         }
       },
+      "RequestResourceApprovalSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "requestResourceApproval"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/ResourceApprovalRequestOutput"
+          }
+        }
+      },
       "ErrorResponse": {
         "type": "object",
         "additionalProperties": false,
@@ -1004,8 +1436,14 @@
           "capability": {
             "type": "string",
             "enum": [
+              "requestPaymentApproval",
               "executePayment",
-              "settleResourceUsage"
+              "requestResourceApproval",
+              "settleResourceUsage",
+              "getApprovalSession",
+              "applyApprovalResult",
+              "resumeApprovalSession",
+              "resumeApprovedAction"
             ]
           },
           "requestRef": {
@@ -1271,6 +1709,89 @@
             "$ref": "#/components/schemas/IdRef"
           },
           "decidedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          }
+        }
+      },
+      "ApprovalSessionStatus": {
+        "type": "string",
+        "enum": [
+          "pending",
+          "approved",
+          "rejected",
+          "expired",
+          "cancelled",
+          "finalized"
+        ]
+      },
+      "ApprovalSession": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "approvalSessionId",
+          "schemaVersion",
+          "actionRef",
+          "actionType",
+          "subjectDid",
+          "priorDecisionRef",
+          "challengeRef",
+          "approvalContextRef",
+          "trustedSurfaceRef",
+          "status",
+          "createdAt",
+          "updatedAt"
+        ],
+        "properties": {
+          "approvalSessionId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "schemaVersion": {
+            "type": "string",
+            "const": "0.1"
+          },
+          "actionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "actionType": {
+            "type": "string"
+          },
+          "subjectDid": {
+            "$ref": "#/components/schemas/DidRef"
+          },
+          "mandateRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "policyRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "priorDecisionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "challengeRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "approvalContextRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "approvalResultRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "finalDecisionRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "trustedSurfaceRef": {
+            "type": "string"
+          },
+          "status": {
+            "$ref": "#/components/schemas/ApprovalSessionStatus"
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "updatedAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "expiresAt": {
             "$ref": "#/components/schemas/Timestamp"
           }
         }
@@ -1777,6 +2298,41 @@
           }
         }
       },
+      "PaymentApprovalRequestOutput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "intent",
+          "initialDecision",
+          "challenge",
+          "approvalContext",
+          "approvalSession",
+          "capabilityResponse"
+        ],
+        "properties": {
+          "intent": {
+            "$ref": "#/components/schemas/PaymentIntent"
+          },
+          "initialDecision": {
+            "$ref": "#/components/schemas/AuthorizationDecision"
+          },
+          "challenge": {
+            "$ref": "#/components/schemas/ChallengeRecord"
+          },
+          "approvalContext": {
+            "$ref": "#/components/schemas/ApprovalContext"
+          },
+          "approvalSession": {
+            "$ref": "#/components/schemas/ApprovalSession"
+          },
+          "capabilityResponse": {
+            "$ref": "#/components/schemas/CapabilityResponse"
+          },
+          "updatedBudget": {
+            "$ref": "#/components/schemas/MonetaryBudget"
+          }
+        }
+      },
       "ResourceFlowOutput": {
         "type": "object",
         "additionalProperties": false,
@@ -1830,6 +2386,221 @@
           },
           "updatedQuota": {
             "$ref": "#/components/schemas/ResourceQuota"
+          }
+        }
+      },
+      "ResourceApprovalRequestOutput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "intent",
+          "initialDecision",
+          "challenge",
+          "approvalContext",
+          "approvalSession",
+          "capabilityResponse",
+          "updatedBudget",
+          "updatedQuota"
+        ],
+        "properties": {
+          "intent": {
+            "$ref": "#/components/schemas/ResourceIntent"
+          },
+          "initialDecision": {
+            "$ref": "#/components/schemas/AuthorizationDecision"
+          },
+          "challenge": {
+            "$ref": "#/components/schemas/ChallengeRecord"
+          },
+          "approvalContext": {
+            "$ref": "#/components/schemas/ApprovalContext"
+          },
+          "approvalSession": {
+            "$ref": "#/components/schemas/ApprovalSession"
+          },
+          "capabilityResponse": {
+            "$ref": "#/components/schemas/CapabilityResponse"
+          },
+          "updatedBudget": {
+            "$ref": "#/components/schemas/ResourceBudget"
+          },
+          "updatedQuota": {
+            "$ref": "#/components/schemas/ResourceQuota"
+          }
+        }
+      },
+      "GetApprovalSessionSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "getApprovalSession"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/ApprovalSession"
+          }
+        }
+      },
+      "ApplyApprovalResultData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "approvalResult",
+          "approvalSession",
+          "challenge"
+        ],
+        "properties": {
+          "approvalResult": {
+            "$ref": "#/components/schemas/ApprovalResult"
+          },
+          "approvalSession": {
+            "$ref": "#/components/schemas/ApprovalSession"
+          },
+          "challenge": {
+            "$ref": "#/components/schemas/ChallengeRecord"
+          }
+        }
+      },
+      "ApplyApprovalResultSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "applyApprovalResult"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/ApplyApprovalResultData"
+          }
+        }
+      },
+      "ResumeApprovalSessionData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "finalDecision",
+          "approvalResult",
+          "approvalSession",
+          "challenge"
+        ],
+        "properties": {
+          "finalDecision": {
+            "$ref": "#/components/schemas/AuthorizationDecision"
+          },
+          "approvalResult": {
+            "$ref": "#/components/schemas/ApprovalResult"
+          },
+          "approvalSession": {
+            "$ref": "#/components/schemas/ApprovalSession"
+          },
+          "challenge": {
+            "$ref": "#/components/schemas/ChallengeRecord"
+          }
+        }
+      },
+      "ResumeApprovalSessionSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "resumeApprovalSession"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/ResumeApprovalSessionData"
+          }
+        }
+      },
+      "ResumeApprovedActionSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "resumeApprovedAction"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PaymentFlowOutput"
+              },
+              {
+                "$ref": "#/components/schemas/ResourceFlowOutput"
+              }
+            ]
           }
         }
       }

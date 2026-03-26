@@ -11,6 +11,10 @@ import {
   handleGetMonetaryBudgetState,
   handleGetResourceBudgetState,
   handleGetResourceQuotaState,
+  handleReleaseMonetaryReservation,
+  handleReserveMonetaryBudget,
+  handleReserveResourceCapacity,
+  handleSettleMonetaryReservation,
 } from "./handlers";
 
 describe("ATS API adapter", () => {
@@ -102,6 +106,80 @@ describe("ATS API adapter", () => {
     }
   });
 
+  test("returns success envelopes for reserve and settle monetary reservation", async () => {
+    const ats = createSeededInMemoryAtsService();
+
+    const reserved = await handleReserveMonetaryBudget(
+      {
+        capability: "reserveMonetaryBudget",
+        requestRef: "req-ats-reserve-money-001",
+        input: {
+          reservationId: "resv-money-001",
+          budgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+          accountRef: paymentFlowFixtures.operatingAccount.accountId,
+          actionRef: paymentFlowFixtures.paymentIntentCreated.intentId,
+          amount: "20.00",
+          createdAt: "2026-03-25T11:31:00Z",
+        },
+      },
+      ats
+    );
+    const settled = await handleSettleMonetaryReservation(
+      {
+        capability: "settleMonetaryReservation",
+        requestRef: "req-ats-settle-money-001",
+        input: {
+          reservationRef: "resv-money-001",
+          settledAt: "2026-03-25T11:32:00Z",
+        },
+      },
+      ats
+    );
+
+    assert.equal(reserved.ok, true);
+    assert.equal(settled.ok, true);
+    if (reserved.ok && settled.ok) {
+      assert.equal(reserved.data.reservation.status, "reserved");
+      assert.equal(reserved.data.budget.availableAmount, "980.00");
+      assert.equal(settled.data.reservation.status, "settled");
+      assert.equal(settled.data.budget.consumedAmount, "20.00");
+    }
+  });
+
+  test("returns success envelopes for reserve and release resource reservation", async () => {
+    const ats = createSeededInMemoryAtsService();
+
+    const reserved = await handleReserveResourceCapacity(
+      {
+        capability: "reserveResourceCapacity",
+        requestRef: "req-ats-reserve-resource-001",
+        input: {
+          reservationId: "resv-resource-001",
+          budgetRef: resourceFlowFixtures.resourceBudgetInitial.budgetId,
+          quotaRef: resourceFlowFixtures.resourceQuotaInitial.quotaId,
+          accountRef: resourceFlowFixtures.operatingAccount.accountId,
+          actionRef: resourceFlowFixtures.resourceIntentCreated.intentId,
+          quantity: 5000,
+          createdAt: "2026-03-25T11:33:00Z",
+        },
+      },
+      ats
+    );
+    const released = await handleReleaseMonetaryReservation(
+      {
+        capability: "releaseMonetaryReservation",
+        requestRef: "req-unused-release-001",
+        input: {
+          reservationRef: "resv-money-missing",
+        },
+      },
+      ats
+    );
+
+    assert.equal(reserved.ok, true);
+    assert.equal(released.ok, false);
+  });
+
   test("maps unknown refs to a 404 response", async () => {
     const response = await handleGetAccountState({
       capability: "getAccountState",
@@ -153,8 +231,20 @@ describe("ATS API adapter", () => {
         quotaRef: resourceFlowFixtures.resourceQuotaInitial.quotaId,
       },
     });
+    const reserveResponse = await handlers.invokeCapability({
+      capability: "reserveMonetaryBudget",
+      requestRef: "req-ats-dispatch-003",
+      input: {
+        reservationId: "resv-money-dispatch-001",
+        budgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+        accountRef: paymentFlowFixtures.operatingAccount.accountId,
+        actionRef: paymentFlowFixtures.paymentIntentCreated.intentId,
+        amount: "5.00",
+      },
+    });
 
     assert.equal(accountResponse.ok, true);
     assert.equal(quotaResponse.ok, true);
+    assert.equal(reserveResponse.ok, true);
   });
 });

@@ -1,5 +1,12 @@
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../sdk/fixtures";
-import type { AccountRecord, MonetaryBudget, ResourceBudget, ResourceQuota } from "../../sdk/types";
+import type {
+  AccountRecord,
+  MonetaryBudget,
+  MonetaryReservation,
+  ResourceBudget,
+  ResourceQuota,
+  ResourceReservation,
+} from "../../sdk/types";
 import { InMemoryAtsService } from "./service";
 import { InMemoryAtsStore } from "./store";
 
@@ -12,6 +19,8 @@ export interface SeededAtsRecords {
   monetaryBudgets: MonetaryBudget[];
   resourceBudgets: ResourceBudget[];
   resourceQuotas: ResourceQuota[];
+  monetaryReservations: MonetaryReservation[];
+  resourceReservations: ResourceReservation[];
 }
 
 export function createSeededAtsRecords(): SeededAtsRecords {
@@ -25,6 +34,8 @@ export function createSeededAtsRecords(): SeededAtsRecords {
     monetaryBudgets: dedupeById([paymentFlowFixtures.monetaryBudgetInitial], "budgetId"),
     resourceBudgets: dedupeById([resourceFlowFixtures.resourceBudgetInitial], "budgetId"),
     resourceQuotas: dedupeById([resourceFlowFixtures.resourceQuotaInitial], "quotaId"),
+    monetaryReservations: [],
+    resourceReservations: [],
   };
 }
 

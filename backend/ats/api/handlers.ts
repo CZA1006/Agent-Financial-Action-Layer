@@ -13,6 +13,12 @@ import type {
   GetMonetaryBudgetStateRequest,
   GetResourceBudgetStateRequest,
   GetResourceQuotaStateRequest,
+  ReleaseMonetaryReservationRequest,
+  ReleaseResourceReservationRequest,
+  ReserveMonetaryBudgetRequest,
+  ReserveResourceCapacityRequest,
+  SettleMonetaryReservationRequest,
+  SettleResourceReservationRequest,
 } from "./types";
 
 function toErrorMessage(error: unknown): string {
@@ -187,12 +193,126 @@ export async function handleConsumeMonetaryBudget(
   }
 }
 
+export async function handleReserveMonetaryBudget(
+  request: ReserveMonetaryBudgetRequest,
+  ats: AtsAdminPort = createSeededInMemoryAtsService()
+) {
+  try {
+    const data = await ats.reserveMonetaryBudget(request.input);
+    const response: AtsApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleSettleMonetaryReservation(
+  request: SettleMonetaryReservationRequest,
+  ats: AtsAdminPort = createSeededInMemoryAtsService()
+) {
+  try {
+    const data = await ats.settleMonetaryReservation(request.input);
+    const response: AtsApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleReleaseMonetaryReservation(
+  request: ReleaseMonetaryReservationRequest,
+  ats: AtsAdminPort = createSeededInMemoryAtsService()
+) {
+  try {
+    const data = await ats.releaseMonetaryReservation(request.input);
+    const response: AtsApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapFailure(request.capability, request.requestRef, error);
+  }
+}
+
 export async function handleConsumeResourceBudget(
   request: ConsumeResourceBudgetRequest,
   ats: AtsAdminPort = createSeededInMemoryAtsService()
 ) {
   try {
     const data = await ats.consumeResourceBudget(request.input);
+    const response: AtsApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleReserveResourceCapacity(
+  request: ReserveResourceCapacityRequest,
+  ats: AtsAdminPort = createSeededInMemoryAtsService()
+) {
+  try {
+    const data = await ats.reserveResourceCapacity(request.input);
+    const response: AtsApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleSettleResourceReservation(
+  request: SettleResourceReservationRequest,
+  ats: AtsAdminPort = createSeededInMemoryAtsService()
+) {
+  try {
+    const data = await ats.settleResourceReservation(request.input);
+    const response: AtsApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleReleaseResourceReservation(
+  request: ReleaseResourceReservationRequest,
+  ats: AtsAdminPort = createSeededInMemoryAtsService()
+) {
+  try {
+    const data = await ats.releaseResourceReservation(request.input);
     const response: AtsApiSuccess<typeof data> = {
       ok: true,
       capability: request.capability,
@@ -235,8 +355,20 @@ export function createAtsApiHandlers(ats: AtsAdminPort = createSeededInMemoryAts
     handleGetResourceQuotaState: (request: GetResourceQuotaStateRequest) =>
       handleGetResourceQuotaState(request, ats),
     handleFreezeAccount: (request: FreezeAccountRequest) => handleFreezeAccount(request, ats),
+    handleReserveMonetaryBudget: (request: ReserveMonetaryBudgetRequest) =>
+      handleReserveMonetaryBudget(request, ats),
+    handleSettleMonetaryReservation: (request: SettleMonetaryReservationRequest) =>
+      handleSettleMonetaryReservation(request, ats),
+    handleReleaseMonetaryReservation: (request: ReleaseMonetaryReservationRequest) =>
+      handleReleaseMonetaryReservation(request, ats),
     handleConsumeMonetaryBudget: (request: ConsumeMonetaryBudgetRequest) =>
       handleConsumeMonetaryBudget(request, ats),
+    handleReserveResourceCapacity: (request: ReserveResourceCapacityRequest) =>
+      handleReserveResourceCapacity(request, ats),
+    handleSettleResourceReservation: (request: SettleResourceReservationRequest) =>
+      handleSettleResourceReservation(request, ats),
+    handleReleaseResourceReservation: (request: ReleaseResourceReservationRequest) =>
+      handleReleaseResourceReservation(request, ats),
     handleConsumeResourceBudget: (request: ConsumeResourceBudgetRequest) =>
       handleConsumeResourceBudget(request, ats),
     handleConsumeResourceQuota: (request: ConsumeResourceQuotaRequest) =>
@@ -253,8 +385,20 @@ export function createAtsApiHandlers(ats: AtsAdminPort = createSeededInMemoryAts
           return handleGetResourceQuotaState(request, ats);
         case "freezeAccount":
           return handleFreezeAccount(request, ats);
+        case "reserveMonetaryBudget":
+          return handleReserveMonetaryBudget(request, ats);
+        case "settleMonetaryReservation":
+          return handleSettleMonetaryReservation(request, ats);
+        case "releaseMonetaryReservation":
+          return handleReleaseMonetaryReservation(request, ats);
         case "consumeMonetaryBudget":
           return handleConsumeMonetaryBudget(request, ats);
+        case "reserveResourceCapacity":
+          return handleReserveResourceCapacity(request, ats);
+        case "settleResourceReservation":
+          return handleSettleResourceReservation(request, ats);
+        case "releaseResourceReservation":
+          return handleReleaseResourceReservation(request, ats);
         case "consumeResourceBudget":
           return handleConsumeResourceBudget(request, ats);
         case "consumeResourceQuota":

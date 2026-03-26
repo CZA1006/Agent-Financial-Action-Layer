@@ -1,6 +1,7 @@
 import type { IdRef, PaymentIntent, ResourceIntent } from "../../../sdk/types";
 import type {
   IntentStateAdminPort,
+  PendingApprovalExecution,
   PaymentIntentTemplateResolver,
   ResourceIntentTemplateResolver,
 } from "./interfaces";
@@ -51,6 +52,19 @@ export class AfalIntentStateService implements IntentStateAdminPort {
     return this.store.listResourceIntents();
   }
 
+  async getPendingExecution(approvalSessionRef: IdRef): Promise<PendingApprovalExecution> {
+    return clone(
+      assertFound(
+        await this.store.getPendingExecution(approvalSessionRef),
+        `Unknown approvalSessionRef "${approvalSessionRef}" for AFAL pending execution`
+      )
+    );
+  }
+
+  async listPendingExecutions(): Promise<PendingApprovalExecution[]> {
+    return this.store.listPendingExecutions();
+  }
+
   async createPaymentIntent(intent: PaymentIntent): Promise<PaymentIntent> {
     const template = this.templateResolver?.resolvePaymentIntentTemplate(intent.intentId);
     const nextIntent = template ? { ...clone(template), ...clone(intent) } : clone(intent);
@@ -63,6 +77,37 @@ export class AfalIntentStateService implements IntentStateAdminPort {
     const nextIntent = template ? { ...clone(template), ...clone(intent) } : clone(intent);
     await this.store.putResourceIntent(nextIntent);
     return clone(nextIntent);
+  }
+
+  async createPendingExecution(
+    execution: PendingApprovalExecution
+  ): Promise<PendingApprovalExecution> {
+    const nextExecution = clone(execution);
+    await this.store.putPendingExecution(nextExecution);
+    return clone(nextExecution);
+  }
+
+  async markPendingExecution(args: {
+    approvalSessionRef: IdRef;
+    status: PendingApprovalExecution["status"];
+    updatedAt?: string;
+    finalDecisionRef?: IdRef;
+    settlementRef?: IdRef;
+    receiptRef?: IdRef;
+    usageReceiptRef?: IdRef;
+  }): Promise<PendingApprovalExecution> {
+    const current = await this.getPendingExecution(args.approvalSessionRef);
+    const nextExecution: PendingApprovalExecution = {
+      ...current,
+      status: args.status,
+      updatedAt: args.updatedAt ?? current.updatedAt,
+      finalDecisionRef: args.finalDecisionRef ?? current.finalDecisionRef,
+      settlementRef: args.settlementRef ?? current.settlementRef,
+      receiptRef: args.receiptRef ?? current.receiptRef,
+      usageReceiptRef: args.usageReceiptRef ?? current.usageReceiptRef,
+    };
+    await this.store.putPendingExecution(nextExecution);
+    return clone(nextExecution);
   }
 
   async markPaymentChallenge(args: {

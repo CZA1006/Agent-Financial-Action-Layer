@@ -1,6 +1,7 @@
 import type {
   ApprovalContext,
   ApprovalResult,
+  ApprovalSession,
   AuthorizationDecision,
   ChallengeRecord,
   Did,
@@ -14,7 +15,11 @@ export type AmnCapability =
   | "createChallengeRecord"
   | "buildApprovalContext"
   | "recordApprovalResult"
-  | "finalizeAuthorization";
+  | "finalizeAuthorization"
+  | "getApprovalSession"
+  | "createApprovalRequest"
+  | "applyApprovalResult"
+  | "resumeAuthorizationSession";
 
 export interface GetMandateRequest {
   capability: "getMandate";
@@ -61,6 +66,39 @@ export interface RecordApprovalResultRequest {
   };
 }
 
+export interface GetApprovalSessionRequest {
+  capability: "getApprovalSession";
+  requestRef: string;
+  input: {
+    approvalSessionRef: IdRef;
+  };
+}
+
+export interface CreateApprovalRequestRequest {
+  capability: "createApprovalRequest";
+  requestRef: string;
+  input: {
+    priorDecision: AuthorizationDecision;
+  };
+}
+
+export interface ApplyApprovalResultRequest {
+  capability: "applyApprovalResult";
+  requestRef: string;
+  input: {
+    approvalSessionRef: IdRef;
+    result: ApprovalResult;
+  };
+}
+
+export interface ResumeAuthorizationSessionRequest {
+  capability: "resumeAuthorizationSession";
+  requestRef: string;
+  input: {
+    approvalSessionRef: IdRef;
+  };
+}
+
 export interface FinalizeAuthorizationRequest {
   capability: "finalizeAuthorization";
   requestRef: string;
@@ -76,6 +114,10 @@ export type AmnApiRequest =
   | CreateChallengeRecordRequest
   | BuildApprovalContextRequest
   | RecordApprovalResultRequest
+  | GetApprovalSessionRequest
+  | CreateApprovalRequestRequest
+  | ApplyApprovalResultRequest
+  | ResumeAuthorizationSessionRequest
   | FinalizeAuthorizationRequest;
 
 export interface AmnApiError {
@@ -102,5 +144,22 @@ export interface AmnApiFailure {
 export type AmnApiResponse =
   | AmnApiSuccess<
       Mandate | AuthorizationDecision | ChallengeRecord | ApprovalContext | ApprovalResult
+      | ApprovalSession
+      | {
+          challenge: ChallengeRecord;
+          approvalContext: ApprovalContext;
+          approvalSession: ApprovalSession;
+        }
+      | {
+          approvalResult: ApprovalResult;
+          approvalSession: ApprovalSession;
+          challenge: ChallengeRecord;
+        }
+      | {
+          finalDecision: AuthorizationDecision;
+          approvalResult: ApprovalResult;
+          approvalSession: ApprovalSession;
+          challenge: ChallengeRecord;
+        }
     >
   | AmnApiFailure;

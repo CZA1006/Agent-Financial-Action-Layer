@@ -3,7 +3,9 @@ import type {
   Did,
   IdRef,
   MonetaryBudget,
+  MonetaryReservation,
   ResourceBudget,
+  ResourceReservation,
   ResourceQuota,
   Timestamp,
 } from "../../../sdk/types";
@@ -14,7 +16,13 @@ export type AtsCapability =
   | "getResourceBudgetState"
   | "getResourceQuotaState"
   | "freezeAccount"
+  | "reserveMonetaryBudget"
+  | "settleMonetaryReservation"
+  | "releaseMonetaryReservation"
   | "consumeMonetaryBudget"
+  | "reserveResourceCapacity"
+  | "settleResourceReservation"
+  | "releaseResourceReservation"
   | "consumeResourceBudget"
   | "consumeResourceQuota";
 
@@ -71,6 +79,38 @@ export interface ConsumeMonetaryBudgetRequest {
   };
 }
 
+export interface ReserveMonetaryBudgetRequest {
+  capability: "reserveMonetaryBudget";
+  requestRef: string;
+  input: {
+    reservationId: IdRef;
+    budgetRef: IdRef;
+    accountRef: IdRef;
+    actionRef: IdRef;
+    amount: string;
+    createdAt?: Timestamp;
+  };
+}
+
+export interface SettleMonetaryReservationRequest {
+  capability: "settleMonetaryReservation";
+  requestRef: string;
+  input: {
+    reservationRef: IdRef;
+    settledAt?: Timestamp;
+  };
+}
+
+export interface ReleaseMonetaryReservationRequest {
+  capability: "releaseMonetaryReservation";
+  requestRef: string;
+  input: {
+    reservationRef: IdRef;
+    releasedAt?: Timestamp;
+    reasonCode?: string;
+  };
+}
+
 export interface ConsumeResourceBudgetRequest {
   capability: "consumeResourceBudget";
   requestRef: string;
@@ -78,6 +118,39 @@ export interface ConsumeResourceBudgetRequest {
     budgetRef: IdRef;
     quantity: number;
     updatedAt?: Timestamp;
+  };
+}
+
+export interface ReserveResourceCapacityRequest {
+  capability: "reserveResourceCapacity";
+  requestRef: string;
+  input: {
+    reservationId: IdRef;
+    budgetRef: IdRef;
+    quotaRef: IdRef;
+    accountRef: IdRef;
+    actionRef: IdRef;
+    quantity: number;
+    createdAt?: Timestamp;
+  };
+}
+
+export interface SettleResourceReservationRequest {
+  capability: "settleResourceReservation";
+  requestRef: string;
+  input: {
+    reservationRef: IdRef;
+    settledAt?: Timestamp;
+  };
+}
+
+export interface ReleaseResourceReservationRequest {
+  capability: "releaseResourceReservation";
+  requestRef: string;
+  input: {
+    reservationRef: IdRef;
+    releasedAt?: Timestamp;
+    reasonCode?: string;
   };
 }
 
@@ -97,7 +170,13 @@ export type AtsApiRequest =
   | GetResourceBudgetStateRequest
   | GetResourceQuotaStateRequest
   | FreezeAccountRequest
+  | ReserveMonetaryBudgetRequest
+  | SettleMonetaryReservationRequest
+  | ReleaseMonetaryReservationRequest
   | ConsumeMonetaryBudgetRequest
+  | ReserveResourceCapacityRequest
+  | SettleResourceReservationRequest
+  | ReleaseResourceReservationRequest
   | ConsumeResourceBudgetRequest
   | ConsumeResourceQuotaRequest;
 
@@ -123,5 +202,12 @@ export interface AtsApiFailure {
 }
 
 export type AtsApiResponse =
-  | AtsApiSuccess<AccountRecord | MonetaryBudget | ResourceBudget | ResourceQuota>
+  | AtsApiSuccess<
+      | AccountRecord
+      | MonetaryBudget
+      | ResourceBudget
+      | ResourceQuota
+      | { reservation: MonetaryReservation; budget: MonetaryBudget }
+      | { reservation: ResourceReservation; budget: ResourceBudget; quota: ResourceQuota }
+    >
   | AtsApiFailure;
