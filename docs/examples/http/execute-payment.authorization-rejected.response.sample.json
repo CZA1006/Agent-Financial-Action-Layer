@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "capability": "executePayment",
+  "requestRef": "req-0001",
+  "statusCode": 403,
+  "error": {
+    "code": "authorization-rejected",
+    "message": "Payment flow stopped because authorization result was \"rejected\""
+  }
+}

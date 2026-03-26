@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "capability": "resumeApprovedAction",
+  "requestRef": "req-resume-action-0001",
+  "statusCode": 409,
+  "error": {
+    "code": "authorization-expired",
+    "message": "AFAL pending payment could not resume because authorization result was \"expired\""
+  }
+}

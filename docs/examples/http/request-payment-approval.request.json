@@ -1,0 +1,36 @@
+{
+  "requestRef": "req-0001",
+  "input": {
+    "requestRef": "req-0001",
+    "monetaryBudgetRef": "budg-money-001",
+    "intent": {
+      "intentId": "payint-0001",
+      "schemaVersion": "0.1",
+      "intentType": "payment",
+      "payer": {
+        "agentDid": "did:afal:agent:payment-agent-01",
+        "accountId": "acct-agent-001"
+      },
+      "payee": {
+        "payeeDid": "did:afal:agent:fraud-service-01",
+        "settlementAddress": "0xFRAUDSERVICEPAYEE"
+      },
+      "asset": "USDC",
+      "amount": "45.00",
+      "chain": "base",
+      "purpose": {
+        "category": "service-payment",
+        "description": "fraud detection request #abc123",
+        "referenceId": "svc-req-abc123"
+      },
+      "mandateRef": "mnd-0001",
+      "policyRef": "cred-policy-0001",
+      "executionMode": "pre-authorized",
+      "challengeState": "required",
+      "status": "created",
+      "expiresAt": "2026-03-24T12:10:00Z",
+      "nonce": "n-0001",
+      "createdAt": "2026-03-24T12:05:00Z"
+    }
+  }
+}

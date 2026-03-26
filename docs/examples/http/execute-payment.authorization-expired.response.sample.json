@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "capability": "executePayment",
+  "requestRef": "req-0001",
+  "statusCode": 409,
+  "error": {
+    "code": "authorization-expired",
+    "message": "Payment flow stopped because authorization result was \"expired\""
+  }
+}

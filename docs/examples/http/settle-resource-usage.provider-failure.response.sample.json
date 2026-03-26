@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "capability": "settleResourceUsage",
+  "requestRef": "req-1001",
+  "statusCode": 502,
+  "error": {
+    "code": "provider-failure",
+    "message": "Provider usage confirmation failed"
+  }
+}

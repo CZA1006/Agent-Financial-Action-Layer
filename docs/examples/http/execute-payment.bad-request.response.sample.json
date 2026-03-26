@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "capability": "executePayment",
+  "requestRef": "unknown",
+  "statusCode": 400,
+  "error": {
+    "code": "bad-request",
+    "message": "executePayment transport only supports POST"
+  }
+}
