@@ -32,5 +32,10 @@
 - one canonical Phase 1 flow should be enough to drive the first demo
 - `interfaces.ts` should remain the minimal contract surface for flow orchestration before concrete service implementations exist
 - `mock/` contains a fixture-backed in-memory stub that replays the canonical payment and resource flows through those interfaces
+- `service/` provides the formal AFAL module runtime above the seeded orchestration stack
+- `state/` provides store-backed payment and resource intent state for AFAL-owned action records
+- `settlement/` provides store-backed settlement and usage-confirmation services for AFAL-owned settlement records
+- `outputs/` provides store-backed receipt and capability-response services for AFAL-owned output records
 - `api/` provides a framework-free request/response adapter above orchestration so AFAL can expose capability handlers before choosing HTTP transport
 - `http/` provides the framework-free transport contract for Phase 1 capability routes and status-code behavior
+- `service/durable.ts` wires the seeded local durable mode over JSON file stores

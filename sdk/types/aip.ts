@@ -60,6 +60,8 @@ export interface CredentialEnvelope<TSubject> {
   };
 }
 
+export type CredentialLifecycleStatus = "active" | "suspended" | "expired" | "revoked";
+
 export interface OwnershipCredentialSubject {
   id: Did;
   ownerDid: Did;
@@ -101,3 +103,18 @@ export type KycCredential = CredentialEnvelope<KycCredentialSubject>;
 export type KybCredential = CredentialEnvelope<KycCredentialSubject>;
 export type AuthorityCredential = CredentialEnvelope<AuthorityCredentialSubject>;
 export type PolicyCredential = CredentialEnvelope<PolicyCredentialSubject>;
+
+export type AnyCredential =
+  | OwnershipCredential
+  | KycCredential
+  | KybCredential
+  | AuthorityCredential
+  | PolicyCredential;
+
+export interface CredentialRecord<TSubject = unknown> {
+  credential: CredentialEnvelope<TSubject>;
+  status: CredentialLifecycleStatus;
+  updatedAt: Timestamp;
+  revokedAt?: Timestamp;
+  suspensionReason?: string;
+}

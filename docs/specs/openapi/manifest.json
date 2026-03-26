@@ -3,7 +3,7 @@
   "version": "0.1.0-draft",
   "openapi": "3.1.0",
   "title": "AFAL Phase 1 HTTP Capability Contract",
-  "generatedAt": "2026-03-25T09:00:24.662Z",
+  "generatedAt": "2026-03-26T06:28:03.861Z",
   "source": {
     "yamlDraft": "docs/specs/afal-http-openapi-draft.yaml",
     "jsonDraft": "docs/specs/afal-http-openapi-draft.json"
@@ -16,7 +16,7 @@
     "releases": "docs/specs/openapi/releases/index.json"
   },
   "git": {
-    "commit": "6c7b6da140fca52763a45a42e51b31b8ef4d7cfa",
+    "commit": "1b2186a73e930d46cf295e32b64d2358223abfc3",
     "dirty": true
   }
 }

@@ -1,4 +1,8 @@
-import { createAfalApiHandlers, type AfalApiFailure } from "../api";
+import {
+  createAfalApiHandlers,
+  type AfalApiFailure,
+  type AfalApiServiceAdapter,
+} from "../api";
 import type { PaymentFlowOrchestrator, ResourceFlowOrchestrator } from "../interfaces";
 import type {
   AfalHttpRequest,
@@ -81,8 +85,14 @@ function ensureRequestRefConsistency(
 export function createAfalHttpRouter(args?: {
   paymentOrchestrator?: PaymentFlowOrchestrator;
   resourceOrchestrator?: ResourceFlowOrchestrator;
+  handlers?: AfalApiServiceAdapter;
 }) {
-  const apiHandlers = createAfalApiHandlers(args);
+  const apiHandlers =
+    args?.handlers ??
+    createAfalApiHandlers({
+      paymentOrchestrator: args?.paymentOrchestrator,
+      resourceOrchestrator: args?.resourceOrchestrator,
+    });
 
   return {
     async handle(request: AfalHttpRequest): Promise<AfalHttpResponse<AfalHttpResponseBody>> {

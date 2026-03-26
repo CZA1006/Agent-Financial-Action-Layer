@@ -11,7 +11,11 @@
 ## Notes
 
 - the default ports are built from `sdk/fixtures/`
-- the orchestrators only support the canonical approved flows defined in the example fixtures
+- AIP, ATS, and AMN now default to seeded store-backed services instead of hand-written fixture ports
+- payment and resource intents now default to a seeded store-backed AFAL intent state service
+- settlement and usage confirmation now default to a seeded store-backed AFAL settlement service
+- receipts and capability responses now default to a seeded store-backed AFAL output service
+- the orchestrators still only support the canonical approved flows defined in the example fixtures
 - this layer is intentionally thin and should not absorb AIP, AMN, or ATS business logic
 
 ## Demo

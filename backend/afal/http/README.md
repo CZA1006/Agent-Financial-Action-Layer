@@ -16,8 +16,11 @@
 ## Notes
 
 - this layer is framework-free and currently implemented as a pure router function
+- `durable-server.ts` adds a thin Node `http` server shell above the durable router wiring
 - request validation is intentionally minimal: method, path, request body shape, and `requestRef` consistency
 - successful responses pass through the API adapter payloads and status codes
+- `durable.ts` wires the same router contract to the seeded local durable AFAL runtime
+- `npm run serve:durable-http` starts the capability routes against the seeded local durable runtime
 - the docs-first transport draft lives at `docs/specs/afal-http-openapi-draft.yaml`
 - `npm run export:openapi` generates `docs/specs/afal-http-openapi-draft.json` from that YAML draft
 - the stable publish paths for downstream consumers are `docs/specs/openapi/latest.yaml` and `docs/specs/openapi/latest.json`

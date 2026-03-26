@@ -120,6 +120,43 @@ export interface CapabilityResponsePort {
   }): Promise<CapabilityResponse>;
 }
 
+export interface IntentStatePort {
+  createPaymentIntent(intent: PaymentIntent): Promise<PaymentIntent>;
+  createResourceIntent(intent: ResourceIntent): Promise<ResourceIntent>;
+  markPaymentChallenge(args: {
+    intentId: IdRef;
+    decisionRef?: IdRef;
+    challengeRef?: IdRef;
+    challengeState: PaymentIntent["challengeState"];
+    status: PaymentIntent["status"];
+  }): Promise<PaymentIntent>;
+  markPaymentSettlement(args: {
+    intentId: IdRef;
+    decisionRef?: IdRef;
+    challengeRef?: IdRef;
+    challengeState: PaymentIntent["challengeState"];
+    settlementRef: IdRef;
+    receiptRef: IdRef;
+    status: PaymentIntent["status"];
+  }): Promise<PaymentIntent>;
+  markResourceChallenge(args: {
+    intentId: IdRef;
+    decisionRef?: IdRef;
+    challengeRef?: IdRef;
+    challengeState: ResourceIntent["challengeState"];
+    status: ResourceIntent["status"];
+  }): Promise<ResourceIntent>;
+  markResourceSettlement(args: {
+    intentId: IdRef;
+    decisionRef?: IdRef;
+    challengeRef?: IdRef;
+    challengeState: ResourceIntent["challengeState"];
+    usageReceiptRef: IdRef;
+    settlementRef: IdRef;
+    status: ResourceIntent["status"];
+  }): Promise<ResourceIntent>;
+}
+
 export interface PaymentFlowOutput {
   intent: PaymentIntent;
   initialDecision: AuthorizationDecision;
@@ -162,6 +199,7 @@ export interface AfalOrchestrationPorts {
   aip: AipPort;
   ats: AtsPort;
   amn: AmnPort;
+  intents: IntentStatePort;
   trustedSurface: TrustedSurfacePort;
   paymentSettlement: PaymentSettlementPort;
   resourceSettlement: ResourceSettlementPort;
