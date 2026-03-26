@@ -1,0 +1,210 @@
+{
+  "ok": true,
+  "capability": "executePayment",
+  "requestRef": "req-0001",
+  "statusCode": 200,
+  "data": {
+    "intent": {
+      "intentId": "payint-0001",
+      "schemaVersion": "0.1",
+      "intentType": "payment",
+      "payer": {
+        "agentDid": "did:afal:agent:payment-agent-01",
+        "accountId": "acct-agent-001"
+      },
+      "payee": {
+        "payeeDid": "did:afal:agent:fraud-service-01",
+        "settlementAddress": "0xFRAUDSERVICEPAYEE"
+      },
+      "asset": "USDC",
+      "amount": "45.00",
+      "chain": "base",
+      "purpose": {
+        "category": "service-payment",
+        "description": "fraud detection request #abc123",
+        "referenceId": "svc-req-abc123"
+      },
+      "mandateRef": "mnd-0001",
+      "policyRef": "cred-policy-0001",
+      "executionMode": "pre-authorized",
+      "challengeState": "approved",
+      "status": "settled",
+      "expiresAt": "2026-03-24T12:10:00Z",
+      "nonce": "n-0001",
+      "createdAt": "2026-03-24T12:05:00Z",
+      "decisionRef": "dec-0002",
+      "challengeRef": "chall-0001",
+      "settlementRef": "stl-0001",
+      "receiptRef": "rcpt-pay-0001"
+    },
+    "initialDecision": {
+      "decisionId": "dec-0001",
+      "schemaVersion": "0.1",
+      "actionRef": "payint-0001",
+      "actionType": "payment",
+      "subjectDid": "did:afal:agent:payment-agent-01",
+      "mandateRef": "mnd-0001",
+      "policyRef": "cred-policy-0001",
+      "accountRef": "acct-agent-001",
+      "result": "challenge-required",
+      "challengeState": "required",
+      "reasonCode": "new-counterparty",
+      "evaluatedAt": "2026-03-24T12:05:05Z",
+      "expiresAt": "2026-03-24T12:10:00Z",
+      "auditRef": "audit-0001"
+    },
+    "challenge": {
+      "challengeId": "chall-0001",
+      "schemaVersion": "0.1",
+      "actionRef": "payint-0001",
+      "actionType": "payment",
+      "subjectDid": "did:afal:agent:payment-agent-01",
+      "mandateRef": "mnd-0001",
+      "policyRef": "cred-policy-0001",
+      "state": "approved",
+      "reasonCode": "new-counterparty",
+      "riskSignals": [
+        "new-counterparty",
+        "amount-above-challenge-threshold"
+      ],
+      "trustedSurfaceRef": "trusted-surface:web",
+      "approvalContextRef": "ctx-0001",
+      "createdAt": "2026-03-24T12:05:06Z",
+      "updatedAt": "2026-03-24T12:07:00Z",
+      "expiresAt": "2026-03-24T12:15:00Z"
+    },
+    "approvalContext": {
+      "approvalContextId": "ctx-0001",
+      "challengeRef": "chall-0001",
+      "actionRef": "payint-0001",
+      "actionType": "payment",
+      "headline": "Approve payment to fraud-service-01",
+      "summary": "45.00 USDC on Base for fraud detection request #abc123",
+      "subjectDid": "did:afal:agent:payment-agent-01",
+      "humanVisibleFields": {
+        "payerAccountRef": "acct-agent-001",
+        "payeeDid": "did:afal:agent:fraud-service-01",
+        "asset": "USDC",
+        "amount": "45.00",
+        "chain": "base",
+        "purpose": "fraud detection request #abc123",
+        "mandateRef": "mnd-0001",
+        "policyRef": "cred-policy-0001",
+        "riskSignals": [
+          "new-counterparty",
+          "amount-above-challenge-threshold"
+        ]
+      },
+      "createdAt": "2026-03-24T12:05:06Z"
+    },
+    "approvalResult": {
+      "approvalResultId": "apr-0001",
+      "challengeRef": "chall-0001",
+      "actionRef": "payint-0001",
+      "result": "approved",
+      "approvedBy": "did:afal:owner:alice-01",
+      "approvalChannel": "trusted-surface:web",
+      "stepUpAuthUsed": true,
+      "comment": "First-time fraud provider is acceptable",
+      "approvalReceiptRef": "rcpt-approval-0001",
+      "decidedAt": "2026-03-24T12:07:00Z"
+    },
+    "finalDecision": {
+      "decisionId": "dec-0002",
+      "schemaVersion": "0.1",
+      "actionRef": "payint-0001",
+      "actionType": "payment",
+      "subjectDid": "did:afal:agent:payment-agent-01",
+      "mandateRef": "mnd-0001",
+      "policyRef": "cred-policy-0001",
+      "accountRef": "acct-agent-001",
+      "result": "approved",
+      "challengeState": "approved",
+      "reasonCode": "approved-via-trusted-surface",
+      "evaluatedAt": "2026-03-24T12:07:05Z",
+      "expiresAt": "2026-03-24T12:10:00Z",
+      "auditRef": "audit-0002"
+    },
+    "settlement": {
+      "settlementId": "stl-0001",
+      "schemaVersion": "0.1",
+      "settlementType": "onchain-transfer",
+      "actionRef": "payint-0001",
+      "decisionRef": "dec-0002",
+      "sourceAccountRef": "acct-agent-001",
+      "destination": {
+        "payeeDid": "did:afal:agent:fraud-service-01",
+        "settlementAddress": "0xFRAUDSERVICEPAYEE"
+      },
+      "asset": "USDC",
+      "amount": "45.00",
+      "chain": "base",
+      "txHash": "0xabc123paymenthash",
+      "status": "settled",
+      "executedAt": "2026-03-24T12:08:00Z",
+      "settledAt": "2026-03-24T12:08:10Z"
+    },
+    "approvalReceipt": {
+      "receiptId": "rcpt-approval-0001",
+      "schemaVersion": "0.1",
+      "receiptType": "approval",
+      "actionRef": "payint-0001",
+      "decisionRef": "dec-0002",
+      "status": "final",
+      "issuedAt": "2026-03-24T12:07:00Z",
+      "evidence": {
+        "challengeRef": "chall-0001",
+        "approvedBy": "did:afal:owner:alice-01",
+        "approvalChannel": "trusted-surface:web",
+        "comment": "First-time fraud provider is acceptable"
+      }
+    },
+    "paymentReceipt": {
+      "receiptId": "rcpt-pay-0001",
+      "schemaVersion": "0.1",
+      "receiptType": "payment",
+      "actionRef": "payint-0001",
+      "decisionRef": "dec-0002",
+      "settlementRef": "stl-0001",
+      "status": "final",
+      "issuedAt": "2026-03-24T12:08:12Z",
+      "evidence": {
+        "payerAccountRef": "acct-agent-001",
+        "payeeDid": "did:afal:agent:fraud-service-01",
+        "asset": "USDC",
+        "amount": "45.00",
+        "chain": "base",
+        "txHash": "0xabc123paymenthash"
+      }
+    },
+    "capabilityResponse": {
+      "responseId": "cap-0001",
+      "schemaVersion": "0.1",
+      "capability": "executePayment",
+      "requestRef": "req-0001",
+      "actionRef": "payint-0001",
+      "result": "approved",
+      "decisionRef": "dec-0002",
+      "challengeRef": "chall-0001",
+      "settlementRef": "stl-0001",
+      "receiptRef": "rcpt-pay-0001",
+      "message": "Payment intent approved, settled, and receipted",
+      "respondedAt": "2026-03-24T12:08:12Z"
+    },
+    "updatedBudget": {
+      "budgetId": "budg-money-001",
+      "budgetType": "monetary",
+      "subjectDid": "did:afal:agent:payment-agent-01",
+      "accountRef": "acct-agent-001",
+      "asset": "USDC",
+      "period": "daily",
+      "limitAmount": "1000.00",
+      "consumedAmount": "45.00",
+      "availableAmount": "955.00",
+      "status": "active",
+      "createdAt": "2026-03-24T12:00:00Z",
+      "updatedAt": "2026-03-24T12:08:10Z",
+      "reservedAmount": "0.00"
+    }
+  }
+}
