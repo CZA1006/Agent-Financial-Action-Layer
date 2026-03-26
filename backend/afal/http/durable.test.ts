@@ -104,6 +104,7 @@ test("durable AFAL HTTP router applies and resumes approval sessions across rest
       resumeResponse.body.capability === "resumeApprovalSession" &&
       "finalDecision" in resumeResponse.body.data
     ) {
+      assert.ok(resumeResponse.body.data.finalDecision);
       assert.equal(resumeResponse.body.data.finalDecision.result, "approved");
     } else {
       assert.fail("expected resumeApprovalSession success response");

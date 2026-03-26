@@ -60,6 +60,7 @@ function inferCapability(
   | "executePayment"
   | "requestResourceApproval"
   | "settleResourceUsage"
+  | "getActionStatus"
   | "getApprovalSession"
   | "applyApprovalResult"
   | "resumeApprovalSession"
@@ -72,6 +73,9 @@ function inferCapability(
   }
   if (pathname === AFAL_HTTP_ROUTES.requestResourceApproval) {
     return "requestResourceApproval";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.getActionStatus) {
+    return "getActionStatus";
   }
   if (pathname === AFAL_HTTP_ROUTES.getApprovalSession) {
     return "getApprovalSession";

@@ -1,0 +1,6 @@
+{
+  "requestRef": "req-action-status-payment-001",
+  "input": {
+    "actionRef": "payint-0001"
+  }
+}

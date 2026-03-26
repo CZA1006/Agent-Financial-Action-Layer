@@ -379,6 +379,150 @@
         }
       }
     },
+    "/actions/get": {
+      "post": {
+        "tags": [
+          "Actions"
+        ],
+        "operationId": "getActionStatus",
+        "summary": "Read the latest AFAL action status for a payment or resource action",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetActionStatusHttpRequest"
+              },
+              "examples": {
+                "canonical-get-payment-action-status": {
+                  "value": {
+                    "requestRef": "req-action-status-payment-001",
+                    "input": {
+                      "actionRef": "payint-0001"
+                    }
+                  }
+                },
+                "canonical-get-resource-action-status": {
+                  "value": {
+                    "requestRef": "req-action-status-resource-001",
+                    "input": {
+                      "actionRef": "resint-0001"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "AFAL action status resolved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetActionStatusSuccessResponse"
+                },
+                "examples": {
+                  "payment-status": {
+                    "value": {
+                      "ok": true,
+                      "capability": "getActionStatus",
+                      "requestRef": "req-action-status-payment-001",
+                      "statusCode": 200,
+                      "data": {
+                        "actionType": "payment",
+                        "intent": {
+                          "intentId": "payint-0001",
+                          "status": "settled",
+                          "settlementRef": "stl-0001",
+                          "receiptRef": "rcpt-pay-0001"
+                        },
+                        "finalDecision": {
+                          "decisionId": "dec-0002",
+                          "result": "approved"
+                        },
+                        "settlement": {
+                          "settlementId": "stl-0001",
+                          "status": "settled"
+                        },
+                        "approvalReceipt": {
+                          "receiptId": "rcpt-approval-0001",
+                          "receiptType": "approval",
+                          "status": "final"
+                        },
+                        "paymentReceipt": {
+                          "receiptId": "rcpt-pay-0001",
+                          "receiptType": "payment",
+                          "status": "final"
+                        },
+                        "capabilityResponse": {
+                          "responseId": "resp-generated-0002",
+                          "capability": "resumeApprovedAction",
+                          "result": "approved"
+                        }
+                      }
+                    }
+                  },
+                  "resource-status": {
+                    "value": {
+                      "ok": true,
+                      "capability": "getActionStatus",
+                      "requestRef": "req-action-status-resource-001",
+                      "statusCode": 200,
+                      "data": {
+                        "actionType": "resource",
+                        "intent": {
+                          "intentId": "resint-0001",
+                          "status": "settled",
+                          "usageReceiptRef": "usage-1001",
+                          "settlementRef": "stl-1001"
+                        },
+                        "finalDecision": {
+                          "decisionId": "dec-1002",
+                          "result": "approved"
+                        },
+                        "usageConfirmation": {
+                          "usageReceiptRef": "usage-1001",
+                          "quantity": 500000
+                        },
+                        "settlement": {
+                          "settlementId": "stl-1001",
+                          "status": "settled"
+                        },
+                        "approvalReceipt": {
+                          "receiptId": "rcpt-approval-1001",
+                          "receiptType": "approval",
+                          "status": "final"
+                        },
+                        "resourceReceipt": {
+                          "receiptId": "rcpt-res-1001",
+                          "receiptType": "resource",
+                          "status": "final"
+                        },
+                        "capabilityResponse": {
+                          "responseId": "resp-generated-0002",
+                          "capability": "resumeApprovedAction",
+                          "result": "approved"
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
     "/approval-sessions/get": {
       "post": {
         "tags": [
@@ -815,6 +959,31 @@
       },
       "RequestResourceApprovalHttpRequest": {
         "$ref": "#/components/schemas/SettleResourceUsageHttpRequest"
+      },
+      "GetActionStatusHttpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "input"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "actionRef"
+            ],
+            "properties": {
+              "actionRef": {
+                "$ref": "#/components/schemas/IdRef"
+              }
+            }
+          }
+        }
       },
       "GetApprovalSessionHttpRequest": {
         "type": "object",
@@ -1440,6 +1609,7 @@
               "executePayment",
               "requestResourceApproval",
               "settleResourceUsage",
+              "getActionStatus",
               "getApprovalSession",
               "applyApprovalResult",
               "resumeApprovalSession",
@@ -2426,6 +2596,111 @@
           },
           "updatedQuota": {
             "$ref": "#/components/schemas/ResourceQuota"
+          }
+        }
+      },
+      "PaymentActionStatusOutput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "actionType",
+          "intent"
+        ],
+        "properties": {
+          "actionType": {
+            "type": "string",
+            "const": "payment"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/PaymentIntent"
+          },
+          "finalDecision": {
+            "$ref": "#/components/schemas/AuthorizationDecision"
+          },
+          "settlement": {
+            "$ref": "#/components/schemas/SettlementRecord"
+          },
+          "approvalReceipt": {
+            "$ref": "#/components/schemas/ActionReceipt"
+          },
+          "paymentReceipt": {
+            "$ref": "#/components/schemas/ActionReceipt"
+          },
+          "capabilityResponse": {
+            "$ref": "#/components/schemas/CapabilityResponse"
+          }
+        }
+      },
+      "ResourceActionStatusOutput": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "actionType",
+          "intent"
+        ],
+        "properties": {
+          "actionType": {
+            "type": "string",
+            "const": "resource"
+          },
+          "intent": {
+            "$ref": "#/components/schemas/ResourceIntent"
+          },
+          "finalDecision": {
+            "$ref": "#/components/schemas/AuthorizationDecision"
+          },
+          "usageConfirmation": {
+            "$ref": "#/components/schemas/ProviderUsageConfirmation"
+          },
+          "settlement": {
+            "$ref": "#/components/schemas/SettlementRecord"
+          },
+          "approvalReceipt": {
+            "$ref": "#/components/schemas/ActionReceipt"
+          },
+          "resourceReceipt": {
+            "$ref": "#/components/schemas/ActionReceipt"
+          },
+          "capabilityResponse": {
+            "$ref": "#/components/schemas/CapabilityResponse"
+          }
+        }
+      },
+      "GetActionStatusSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "getActionStatus"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "oneOf": [
+              {
+                "$ref": "#/components/schemas/PaymentActionStatusOutput"
+              },
+              {
+                "$ref": "#/components/schemas/ResourceActionStatusOutput"
+              }
+            ]
           }
         }
       },

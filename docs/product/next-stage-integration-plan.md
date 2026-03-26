@@ -28,7 +28,7 @@ It assumes the current repo already has:
 
 AFAL's current stage is:
 
-- **Phase 1 integration-ready runtime, initial multi-flow runtime-agent harness**
+- **Phase 1 integration-ready runtime, bilateral multi-flow runtime-agent harness**
 
 What that means in practical terms:
 
@@ -40,7 +40,7 @@ What that means in practical terms:
 - AFAL can expose top-level pending approval requests
 - post-approval execution can resume into settlement and receipt generation
 - local HTTP demos, SQLite HTTP demos, and local acceptance pass
-- first runtime-agent harnesses can drive canonical payment and resource approval flows through independent agent subprocesses
+- bilateral runtime-agent harnesses can drive canonical payment and resource approval flows through independent agent subprocesses
 
 What this stage still is **not**:
 
@@ -156,7 +156,7 @@ Current progress:
 
 - Workstream 1 is in place for Phase 1 callback-and-resume behavior and includes a minimal trusted-surface stub.
 - Workstream 2 is in place for the first integration-critical SQLite slice.
-- Workstream 3 has started with payment and resource runtime-agent harnesses.
+- Workstream 3 has started with payment and resource runtime-agent harnesses, including bilateral payee/provider-side confirmation.
 
 ---
 

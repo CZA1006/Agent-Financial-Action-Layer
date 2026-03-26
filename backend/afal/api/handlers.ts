@@ -10,6 +10,8 @@ import type {
   AfalCapabilityRequest,
   AfalCapabilityResponse,
   ApplyApprovalResultResponse,
+  GetActionStatusRequest,
+  GetActionStatusResponse,
   GetApprovalSessionRequest,
   GetApprovalSessionResponse,
   RequestPaymentApprovalRequest,
@@ -94,6 +96,29 @@ export async function handleRequestResourceApproval(
 ): Promise<RequestResourceApprovalResponse> {
   try {
     const data = await service.requestResourceApproval({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleGetActionStatus(
+  request: GetActionStatusRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<GetActionStatusResponse> {
+  try {
+    const data = await service.getActionStatus({
       capability: request.capability,
       requestRef: request.requestRef,
       input: request.input,
@@ -229,6 +254,8 @@ export function createAfalApiHandlers(args?: {
       handleSettleResourceUsage(request, resourceOrchestrator),
     handleRequestResourceApproval: (request: RequestResourceApprovalRequest) =>
       handleRequestResourceApproval(request, runtime),
+    handleGetActionStatus: (request: GetActionStatusRequest) =>
+      handleGetActionStatus(request, runtime),
     handleGetApprovalSession: (request: GetApprovalSessionRequest) =>
       handleGetApprovalSession(request, runtime),
     handleApplyApprovalResult: (request: ApplyApprovalResultRequest) =>
@@ -249,6 +276,9 @@ export function createAfalApiHandlers(args?: {
       }
       if (request.capability === "requestResourceApproval") {
         return handleRequestResourceApproval(request, runtime);
+      }
+      if (request.capability === "getActionStatus") {
+        return handleGetActionStatus(request, runtime);
       }
       if (request.capability === "getApprovalSession") {
         return handleGetApprovalSession(request, runtime);

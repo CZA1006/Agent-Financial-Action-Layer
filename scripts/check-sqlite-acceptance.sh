@@ -38,7 +38,9 @@ run_step "sqlite integration demo" npm run demo:sqlite -- "$TMP_ROOT/sqlite-runt
 if [ "$SKIP_HTTP" -eq 0 ]; then
   run_step "sqlite http payment demo" env AFAL_SQLITE_HTTP_DATA_DIR="$TMP_ROOT/sqlite-http" npm run demo:http-sqlite
   run_step "runtime-agent payment harness" npm run demo:agent-payment -- --data-dir "$TMP_ROOT/agent-harness"
+  run_step "bilateral payment harness" npm run demo:agent-payment-bilateral -- --data-dir "$TMP_ROOT/agent-harness-bilateral-payment"
   run_step "runtime-agent resource harness" npm run demo:agent-resource -- --data-dir "$TMP_ROOT/agent-harness-resource"
+  run_step "bilateral resource harness" npm run demo:agent-resource-bilateral -- --data-dir "$TMP_ROOT/agent-harness-bilateral-resource"
 else
   echo
   echo "[accept:sqlite] skipping sqlite HTTP demos and runtime-agent harness"

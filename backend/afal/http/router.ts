@@ -10,6 +10,7 @@ import type {
   AfalHttpResponse,
   AfalHttpResponseBody,
   ExecutePaymentHttpBody,
+  GetActionStatusHttpBody,
   GetApprovalSessionHttpBody,
   ResumeApprovedActionHttpBody,
   ResumeApprovalSessionHttpBody,
@@ -33,6 +34,7 @@ function buildTransportError(args: {
     | "executePayment"
     | "requestResourceApproval"
     | "settleResourceUsage"
+    | "getActionStatus"
     | "getApprovalSession"
     | "applyApprovalResult"
     | "resumeApprovalSession"
@@ -82,6 +84,15 @@ function isGetApprovalSessionBody(body: unknown): body is GetApprovalSessionHttp
     typeof body.requestRef === "string" &&
     isObjectRecord(body.input) &&
     typeof body.input.approvalSessionRef === "string"
+  );
+}
+
+function isGetActionStatusBody(body: unknown): body is GetActionStatusHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    isObjectRecord(body.input) &&
+    typeof body.input.actionRef === "string"
   );
 }
 
@@ -319,6 +330,39 @@ export function createAfalHttpRouter(args?: {
 
         const response = await apiHandlers.handleRequestResourceApproval({
           capability: "requestResourceApproval",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.getActionStatus) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getActionStatus",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "getActionStatus transport only supports POST",
+            })
+          );
+        }
+        if (!isGetActionStatusBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getActionStatus",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "getActionStatus request body must include requestRef and input.actionRef",
+            })
+          );
+        }
+        const response = await apiHandlers.handleGetActionStatus({
+          capability: "getActionStatus",
           requestRef: request.body.requestRef,
           input: request.body.input,
         });

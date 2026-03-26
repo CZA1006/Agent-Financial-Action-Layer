@@ -6,6 +6,8 @@ import type {
   AfalCapabilityRequest,
   AfalCapabilityResponse,
   ApplyApprovalResultResponse,
+  GetActionStatusRequest,
+  GetActionStatusResponse,
   GetApprovalSessionRequest,
   GetApprovalSessionResponse,
   RequestPaymentApprovalRequest,
@@ -34,6 +36,7 @@ export interface AfalApiServiceAdapter {
   handleSettleResourceUsage(
     request: ResourceCapabilityRequest
   ): Promise<ResourceCapabilityResponse>;
+  handleGetActionStatus(request: GetActionStatusRequest): Promise<GetActionStatusResponse>;
   handleGetApprovalSession(
     request: GetApprovalSessionRequest
   ): Promise<GetApprovalSessionResponse>;
@@ -113,6 +116,25 @@ export function createAfalApiServiceAdapter(
     handleRequestResourceApproval: async (request) => {
       try {
         const data = await service.requestResourceApproval({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleGetActionStatus: async (request) => {
+      try {
+        const data = await service.getActionStatus({
           capability: request.capability,
           requestRef: request.requestRef,
           input: request.input,

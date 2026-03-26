@@ -8,6 +8,7 @@ import {
   createAfalApiHandlers,
   handleApplyApprovalResult,
   handleExecutePayment,
+  handleGetActionStatus,
   handleGetApprovalSession,
   handleRequestPaymentApproval,
   handleRequestResourceApproval,
@@ -262,6 +263,59 @@ describe("AFAL API adapter", () => {
     }
     if (resumedActionResponse.ok) {
       assert.equal(resumedActionResponse.data.finalDecision.result, "approved");
+    }
+  });
+
+  test("returns a success envelope for getActionStatus after resuming a payment action", async () => {
+    const runtime = createAfalRuntimeService();
+    const pending = await runtime.requestPaymentApproval({
+      capability: "requestPaymentApproval",
+      requestRef: "req-afal-action-status-payment-001",
+      input: {
+        requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+        intent: paymentFlowFixtures.paymentIntentCreated,
+        monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+      },
+    });
+    await runtime.applyApprovalResult({
+      capability: "applyApprovalResult",
+      requestRef: "req-afal-action-status-apply-001",
+      input: {
+        approvalSessionRef: pending.approvalSession.approvalSessionId,
+        result: paymentFlowFixtures.approvalResult,
+      },
+    });
+    await runtime.resumeApprovedAction({
+      capability: "resumeApprovedAction",
+      requestRef: "req-afal-action-status-resume-001",
+      input: {
+        approvalSessionRef: pending.approvalSession.approvalSessionId,
+      },
+    });
+
+    const response = await handleGetActionStatus(
+      {
+        capability: "getActionStatus",
+        requestRef: "req-afal-action-status-read-001",
+        input: {
+          actionRef: pending.intent.intentId,
+        },
+      },
+      runtime
+    );
+
+    assert.equal(response.ok, true);
+    if (response.ok) {
+      assert.equal(response.data.actionType, "payment");
+      assert.equal(response.data.intent.status, "settled");
+      assert.equal(
+        response.data.settlement?.settlementId,
+        paymentFlowFixtures.settlementRecord.settlementId
+      );
+      assert.equal(
+        response.data.paymentReceipt?.receiptId,
+        paymentFlowFixtures.paymentReceipt.receiptId
+      );
     }
   });
 });

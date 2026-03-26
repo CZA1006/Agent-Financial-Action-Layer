@@ -108,4 +108,18 @@ test("AFAL API service adapter delegates approval session lifecycle through the 
   if (resumedAction.ok) {
     assert.equal(resumedAction.data.finalDecision.result, "approved");
   }
+
+  const actionStatus = await adapter.handleGetActionStatus({
+    capability: "getActionStatus",
+    requestRef: "req-afal-action-status-001",
+    input: {
+      actionRef: pending.intent.intentId,
+    },
+  });
+
+  assert.equal(actionStatus.ok, true);
+  if (actionStatus.ok) {
+    assert.equal(actionStatus.data.actionType, "payment");
+    assert.equal(actionStatus.data.intent.status, "settled");
+  }
 });

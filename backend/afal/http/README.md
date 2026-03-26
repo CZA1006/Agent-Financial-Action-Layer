@@ -14,6 +14,7 @@
 - `POST /capabilities/execute-payment`
 - `POST /capabilities/request-resource-approval`
 - `POST /capabilities/settle-resource-usage`
+- `POST /actions/get`
 - `POST /approval-sessions/get`
 - `POST /approval-sessions/apply-result`
 - `POST /approval-sessions/resume`
@@ -29,6 +30,7 @@
 - request validation is intentionally minimal: method, path, request body shape, and `requestRef` consistency
 - successful responses pass through the API adapter payloads and status codes
 - `request-payment-approval` and `request-resource-approval` now expose top-level `pending-approval` capability responses without forcing inline settlement
+- `actions/get` exposes a minimal read-side action status surface so payee/provider-side agents can independently confirm final settlement state
 - `resume-approved-action` resumes a persisted approved action into final settlement, receipt creation, and capability response creation
 - `durable.ts` wires the same router contract to the seeded local durable AFAL runtime
 - `sqlite.ts` wires the same router contract to the seeded SQLite-backed AFAL integration runtime

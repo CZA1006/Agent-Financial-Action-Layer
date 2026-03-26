@@ -3,6 +3,7 @@ import type { PaymentFlowInput, ResourceFlowInput } from "../interfaces";
 import type {
   AfalApiFailure,
   ApplyApprovalResultResponse,
+  GetActionStatusResponse,
   GetApprovalSessionResponse,
   RequestPaymentApprovalResponse,
   PaymentCapabilityResponse,
@@ -17,6 +18,7 @@ export const AFAL_HTTP_ROUTES = {
   executePayment: "/capabilities/execute-payment",
   requestResourceApproval: "/capabilities/request-resource-approval",
   settleResourceUsage: "/capabilities/settle-resource-usage",
+  getActionStatus: "/actions/get",
   getApprovalSession: "/approval-sessions/get",
   applyApprovalResult: "/approval-sessions/apply-result",
   resumeApprovalSession: "/approval-sessions/resume",
@@ -52,6 +54,13 @@ export interface GetApprovalSessionHttpBody {
   };
 }
 
+export interface GetActionStatusHttpBody {
+  requestRef: string;
+  input: {
+    actionRef: string;
+  };
+}
+
 export interface ApplyApprovalResultHttpBody {
   requestRef: string;
   input: {
@@ -79,6 +88,7 @@ export type AfalHttpBody =
   | ExecutePaymentHttpBody
   | RequestResourceApprovalHttpBody
   | SettleResourceUsageHttpBody
+  | GetActionStatusHttpBody
   | GetApprovalSessionHttpBody
   | ApplyApprovalResultHttpBody
   | ResumeApprovalSessionHttpBody
@@ -103,6 +113,7 @@ export type AfalHttpSuccessBody =
   | PaymentCapabilityResponse
   | RequestResourceApprovalResponse
   | ResourceCapabilityResponse
+  | GetActionStatusResponse
   | GetApprovalSessionResponse
   | ApplyApprovalResultResponse
   | ResumeApprovalSessionResponse

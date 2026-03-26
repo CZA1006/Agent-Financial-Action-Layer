@@ -70,6 +70,7 @@ test("exports the AFAL OpenAPI draft to stable YAML and JSON artifacts", () => {
   assert.equal(document.openapi, "3.1.0");
   assert.equal(document.info.title, "AFAL Phase 1 HTTP Capability Contract");
   assert.deepEqual(Object.keys(document.paths).sort(), [
+    "/actions/get",
     "/approval-sessions/apply-result",
     "/approval-sessions/get",
     "/approval-sessions/resume",
@@ -84,10 +85,14 @@ test("exports the AFAL OpenAPI draft to stable YAML and JSON artifacts", () => {
   assert.ok(document.components.schemas.ExecutePaymentHttpRequest);
   assert.ok(document.components.schemas.RequestResourceApprovalHttpRequest);
   assert.ok(document.components.schemas.SettleResourceUsageHttpRequest);
+  assert.ok(document.components.schemas.GetActionStatusHttpRequest);
   assert.ok(document.components.schemas.GetApprovalSessionHttpRequest);
   assert.ok(document.components.schemas.ApplyApprovalResultHttpRequest);
   assert.ok(document.components.schemas.ResumeApprovalSessionHttpRequest);
   assert.ok(document.components.schemas.ResumeApprovedActionHttpRequest);
+  assert.ok(document.components.schemas.PaymentActionStatusOutput);
+  assert.ok(document.components.schemas.ResourceActionStatusOutput);
+  assert.ok(document.components.schemas.GetActionStatusSuccessResponse);
   assert.ok(document.components.schemas.PaymentApprovalRequestOutput);
   assert.ok(document.components.schemas.PaymentFlowOutput);
   assert.ok(document.components.schemas.ResourceApprovalRequestOutput);

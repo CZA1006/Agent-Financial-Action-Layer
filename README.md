@@ -14,13 +14,13 @@ Together, these modules form the substrate for agent financial actions across pa
 AFAL is no longer just a whitepaper or schema set.
 
 Current stage:
-- **Phase 1 integration-ready runtime, initial multi-flow runtime-agent harness**
+- **Phase 1 integration-ready runtime, bilateral multi-flow runtime-agent harness**
 - docs/specs/contracts are frozen enough to demo
 - AIP / ATS / AMN / AFAL runtime all run in seeded durable local mode
 - top-level approval requests, trusted-surface callback persistence, and post-approval resume-to-settlement are all wired end to end
 - ATS, AMN approval state, and AFAL intent state now also run in a seeded SQLite-backed integration mode
 - the same SQLite-backed integration slice is now reachable through the AFAL HTTP contract
-- a first runtime-agent harness now drives both payment and resource callback-and-resume flows through independent agent processes
+- bilateral runtime-agent harnesses now drive both payment and resource callback-and-resume flows through independent agent processes
 
 The repo now includes:
 - frozen Phase 1 schemas and canonical examples
@@ -33,14 +33,14 @@ The repo now includes:
 - local durable mode backed by JSON file stores
 - initial SQLite-backed integration mode for ATS, AMN approval state, and AFAL intent state
 - SQLite-backed AFAL HTTP runtime, server shell, demo, and acceptance path
-- minimal runtime-agent harnesses over the SQLite-backed AFAL HTTP contract
+- bilateral runtime-agent harnesses over the SQLite-backed AFAL HTTP contract
 - OpenAPI draft, stable publish artifacts, snapshot releases, and preview UI
 - automated verification across runtime, API, HTTP, OpenAPI export, and durable persistence
 
 Current validated state:
 - `npm run typecheck` passes
 - `npm run test:mock` passes
-- the test suite currently contains `129` passing tests
+- the test suite currently contains `133` passing tests
 - both canonical flows run in:
   - seeded in-memory mode
   - seeded local durable mode
@@ -76,7 +76,9 @@ npm run demo:http-async
 npm run demo:http-payment
 npm run demo:http-sqlite
 npm run demo:agent-payment
+npm run demo:agent-payment-bilateral
 npm run demo:agent-resource
+npm run demo:agent-resource-bilateral
 npm run export:openapi
 ```
 
@@ -189,7 +191,7 @@ Already real in local development terms:
 - persisted pending executions that can resume approved actions into settlement and receipts
 - state transitions for identity, budget, mandate, intent, settlement, and receipts
 - HTTP capability routing and OpenAPI publication pipeline
-- first runtime-agent harnesses that exercise AFAL through independent subprocess roles
+- bilateral runtime-agent harnesses that exercise AFAL through independent subprocess roles
 
 Still intentionally not production-real:
 - real database backend
@@ -233,8 +235,10 @@ What these do:
 - `demo:http-async` runs the async payment path end to end: request approval, trusted-surface stub callback, then resume the approved action into settlement
 - `demo:http-payment` runs the canonical payment request through the durable HTTP layer and writes state to `.afal-durable-http-data/`
 - `demo:http-sqlite` runs the canonical payment request through the SQLite-backed HTTP layer and writes state to `.afal-sqlite-http-data/`
-- `demo:agent-payment` runs a minimal runtime-agent harness over the SQLite-backed HTTP layer: one `payer-agent` creates a pending approval session and one `approval-agent` completes callback-and-resume into settlement
-- `demo:agent-resource` runs the same runtime-agent pattern for the canonical resource approval flow
+- `demo:agent-payment` runs the requester-side payment harness over the SQLite-backed HTTP layer: one `payer-agent` creates a pending approval session and one `approval-agent` completes callback-and-resume into settlement
+- `demo:agent-payment-bilateral` extends that payment harness with a `payee-agent` that independently confirms the final settled action over AFAL's HTTP query surface
+- `demo:agent-resource` runs the requester-side resource harness for the canonical resource approval flow
+- `demo:agent-resource-bilateral` extends that resource harness with a `provider-agent` that independently confirms final usage and settlement over AFAL's HTTP query surface
 - `demo:http-resource` starts the durable HTTP server, sends the canonical resource request, compares the response with the sample file, and prints the response
 
 Trusted-surface stub:
@@ -499,7 +503,7 @@ npm run accept:sqlite
 - `backend/afal/service/` — AFAL runtime and durable runtime wiring
 - `backend/afal/api/` — capability request/response adapter
 - `backend/afal/http/` — framework-free HTTP contract and durable server shell
-- `agents/test-harness/` — initial payment/resource runtime-agent harnesses over the AFAL HTTP contract
+- `agents/test-harness/` — bilateral payment/resource runtime-agent harnesses over the AFAL HTTP contract
 
 ## Key Documents
 

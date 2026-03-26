@@ -1,5 +1,6 @@
 import type { ApprovalResult } from "../../../sdk/types";
 import type {
+  ActionStatusOutput,
   PaymentFlowInput,
   PaymentFlowOutput,
   PaymentApprovalRequestOutput,
@@ -18,6 +19,7 @@ export type AfalCapability =
   | "executePayment"
   | "requestResourceApproval"
   | "settleResourceUsage"
+  | "getActionStatus"
   | "getApprovalSession"
   | "applyApprovalResult"
   | "resumeApprovalSession"
@@ -55,6 +57,14 @@ export interface GetApprovalSessionRequest {
   };
 }
 
+export interface GetActionStatusRequest {
+  capability: "getActionStatus";
+  requestRef: string;
+  input: {
+    actionRef: string;
+  };
+}
+
 export interface ApplyApprovalResultRequest {
   capability: "applyApprovalResult";
   requestRef: string;
@@ -85,6 +95,7 @@ export type AfalCapabilityRequest =
   | PaymentCapabilityRequest
   | RequestResourceApprovalRequest
   | ResourceCapabilityRequest
+  | GetActionStatusRequest
   | GetApprovalSessionRequest
   | ApplyApprovalResultRequest
   | ResumeApprovalSessionRequest
@@ -127,6 +138,7 @@ export type RequestResourceApprovalResponse =
   | AfalApiSuccess<ResourceApprovalRequestOutput>
   | AfalApiFailure;
 export type ResourceCapabilityResponse = AfalApiSuccess<ResourceFlowOutput> | AfalApiFailure;
+export type GetActionStatusResponse = AfalApiSuccess<ActionStatusOutput> | AfalApiFailure;
 export type GetApprovalSessionResponse =
   | AfalApiSuccess<Awaited<ReturnType<import("../service").AfalModuleService["getApprovalSession"]>>>
   | AfalApiFailure;
@@ -145,6 +157,7 @@ export type AfalCapabilityResponse =
       | PaymentApprovalRequestOutput
       | ResourceFlowOutput
       | ResourceApprovalRequestOutput
+      | ActionStatusOutput
       | Awaited<ReturnType<import("../service").AfalModuleService["getApprovalSession"]>>
       | ApplyApprovalResultOutput
       | ResumeApprovalSessionOutput

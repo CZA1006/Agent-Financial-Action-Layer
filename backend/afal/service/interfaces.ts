@@ -1,4 +1,5 @@
 import type {
+  ActionStatusOutput,
   PaymentFlowInput,
   PaymentFlowOutput,
   PaymentApprovalRequestOutput,
@@ -20,6 +21,7 @@ export type AfalServiceCapability =
   | "requestResourceApproval"
   | "executePayment"
   | "settleResourceUsage"
+  | "getActionStatus"
   | "getApprovalSession"
   | "applyApprovalResult"
   | "resumeApprovalSession"
@@ -57,6 +59,14 @@ export interface GetApprovalSessionCommand {
   };
 }
 
+export interface GetActionStatusCommand {
+  capability: "getActionStatus";
+  requestRef: string;
+  input: {
+    actionRef: IdRef;
+  };
+}
+
 export interface ApplyApprovalResultCommand {
   capability: "applyApprovalResult";
   requestRef: string;
@@ -87,6 +97,7 @@ export type AfalServiceCommand =
   | ExecutePaymentCommand
   | RequestResourceApprovalCommand
   | SettleResourceUsageCommand
+  | GetActionStatusCommand
   | GetApprovalSessionCommand
   | ApplyApprovalResultCommand
   | ResumeApprovalSessionCommand
@@ -110,6 +121,7 @@ export type AfalServiceResult =
   | PaymentFlowOutput
   | ResourceApprovalRequestOutput
   | ResourceFlowOutput
+  | ActionStatusOutput
   | ApprovalSession
   | ApplyApprovalResultOutput
   | ResumeApprovalSessionOutput
@@ -124,6 +136,7 @@ export interface AfalModuleService {
     command: RequestResourceApprovalCommand
   ): Promise<ResourceApprovalRequestOutput>;
   settleResourceUsage(command: SettleResourceUsageCommand): Promise<ResourceFlowOutput>;
+  getActionStatus(command: GetActionStatusCommand): Promise<ActionStatusOutput>;
   getApprovalSession(command: GetApprovalSessionCommand): Promise<ApprovalSession>;
   applyApprovalResult(command: ApplyApprovalResultCommand): Promise<ApplyApprovalResultOutput>;
   resumeApprovalSession(

@@ -248,6 +248,29 @@ export interface ResourceApprovalRequestOutput {
   updatedQuota: ResourceQuota;
 }
 
+export interface PaymentActionStatusOutput {
+  actionType: "payment";
+  intent: PaymentIntent;
+  finalDecision?: AuthorizationDecision;
+  settlement?: SettlementRecord;
+  approvalReceipt?: ActionReceipt;
+  paymentReceipt?: ActionReceipt;
+  capabilityResponse?: CapabilityResponse;
+}
+
+export interface ResourceActionStatusOutput {
+  actionType: "resource";
+  intent: ResourceIntent;
+  finalDecision?: AuthorizationDecision;
+  usageConfirmation?: ProviderUsageConfirmation;
+  settlement?: SettlementRecord;
+  approvalReceipt?: ActionReceipt;
+  resourceReceipt?: ActionReceipt;
+  capabilityResponse?: CapabilityResponse;
+}
+
+export type ActionStatusOutput = PaymentActionStatusOutput | ResourceActionStatusOutput;
+
 export type ResumeApprovedActionOutput = PaymentFlowOutput | ResourceFlowOutput;
 
 export interface PaymentFlowOrchestrator {

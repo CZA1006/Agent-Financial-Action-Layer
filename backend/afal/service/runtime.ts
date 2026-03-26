@@ -6,7 +6,10 @@ import {
 } from "../../../sdk/fixtures";
 import type { IdRef, PaymentIntent, ResourceIntent } from "../../../sdk/types";
 import type { AtsAdminPort } from "../../ats";
+import type { OutputAdminPort } from "../outputs";
+import type { SettlementAdminPort } from "../settlement";
 import type {
+  ActionStatusOutput,
   AfalOrchestrationPorts,
   PaymentFlowInput,
   PaymentFlowOrchestrator,
@@ -23,10 +26,11 @@ import type {
   ApplyApprovalResultCommand,
   AfalServiceCommand,
   AfalServiceResult,
+  ExecutePaymentCommand,
+  GetActionStatusCommand,
+  GetApprovalSessionCommand,
   RequestPaymentApprovalCommand,
   RequestResourceApprovalCommand,
-  ExecutePaymentCommand,
-  GetApprovalSessionCommand,
   ResumeApprovalSessionCommand,
   ResumeApprovedActionCommand,
   SettleResourceUsageCommand,
@@ -36,6 +40,7 @@ import {
   createMockPaymentFlowOrchestrator,
   createMockResourceFlowOrchestrator,
 } from "../mock";
+import type { CapabilityResponse } from "../../../sdk/types";
 
 export interface AfalRuntimeServiceOptions {
   ports?: AfalOrchestrationPorts;
@@ -132,6 +137,53 @@ function canReleaseResourceReservation(
     "releaseResourceReservation" in port &&
     typeof port.releaseResourceReservation === "function"
   );
+}
+
+function canListReceipts(
+  port: AfalOrchestrationPorts["receipts"]
+): port is AfalOrchestrationPorts["receipts"] & Pick<OutputAdminPort, "listReceipts"> {
+  return "listReceipts" in port && typeof port.listReceipts === "function";
+}
+
+function canListCapabilityResponses(
+  port: AfalOrchestrationPorts["capabilityResponses"]
+): port is AfalOrchestrationPorts["capabilityResponses"] &
+  Pick<OutputAdminPort, "listCapabilityResponses"> {
+  return (
+    "listCapabilityResponses" in port && typeof port.listCapabilityResponses === "function"
+  );
+}
+
+function canGetSettlement(
+  port: AfalOrchestrationPorts["paymentSettlement"] | AfalOrchestrationPorts["resourceSettlement"]
+): port is (AfalOrchestrationPorts["paymentSettlement"] | AfalOrchestrationPorts["resourceSettlement"]) &
+  Pick<SettlementAdminPort, "getSettlement"> {
+  return "getSettlement" in port && typeof port.getSettlement === "function";
+}
+
+function canGetUsageConfirmation(
+  port: AfalOrchestrationPorts["resourceSettlement"]
+): port is AfalOrchestrationPorts["resourceSettlement"] &
+  Pick<SettlementAdminPort, "getUsageConfirmation"> {
+  return "getUsageConfirmation" in port && typeof port.getUsageConfirmation === "function";
+}
+
+function isUnknownIntentError(error: unknown): boolean {
+  return (
+    error instanceof Error &&
+    (error.message.includes("Unknown payment intent") ||
+      error.message.includes("Unknown resource intent"))
+  );
+}
+
+function selectLatestCapabilityResponse(
+  entries: CapabilityResponse[]
+): CapabilityResponse | undefined {
+  return [...entries].sort((left, right) => {
+    const leftValue = left.respondedAt ?? "";
+    const rightValue = right.respondedAt ?? "";
+    return rightValue.localeCompare(leftValue);
+  })[0];
 }
 
 export class AfalRuntimeService
@@ -334,6 +386,28 @@ export class AfalRuntimeService
     return this.executeResourceSettlementFlow(command.input);
   }
 
+  async getActionStatus(command: GetActionStatusCommand): Promise<ActionStatusOutput> {
+    try {
+      const intent = await this.ports.intents.getPaymentIntent(command.input.actionRef);
+      return this.buildPaymentActionStatus(intent);
+    } catch (error) {
+      if (!isUnknownIntentError(error)) {
+        throw error;
+      }
+    }
+
+    try {
+      const intent = await this.ports.intents.getResourceIntent(command.input.actionRef);
+      return this.buildResourceActionStatus(intent);
+    } catch (error) {
+      if (!isUnknownIntentError(error)) {
+        throw error;
+      }
+    }
+
+    throw new Error(`Unknown actionRef "${command.input.actionRef}"`);
+  }
+
   async getApprovalSession(command: GetApprovalSessionCommand) {
     return this.ports.amn.getApprovalSession(command.input.approvalSessionRef);
   }
@@ -378,6 +452,62 @@ export class AfalRuntimeService
       approvalContext,
       ...resumed,
     });
+  }
+
+  private async buildPaymentActionStatus(intent: PaymentIntent): Promise<ActionStatusOutput> {
+    const receipts = canListReceipts(this.ports.receipts)
+      ? (await this.ports.receipts.listReceipts()).filter((receipt) => receipt.actionRef === intent.intentId)
+      : [];
+    const capabilityResponses = canListCapabilityResponses(this.ports.capabilityResponses)
+      ? (
+          await this.ports.capabilityResponses.listCapabilityResponses()
+        ).filter((response) => response.actionRef === intent.intentId)
+      : [];
+
+    return {
+      actionType: "payment",
+      intent,
+      finalDecision: intent.decisionRef
+        ? await this.ports.amn.getDecision(intent.decisionRef)
+        : undefined,
+      settlement:
+        intent.settlementRef && canGetSettlement(this.ports.paymentSettlement)
+          ? await this.ports.paymentSettlement.getSettlement(intent.settlementRef)
+          : undefined,
+      approvalReceipt: receipts.find((receipt) => receipt.receiptType === "approval"),
+      paymentReceipt: receipts.find((receipt) => receipt.receiptType === "payment"),
+      capabilityResponse: selectLatestCapabilityResponse(capabilityResponses),
+    };
+  }
+
+  private async buildResourceActionStatus(intent: ResourceIntent): Promise<ActionStatusOutput> {
+    const receipts = canListReceipts(this.ports.receipts)
+      ? (await this.ports.receipts.listReceipts()).filter((receipt) => receipt.actionRef === intent.intentId)
+      : [];
+    const capabilityResponses = canListCapabilityResponses(this.ports.capabilityResponses)
+      ? (
+          await this.ports.capabilityResponses.listCapabilityResponses()
+        ).filter((response) => response.actionRef === intent.intentId)
+      : [];
+
+    return {
+      actionType: "resource",
+      intent,
+      finalDecision: intent.decisionRef
+        ? await this.ports.amn.getDecision(intent.decisionRef)
+        : undefined,
+      usageConfirmation:
+        intent.usageReceiptRef && canGetUsageConfirmation(this.ports.resourceSettlement)
+          ? await this.ports.resourceSettlement.getUsageConfirmation(intent.usageReceiptRef)
+          : undefined,
+      settlement:
+        intent.settlementRef && canGetSettlement(this.ports.resourceSettlement)
+          ? await this.ports.resourceSettlement.getSettlement(intent.settlementRef)
+          : undefined,
+      approvalReceipt: receipts.find((receipt) => receipt.receiptType === "approval"),
+      resourceReceipt: receipts.find((receipt) => receipt.receiptType === "resource"),
+      capabilityResponse: selectLatestCapabilityResponse(capabilityResponses),
+    };
   }
 
   private async resumeApprovedPaymentAction(args: {
@@ -664,6 +794,10 @@ export class AfalRuntimeService
 
     if (command.capability === "settleResourceUsage") {
       return this.settleResourceUsage(command);
+    }
+
+    if (command.capability === "getActionStatus") {
+      return this.getActionStatus(command);
     }
 
     if (command.capability === "getApprovalSession") {

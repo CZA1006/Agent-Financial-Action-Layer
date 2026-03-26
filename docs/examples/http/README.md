@@ -5,6 +5,10 @@ This directory contains canonical AFAL HTTP request examples aligned with the cu
 Available examples:
 - `request-payment-approval.request.json` — canonical Phase 1 top-level pending payment approval request
 - `request-payment-approval.response.sample.json` — canonical pending-approval response with approval session
+- `get-action-status.payment.request.json` — canonical payment action status query request
+- `get-action-status.payment.response.sample.json` — canonical settled payment action status response
+- `get-action-status.resource.request.json` — canonical resource action status query request
+- `get-action-status.resource.response.sample.json` — canonical settled resource action status response
 - `get-approval-session.request.json` — canonical trusted-surface session read request
 - `get-approval-session.response.sample.json` — canonical trusted-surface session read response
 - `apply-approval-result.request.json` — canonical trusted-surface approval callback request
@@ -35,6 +39,14 @@ Example usage:
 curl -X POST http://127.0.0.1:3212/capabilities/request-payment-approval \
   -H 'content-type: application/json' \
   -d @docs/examples/http/request-payment-approval.request.json
+```
+
+Receiver-side or provider-side agents can independently confirm final state through the read-side action query:
+
+```bash
+curl -X POST http://127.0.0.1:3212/actions/get \
+  -H 'content-type: application/json' \
+  -d @docs/examples/http/get-action-status.payment.request.json
 ```
 
 Then the trusted surface can read the session and apply the callback:

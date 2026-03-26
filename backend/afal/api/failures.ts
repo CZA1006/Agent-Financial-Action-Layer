@@ -1,5 +1,6 @@
 import type {
   ApplyApprovalResultRequest,
+  GetActionStatusRequest,
   GetApprovalSessionRequest,
   RequestPaymentApprovalRequest,
   PaymentCapabilityRequest,
@@ -24,6 +25,7 @@ export function mapAfalFailure(
     | RequestPaymentApprovalRequest["capability"]
     | ResourceCapabilityRequest["capability"]
     | RequestResourceApprovalRequest["capability"]
+    | GetActionStatusRequest["capability"]
     | GetApprovalSessionRequest["capability"]
     | ApplyApprovalResultRequest["capability"]
     | ResumeApprovalSessionRequest["capability"]

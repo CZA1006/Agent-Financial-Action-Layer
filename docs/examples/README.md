@@ -16,6 +16,10 @@ Phase 1 priority:
 - `mvp-resource-settlement-flow.md` — canonical resource purchase and provider settlement flow in USDC on Base
 - `http/request-payment-approval.request.json` — canonical HTTP request body for `POST /capabilities/request-payment-approval`
 - `http/request-payment-approval.response.sample.json` — canonical pending-approval success response for `POST /capabilities/request-payment-approval`
+- `http/get-action-status.payment.request.json` — canonical payment action status request for `POST /actions/get`
+- `http/get-action-status.payment.response.sample.json` — canonical settled payment action status response for `POST /actions/get`
+- `http/get-action-status.resource.request.json` — canonical resource action status request for `POST /actions/get`
+- `http/get-action-status.resource.response.sample.json` — canonical settled resource action status response for `POST /actions/get`
 - `http/get-approval-session.request.json` — canonical HTTP request body for `POST /approval-sessions/get`
 - `http/get-approval-session.response.sample.json` — canonical session read response for `POST /approval-sessions/get`
 - `http/apply-approval-result.request.json` — canonical HTTP request body for `POST /approval-sessions/apply-result`

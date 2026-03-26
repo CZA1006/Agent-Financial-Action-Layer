@@ -54,8 +54,12 @@ Run these in addition to `accept:local` when relevant:
   Use when you changed canonical fixture or orchestration behavior and want a quick in-memory comparison.
 - `npm run demo:agent-payment`
   Use when you changed callback, resume, SQLite HTTP, or runtime-agent harness behavior and want a subprocess-level verification.
+- `npm run demo:agent-payment-bilateral`
+  Use when you changed payee-facing action status reads or the bilateral payment harness flow.
 - `npm run demo:agent-resource`
   Use when you changed the resource approval/resume path and want the same subprocess-level verification on the resource flow.
+- `npm run demo:agent-resource-bilateral`
+  Use when you changed provider-facing action status reads or the bilateral resource harness flow.
 
 ## Pull Request Expectations
 

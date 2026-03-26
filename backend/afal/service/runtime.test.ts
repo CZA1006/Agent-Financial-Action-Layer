@@ -138,6 +138,7 @@ test("AFAL runtime service exposes module-service command entrypoints", async ()
 
   assert.equal(payment.finalDecision.result, "approved");
   if ("finalDecision" in resource) {
+    assert.ok(resource.finalDecision);
     assert.equal(resource.finalDecision.result, "approved");
   } else {
     assert.fail("expected settleResourceUsage to return a flow output");
@@ -145,11 +146,13 @@ test("AFAL runtime service exposes module-service command entrypoints", async ()
   assert.equal(session.status, "pending");
   assert.equal(applied.approvalSession.status, "approved");
   if ("finalDecision" in resumed) {
+    assert.ok(resumed.finalDecision);
     assert.equal(resumed.finalDecision.result, "approved");
   } else {
     assert.fail("expected resumeApprovalSession to return a final decision");
   }
   if ("paymentReceipt" in resumedExecution) {
+    assert.ok(resumedExecution.paymentReceipt);
     assert.equal(resumedExecution.paymentReceipt.receiptId, paymentFlowFixtures.paymentReceipt.receiptId);
   } else {
     assert.fail("expected resumeApprovedAction to return a settled payment flow");

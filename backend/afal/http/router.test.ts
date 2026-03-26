@@ -45,13 +45,21 @@ describe("AFAL HTTP transport contract", () => {
     assert.equal(resourceResponse.statusCode, 200);
     assert.equal(paymentResponse.body.ok, true);
     assert.equal(resourceResponse.body.ok, true);
-    if (paymentResponse.body.ok && "capabilityResponse" in paymentResponse.body.data) {
+    if (
+      paymentResponse.body.ok &&
+      "capabilityResponse" in paymentResponse.body.data &&
+      paymentResponse.body.data.capabilityResponse
+    ) {
       assert.equal(paymentResponse.body.capability, "requestPaymentApproval");
       assert.equal(paymentResponse.body.data.capabilityResponse.result, "pending-approval");
     } else {
       assert.fail("expected requestPaymentApproval success response");
     }
-    if (resourceResponse.body.ok && "capabilityResponse" in resourceResponse.body.data) {
+    if (
+      resourceResponse.body.ok &&
+      "capabilityResponse" in resourceResponse.body.data &&
+      resourceResponse.body.data.capabilityResponse
+    ) {
       assert.equal(resourceResponse.body.capability, "requestResourceApproval");
       assert.equal(resourceResponse.body.data.capabilityResponse.result, "pending-approval");
     } else {
@@ -80,7 +88,8 @@ describe("AFAL HTTP transport contract", () => {
     if (
       response.body.ok &&
       response.body.capability === "executePayment" &&
-      "paymentReceipt" in response.body.data
+      "paymentReceipt" in response.body.data &&
+      response.body.data.paymentReceipt
     ) {
       assert.equal(response.body.capability, "executePayment");
       assert.equal(response.body.data.paymentReceipt.receiptId, paymentFlowFixtures.paymentReceipt.receiptId);
@@ -111,7 +120,8 @@ describe("AFAL HTTP transport contract", () => {
     if (
       response.body.ok &&
       response.body.capability === "settleResourceUsage" &&
-      "resourceReceipt" in response.body.data
+      "resourceReceipt" in response.body.data &&
+      response.body.data.resourceReceipt
     ) {
       assert.equal(response.body.capability, "settleResourceUsage");
       assert.equal(response.body.data.resourceReceipt.receiptId, resourceFlowFixtures.resourceReceipt.receiptId);
@@ -272,6 +282,7 @@ describe("AFAL HTTP transport contract", () => {
       resumeResponse.body.capability === "resumeApprovalSession" &&
       "finalDecision" in resumeResponse.body.data
     ) {
+      assert.ok(resumeResponse.body.data.finalDecision);
       assert.equal(resumeResponse.body.capability, "resumeApprovalSession");
       assert.equal(resumeResponse.body.data.finalDecision.result, "approved");
     } else {
@@ -282,9 +293,70 @@ describe("AFAL HTTP transport contract", () => {
       resumeActionResponse.body.capability === "resumeApprovedAction" &&
       "finalDecision" in resumeActionResponse.body.data
     ) {
+      assert.ok(resumeActionResponse.body.data.finalDecision);
       assert.equal(resumeActionResponse.body.data.finalDecision.result, "approved");
     } else {
       assert.fail("expected resumeApprovedAction success response");
+    }
+  });
+
+  test("routes action status POST requests after payment settlement", async () => {
+    const runtime = createAfalRuntimeService();
+    const router = createAfalHttpRouter({ handlers: createAfalApiHandlers({ service: runtime }) });
+    const pending = await runtime.requestPaymentApproval({
+      capability: "requestPaymentApproval",
+      requestRef: "req-http-action-status-payment-001",
+      input: {
+        requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+        intent: paymentFlowFixtures.paymentIntentCreated,
+        monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+      },
+    });
+    await runtime.applyApprovalResult({
+      capability: "applyApprovalResult",
+      requestRef: "req-http-action-status-apply-001",
+      input: {
+        approvalSessionRef: pending.approvalSession.approvalSessionId,
+        result: paymentFlowFixtures.approvalResult,
+      },
+    });
+    await runtime.resumeApprovedAction({
+      capability: "resumeApprovedAction",
+      requestRef: "req-http-action-status-resume-001",
+      input: {
+        approvalSessionRef: pending.approvalSession.approvalSessionId,
+      },
+    });
+
+    const response = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.getActionStatus,
+      body: {
+        requestRef: "req-http-action-status-read-001",
+        input: {
+          actionRef: pending.intent.intentId,
+        },
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.ok, true);
+    if (
+      response.body.ok &&
+      response.body.capability === "getActionStatus" &&
+      "actionType" in response.body.data &&
+      "intent" in response.body.data
+    ) {
+      assert.equal(response.body.data.actionType, "payment");
+      assert.equal(response.body.data.intent.status, "settled");
+      if ("paymentReceipt" in response.body.data) {
+        assert.equal(
+          response.body.data.paymentReceipt?.receiptId,
+          paymentFlowFixtures.paymentReceipt.receiptId
+        );
+      }
+    } else {
+      assert.fail("expected getActionStatus success response");
     }
   });
 });

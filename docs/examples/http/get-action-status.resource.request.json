@@ -1,0 +1,6 @@
+{
+  "requestRef": "req-action-status-resource-001",
+  "input": {
+    "actionRef": "resint-0001"
+  }
+}

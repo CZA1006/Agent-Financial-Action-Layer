@@ -1,4 +1,5 @@
 import type {
+  ActionStatusOutput,
   PaymentApprovalRequestOutput,
   ResourceApprovalRequestOutput,
   ResumeApprovedActionOutput,
@@ -22,6 +23,10 @@ export interface AgentHarnessClient {
     resourceBudgetRef?: IdRef;
     resourceQuotaRef?: IdRef;
   }): Promise<ResourceApprovalRequestOutput>;
+  getActionStatus(args: {
+    requestRef: string;
+    actionRef: IdRef;
+  }): Promise<ActionStatusOutput>;
   getApprovalSession(args: {
     requestRef: string;
     approvalSessionRef: IdRef;
@@ -149,6 +154,24 @@ export function createAfalHttpClient(baseUrl: string): AgentHarnessClient {
       return body.data;
     },
 
+    async getActionStatus(args) {
+      const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.getActionStatus}`, {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          requestRef: args.requestRef,
+          input: {
+            actionRef: args.actionRef,
+          },
+        }),
+      });
+
+      const body = await parseJsonResponse<AfalApiSuccess<ActionStatusOutput>>(response);
+      return body.data;
+    },
+
     async getApprovalSession(args) {
       const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.getApprovalSession}`, {
         method: "POST",
@@ -231,6 +254,16 @@ export function createAfalNodeTransportClient(handler: NodeTransportHandler): Ag
         AFAL_HTTP_ROUTES.requestResourceApproval,
         buildCanonicalResourceApprovalRequest(args)
       );
+      return body.data;
+    },
+
+    async getActionStatus(args) {
+      const body = await request<AfalApiSuccess<ActionStatusOutput>>(AFAL_HTTP_ROUTES.getActionStatus, {
+        requestRef: args.requestRef,
+        input: {
+          actionRef: args.actionRef,
+        },
+      });
       return body.data;
     },
 
