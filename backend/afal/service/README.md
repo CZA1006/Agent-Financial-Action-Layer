@@ -9,6 +9,7 @@
 - centralize default wiring of seeded module ports and flow orchestrators
 - expose module-level command entrypoints separate from the HTTP capability envelope
 - provide a seeded durable local mode that swaps JSON file stores in for the default in-memory stores
+- provide an initial SQLite-backed integration mode for ATS, AMN approval state, and AFAL intent state
 - expose approval-session lookup, callback application, and resume operations above AMN persistence
 - resume persisted approved actions into final AFAL settlement, receipt, and output generation
 
@@ -18,3 +19,4 @@
 - `mock/` remains the seeded wiring and demo surface
 - this layer is the preferred dependency for AFAL API adapters going forward
 - `durable-demo.ts` is the executable entrypoint for the seeded local durable mode
+- `sqlite-demo.ts` is the executable entrypoint for the seeded SQLite integration mode

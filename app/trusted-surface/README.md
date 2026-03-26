@@ -95,6 +95,10 @@ Required callback behavior:
 
 Phase 1 local runtime now persists this state in an AMN approval session so the challenge can survive process restarts and later be resumed.
 
+The concrete integration contract for this flow now lives in:
+
+- [docs/specs/trusted-surface-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/trusted-surface-callback-contract.md#L1)
+
 ## Phase 1 UX Rules
 
 The first implementation should optimize for:
@@ -120,3 +124,27 @@ Phase 1 work in this folder should produce:
 - approval result object notes
 - state transition notes
 - lightweight placeholder UI scaffold later
+- minimal trusted-surface stub for callback and resume testing
+
+## Local Stub
+
+A minimal stub now exists at:
+
+- [stub.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/app/trusted-surface/stub.ts#L1)
+
+It is a small integration helper, not a UI.
+
+It can:
+
+- read a persisted approval session
+- construct a structured `ApprovalResult`
+- submit the approval result back to AFAL
+- optionally resume the approved action into settlement
+
+Example usage against the local durable HTTP server:
+
+```bash
+node --import tsx/esm app/trusted-surface/stub.ts \
+  --base-url http://127.0.0.1:3212 \
+  --approval-session-ref aps-chall-0001
+```

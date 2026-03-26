@@ -1,6 +1,11 @@
 # Contributing
 
-AFAL is currently in a docs-first, schema-first, seeded-runtime stage.
+AFAL is currently in a Phase 1 integration-ready runtime stage with:
+
+- durable local mode
+- initial SQLite integration mode
+- persistent approval callback and resume flow
+- initial payment/resource runtime-agent harnesses over the AFAL HTTP contract
 
 That means contribution quality is judged less by feature count and more by whether a change keeps the current Phase 1 contract coherent.
 
@@ -18,12 +23,14 @@ Before opening a PR, run:
 
 ```bash
 npm run accept:local
+npm run accept:sqlite
 ```
 
 If your environment cannot bind local ports, run:
 
 ```bash
 npm run accept:local -- --skip-http
+npm run accept:sqlite -- --skip-http
 ```
 
 This currently covers:
@@ -31,6 +38,8 @@ This currently covers:
 - full automated test suite
 - durable runtime demo
 - durable HTTP demos, when enabled
+- SQLite integration demo and SQLite HTTP demo, when enabled
+- runtime-agent payment/resource harnesses, when enabled
 - OpenAPI export refresh
 
 ## When To Run Extra Checks
@@ -43,6 +52,10 @@ Run these in addition to `accept:local` when relevant:
   Use only when intentionally publishing a new immutable OpenAPI snapshot.
 - `npm run demo:mock`
   Use when you changed canonical fixture or orchestration behavior and want a quick in-memory comparison.
+- `npm run demo:agent-payment`
+  Use when you changed callback, resume, SQLite HTTP, or runtime-agent harness behavior and want a subprocess-level verification.
+- `npm run demo:agent-resource`
+  Use when you changed the resource approval/resume path and want the same subprocess-level verification on the resource flow.
 
 ## Pull Request Expectations
 
@@ -61,7 +74,7 @@ Still out of scope for this phase:
 - real database backends
 - real stablecoin settlement integration
 - real provider billing integration
-- trusted-surface deployment and callback infrastructure
+- trusted-surface deployment and production callback infrastructure
 - on-chain enforcement and production ops concerns
 
 Keep AFAL coherent first; expand scope only when the current Phase 1 surfaces stay stable.

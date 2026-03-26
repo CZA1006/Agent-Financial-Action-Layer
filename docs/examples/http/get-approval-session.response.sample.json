@@ -1,0 +1,23 @@
+{
+  "ok": true,
+  "capability": "getApprovalSession",
+  "requestRef": "req-approval-session-001",
+  "statusCode": 200,
+  "data": {
+    "approvalSessionId": "aps-chall-0001",
+    "schemaVersion": "0.1",
+    "actionRef": "payint-0001",
+    "actionType": "payment",
+    "subjectDid": "did:afal:agent:payment-agent-01",
+    "mandateRef": "mnd-0001",
+    "policyRef": "cred-policy-0001",
+    "priorDecisionRef": "dec-0001",
+    "challengeRef": "chall-0001",
+    "approvalContextRef": "ctx-0001",
+    "trustedSurfaceRef": "trusted-surface:web",
+    "status": "pending",
+    "createdAt": "2026-03-24T12:05:06Z",
+    "updatedAt": "2026-03-24T12:05:06Z",
+    "expiresAt": "2026-03-24T12:15:00Z"
+  }
+}

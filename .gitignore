@@ -16,6 +16,8 @@ build/
 # Local AFAL durable runtime data
 .afal-durable-data/
 .afal-durable-http-data/
+.afal-sqlite-data/
+.afal-sqlite-http-data/
 
 # IDE
 .vscode/*

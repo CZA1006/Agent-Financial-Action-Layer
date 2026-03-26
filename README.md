@@ -14,10 +14,13 @@ Together, these modules form the substrate for agent financial actions across pa
 AFAL is no longer just a whitepaper or schema set.
 
 Current stage:
-- **Phase 1 durable async execution skeleton**
+- **Phase 1 integration-ready runtime, initial multi-flow runtime-agent harness**
 - docs/specs/contracts are frozen enough to demo
 - AIP / ATS / AMN / AFAL runtime all run in seeded durable local mode
 - top-level approval requests, trusted-surface callback persistence, and post-approval resume-to-settlement are all wired end to end
+- ATS, AMN approval state, and AFAL intent state now also run in a seeded SQLite-backed integration mode
+- the same SQLite-backed integration slice is now reachable through the AFAL HTTP contract
+- a first runtime-agent harness now drives both payment and resource callback-and-resume flows through independent agent processes
 
 The repo now includes:
 - frozen Phase 1 schemas and canonical examples
@@ -28,17 +31,23 @@ The repo now includes:
 - top-level `pending-approval` capability entrypoints for payment and resource requests
 - AFAL-level `resume-approved-action` execution for post-approval settlement and receipt completion
 - local durable mode backed by JSON file stores
+- initial SQLite-backed integration mode for ATS, AMN approval state, and AFAL intent state
+- SQLite-backed AFAL HTTP runtime, server shell, demo, and acceptance path
+- minimal runtime-agent harnesses over the SQLite-backed AFAL HTTP contract
 - OpenAPI draft, stable publish artifacts, snapshot releases, and preview UI
 - automated verification across runtime, API, HTTP, OpenAPI export, and durable persistence
 
 Current validated state:
 - `npm run typecheck` passes
 - `npm run test:mock` passes
-- the test suite currently contains `112` passing tests
+- the test suite currently contains `129` passing tests
 - both canonical flows run in:
   - seeded in-memory mode
   - seeded local durable mode
   - durable HTTP mode
+  - seeded SQLite integration mode
+  - SQLite-backed HTTP integration mode
+  - initial runtime-agent harness modes over SQLite HTTP
 
 ## Quickstart
 
@@ -46,12 +55,14 @@ If you only want the fastest path to verify and demo the repo, run:
 
 ```bash
 npm run accept:local
+npm run accept:sqlite
 ```
 
 If your environment cannot open local ports, use:
 
 ```bash
 npm run accept:local -- --skip-http
+npm run accept:sqlite -- --skip-http
 ```
 
 Equivalent manual flow:
@@ -60,8 +71,12 @@ Equivalent manual flow:
 npm run typecheck
 npm run test:mock
 npm run demo:durable
+npm run demo:sqlite
 npm run demo:http-async
 npm run demo:http-payment
+npm run demo:http-sqlite
+npm run demo:agent-payment
+npm run demo:agent-resource
 npm run export:openapi
 ```
 
@@ -157,9 +172,9 @@ Canonical examples:
 | Docs and specs | Phase 1 schemas, examples, architecture docs, roadmap, whitepaper |
 | AIP | storage-backed skeleton, API adapter, JSON durable store |
 | ATS | storage-backed skeleton, API adapter, JSON durable store, reservation/hold/release semantics |
-| AMN | storage-backed skeleton, API adapter, JSON durable store, approval-session persistence and recovery |
-| AFAL runtime | seeded runtime, durable runtime, intent state, settlement, outputs |
-| HTTP surface | framework-free router, durable HTTP wiring, thin Node server shell |
+| AMN | storage-backed skeleton, API adapter, JSON durable store, SQLite store, approval-session persistence and recovery |
+| AFAL runtime | seeded runtime, durable runtime, SQLite integration runtime, intent state, settlement, outputs, payment/resource runtime-agent harnesses |
+| HTTP surface | framework-free router, durable HTTP wiring, SQLite HTTP wiring, thin Node server shells |
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
 
@@ -169,10 +184,12 @@ Already real in local development terms:
 - module boundaries and type surfaces
 - store/service separation
 - durable local persistence through JSON file stores
+- initial SQLite-backed integration persistence for ATS, AMN approval state, and AFAL intent state
 - persistent approval sessions and resumable trusted-surface state transitions
 - persisted pending executions that can resume approved actions into settlement and receipts
 - state transitions for identity, budget, mandate, intent, settlement, and receipts
 - HTTP capability routing and OpenAPI publication pipeline
+- first runtime-agent harnesses that exercise AFAL through independent subprocess roles
 
 Still intentionally not production-real:
 - real database backend
@@ -190,6 +207,7 @@ Still intentionally not production-real:
 npm run typecheck
 npm run test:mock
 npm run accept:local
+npm run accept:sqlite
 ```
 
 ### Run The Canonical Demos
@@ -197,30 +215,50 @@ npm run accept:local
 ```bash
 npm run demo:mock
 npm run demo:durable
+npm run demo:sqlite
 npm run demo:http
 npm run demo:http-async
 npm run demo:http-payment
+npm run demo:http-sqlite
+npm run demo:agent-payment
+npm run demo:agent-resource
 npm run demo:http-resource
 ```
 
 What these do:
 - `demo:mock` runs the payment and resource flows in seeded in-memory mode
 - `demo:durable` runs the same flows in seeded local durable mode and writes state to `.afal-durable-data/`
+- `demo:sqlite` runs the same flows in the seeded SQLite integration mode and writes ATS, AMN approval state, and AFAL intent state to `.sqlite` files under `.afal-sqlite-data/`
 - `demo:http` starts the durable HTTP server, sends the canonical payment request, compares the response with the sample file, and prints the response
-- `demo:http-async` runs the async payment path end to end: request approval, apply approval result, then resume the approved action into settlement
+- `demo:http-async` runs the async payment path end to end: request approval, trusted-surface stub callback, then resume the approved action into settlement
 - `demo:http-payment` runs the canonical payment request through the durable HTTP layer and writes state to `.afal-durable-http-data/`
+- `demo:http-sqlite` runs the canonical payment request through the SQLite-backed HTTP layer and writes state to `.afal-sqlite-http-data/`
+- `demo:agent-payment` runs a minimal runtime-agent harness over the SQLite-backed HTTP layer: one `payer-agent` creates a pending approval session and one `approval-agent` completes callback-and-resume into settlement
+- `demo:agent-resource` runs the same runtime-agent pattern for the canonical resource approval flow
 - `demo:http-resource` starts the durable HTTP server, sends the canonical resource request, compares the response with the sample file, and prints the response
+
+Trusted-surface stub:
+
+```bash
+npm run trusted-surface:stub -- --base-url http://127.0.0.1:3212 --approval-session-ref aps-chall-0001
+```
 
 ### Run The Local Durable HTTP Server
 
 ```bash
 npm run serve:durable-http
+npm run serve:sqlite-http
 ```
 
 Default runtime settings:
 - host: `127.0.0.1`
 - port: `3212`
 - data dir: `.afal-durable-http-data/`
+
+SQLite integration HTTP settings:
+- host: `127.0.0.1`
+- port: `3213`
+- data dir: `.afal-sqlite-http-data/`
 
 You can also run the underlying TypeScript entry directly and override values:
 
@@ -249,12 +287,14 @@ One-command version:
 
 ```bash
 npm run accept:local
+npm run accept:sqlite
 ```
 
 Restricted-environment version:
 
 ```bash
 npm run accept:local -- --skip-http
+npm run accept:sqlite -- --skip-http
 ```
 
 ### 1. Static Type Validation
@@ -285,7 +325,7 @@ This covers:
 - OpenAPI export, preview, and snapshot checks
 
 Current validated result:
-- `112` tests passing
+- `129` tests passing
 
 ### 3. Demo-Level Runtime Checks
 
@@ -368,6 +408,8 @@ npm run demo:durable
 npm run demo:http
 npm run demo:http-async
 npm run demo:http-payment
+npm run demo:agent-payment
+npm run demo:agent-resource
 npm run export:openapi
 ```
 
@@ -383,6 +425,8 @@ npm run demo:durable
 npm run demo:http
 npm run demo:http-async
 npm run demo:http-payment
+npm run demo:agent-payment
+npm run demo:agent-resource
 ```
 
 3. Show that AFAL exposes a stable HTTP capability surface.
@@ -411,6 +455,8 @@ curl -X POST http://127.0.0.1:3212/approval-sessions/resume-action \
 
 ```bash
 npm run demo:http-async
+npm run demo:agent-payment
+npm run demo:agent-resource
 ```
 
 7. Show that the contract is published and versioned.
@@ -439,6 +485,7 @@ Default submission check:
 
 ```bash
 npm run accept:local
+npm run accept:sqlite
 ```
 
 ## Current Runtime Layers
@@ -452,6 +499,7 @@ npm run accept:local
 - `backend/afal/service/` — AFAL runtime and durable runtime wiring
 - `backend/afal/api/` — capability request/response adapter
 - `backend/afal/http/` — framework-free HTTP contract and durable server shell
+- `agents/test-harness/` — initial payment/resource runtime-agent harnesses over the AFAL HTTP contract
 
 ## Key Documents
 
@@ -460,15 +508,18 @@ npm run accept:local
 - [docs/whitepaper/afal-whitepaper-v6.md](docs/whitepaper/afal-whitepaper-v6.md)
 - [docs/product/mvp-scope.md](docs/product/mvp-scope.md)
 - [docs/product/implementation-roadmap-next-stage.md](docs/product/implementation-roadmap-next-stage.md)
+- [docs/product/next-stage-integration-plan.md](docs/product/next-stage-integration-plan.md)
 - [tasks/milestone-mvp.md](tasks/milestone-mvp.md)
 
 ### Specs And Contracts
 
 - [docs/specs/afal-http-openapi-draft.yaml](docs/specs/afal-http-openapi-draft.yaml)
+- [docs/specs/trusted-surface-callback-contract.md](docs/specs/trusted-surface-callback-contract.md)
 - [docs/specs/openapi/latest.yaml](docs/specs/openapi/latest.yaml)
 - [docs/specs/openapi/latest.json](docs/specs/openapi/latest.json)
 - [docs/specs/openapi/manifest.json](docs/specs/openapi/manifest.json)
 - [docs/specs/openapi/versioning-policy.md](docs/specs/openapi/versioning-policy.md)
+- [agents/test-harness/README.md](agents/test-harness/README.md)
 
 ### Example Flows
 
@@ -482,7 +533,10 @@ AFAL currently demonstrates:
 - schema-first module boundaries
 - executable canonical payment and resource flows
 - local durable persistence across restarts
+- initial SQLite-backed integration persistence for execution-critical state
 - capability-oriented HTTP transport
+- persistent approval callback and resume semantics
+- minimal runtime-agent orchestration paths over the real HTTP contract
 - versioned OpenAPI publication
 
 AFAL does not yet claim:

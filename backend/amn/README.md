@@ -38,5 +38,8 @@
   - `bootstrap.ts` for fixture-backed seeded mandates and decision templates
   - `store.ts` for persistence operations
   - `file-store.ts` for a durable JSON snapshot implementation of the same store boundary
+  - `sqlite-store.ts` for a seeded SQLite-backed persistence implementation of the same boundary
   - `service.ts` for evaluation, challenge creation, approval session persistence, callback recording, and finalization
-- this layer now also has one minimal durable persistence option for local seeded mode via `JsonFileAmnStore`
+- this layer now has two minimal durable persistence options:
+  - `JsonFileAmnStore` for local durable demo mode
+  - `SqliteAmnStore` for the initial integration-ready SQLite mode

@@ -1,0 +1,6 @@
+{
+  "requestRef": "req-approval-session-001",
+  "input": {
+    "approvalSessionRef": "aps-chall-0001"
+  }
+}

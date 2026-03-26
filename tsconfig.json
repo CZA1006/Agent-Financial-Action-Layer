@@ -13,6 +13,8 @@
     "forceConsistentCasingInFileNames": true
   },
   "include": [
+    "agents/**/*.ts",
+    "app/**/*.ts",
     "backend/**/*.ts",
     "sdk/**/*.ts"
   ]

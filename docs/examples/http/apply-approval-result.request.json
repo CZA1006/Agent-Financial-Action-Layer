@@ -1,0 +1,18 @@
+{
+  "requestRef": "req-apply-approval-001",
+  "input": {
+    "approvalSessionRef": "aps-chall-0001",
+    "result": {
+      "approvalResultId": "apr-0001",
+      "challengeRef": "chall-0001",
+      "actionRef": "payint-0001",
+      "result": "approved",
+      "approvedBy": "did:afal:owner:alice-01",
+      "approvalChannel": "trusted-surface:web",
+      "stepUpAuthUsed": true,
+      "comment": "First-time fraud provider is acceptable",
+      "approvalReceiptRef": "rcpt-approval-0001",
+      "decidedAt": "2026-03-24T12:07:00Z"
+    }
+  }
+}

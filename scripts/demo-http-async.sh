@@ -20,10 +20,7 @@ trap cleanup EXIT INT TERM
 
 SERVER_LOG="$TMP_DIR/server.log"
 PENDING_RESPONSE="$TMP_DIR/pending-response.json"
-APPLY_REQUEST="$TMP_DIR/apply-request.json"
-APPLY_RESPONSE="$TMP_DIR/apply-response.json"
-RESUME_REQUEST="$TMP_DIR/resume-request.json"
-RESUME_RESPONSE="$TMP_DIR/resume-response.json"
+STUB_RESPONSE="$TMP_DIR/trusted-surface-response.json"
 
 node --import tsx/esm "$ROOT/backend/afal/http/durable-server.ts" "$DATA_DIR" "$HOST" "$PORT" \
   >"$SERVER_LOG" 2>&1 &
@@ -68,133 +65,73 @@ if (response.data.approvalSession.status !== "pending") {
 }
 EOF
 
-node - "$PENDING_RESPONSE" "$APPLY_REQUEST" <<'EOF'
+APPROVAL_SESSION_REF="$(node - "$PENDING_RESPONSE" <<'EOF'
 const fs = require("node:fs");
 
 const pending = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-const approvalSessionRef = pending.data.approvalSession.approvalSessionId;
-const challengeRef = pending.data.challenge.challengeId;
-const actionRef = pending.data.intent.intentId;
-
-const request = {
-  requestRef: "req-apply-approval-0001",
-  input: {
-    approvalSessionRef,
-    result: {
-      approvalResultId: "apr-0001",
-      challengeRef,
-      actionRef,
-      result: "approved",
-      approvedBy: "did:afal:owner:alice-01",
-      approvalChannel: "trusted-surface:web",
-      stepUpAuthUsed: true,
-      comment: "First-time fraud provider is acceptable",
-      approvalReceiptRef: "rcpt-approval-0001",
-      decidedAt: "2026-03-24T12:07:00Z"
-    }
-  }
-};
-
-fs.writeFileSync(process.argv[3], JSON.stringify(request, null, 2));
+process.stdout.write(pending.data.approvalSession.approvalSessionId);
 EOF
+)"
 
-curl -sS \
-  -X POST "http://$HOST:$PORT/approval-sessions/apply-result" \
-  -H 'content-type: application/json' \
-  -d @"$APPLY_REQUEST" \
-  >"$APPLY_RESPONSE"
+node --import tsx/esm "$ROOT/app/trusted-surface/stub.ts" \
+  --base-url "http://$HOST:$PORT" \
+  --approval-session-ref "$APPROVAL_SESSION_REF" \
+  --request-ref-prefix "req-http-async" \
+  --decided-at "2026-03-24T12:07:00Z" \
+  --comment "First-time fraud provider is acceptable" \
+  >"$STUB_RESPONSE"
 
-node - "$APPLY_RESPONSE" <<'EOF'
-const fs = require("node:fs");
-
-const response = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-
-if (!response.ok) {
-  console.error("apply-approval-result did not return ok=true");
-  process.exit(1);
-}
-
-if (response.capability !== "applyApprovalResult") {
-  console.error(`unexpected capability: ${response.capability}`);
-  process.exit(1);
-}
-
-if (response.data.approvalSession.status !== "approved") {
-  console.error("approval session was not updated to approved");
-  process.exit(1);
-}
-EOF
-
-node - "$PENDING_RESPONSE" "$RESUME_REQUEST" <<'EOF'
-const fs = require("node:fs");
-
-const pending = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
-const request = {
-  requestRef: "req-resume-action-0001",
-  input: {
-    approvalSessionRef: pending.data.approvalSession.approvalSessionId
-  }
-};
-
-fs.writeFileSync(process.argv[3], JSON.stringify(request, null, 2));
-EOF
-
-curl -sS \
-  -X POST "http://$HOST:$PORT/approval-sessions/resume-action" \
-  -H 'content-type: application/json' \
-  -d @"$RESUME_REQUEST" \
-  >"$RESUME_RESPONSE"
-
-node - "$RESUME_RESPONSE" "$ROOT/docs/examples/http/resume-approved-action.response.sample.json" <<'EOF'
+node - "$STUB_RESPONSE" "$ROOT/docs/examples/http/resume-approved-action.response.sample.json" <<'EOF'
 const fs = require("node:fs");
 
 const actual = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 const expected = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
+const resumed = actual.resumed;
 
-if (!actual.ok) {
-  console.error("resume-approved-action did not return ok=true");
+if (!resumed) {
+  console.error("trusted-surface stub did not return a resumed action payload");
   process.exit(1);
 }
 
-if (actual.capability !== "resumeApprovedAction") {
-  console.error(`unexpected capability: ${actual.capability}`);
+if (actual.summary.result !== "approved") {
+  console.error("trusted-surface stub did not record an approved result");
   process.exit(1);
 }
 
-if (actual.data.finalDecision.result !== "approved") {
+if (resumed.finalDecision.result !== "approved") {
   console.error("resumed action did not produce an approved final decision");
   process.exit(1);
 }
 
-if (actual.data.intent.status !== "settled") {
+if (resumed.intent.status !== "settled") {
   console.error("resumed action did not settle the payment intent");
   process.exit(1);
 }
 
-if (actual.data.paymentReceipt.receiptId !== expected.data.paymentReceipt.receiptId) {
+if (resumed.paymentReceipt.receiptId !== expected.data.paymentReceipt.receiptId) {
   console.error("payment receipt id drifted from the canonical sample");
   process.exit(1);
 }
 
-if (actual.data.settlement.settlementId !== expected.data.settlement.settlementId) {
+if (resumed.settlement.settlementId !== expected.data.settlement.settlementId) {
   console.error("settlement id drifted from the canonical sample");
   process.exit(1);
 }
 
-if (actual.data.capabilityResponse.capability !== "resumeApprovedAction") {
+if (resumed.capabilityResponse.capability !== "resumeApprovedAction") {
   console.error("capability response did not record resumeApprovedAction");
   process.exit(1);
 }
 
 console.log(JSON.stringify({
   summary: {
-    capability: actual.capability,
-    requestRef: actual.requestRef,
-    actionRef: actual.data.intent.intentId,
-    finalDecision: actual.data.finalDecision.result,
-    settlementRef: actual.data.settlement.settlementId,
-    receiptRef: actual.data.paymentReceipt.receiptId
+    capability: "resumeApprovedAction",
+    requestRef: "req-http-async-resume",
+    actionRef: resumed.intent.intentId,
+    finalDecision: resumed.finalDecision.result,
+    settlementRef: resumed.settlement.settlementId,
+    receiptRef: resumed.paymentReceipt.receiptId
   },
-  response: actual
+  response: resumed
 }, null, 2));
 EOF
