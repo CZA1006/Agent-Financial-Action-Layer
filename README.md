@@ -223,7 +223,9 @@ npm run demo:http-async
 npm run demo:http-payment
 npm run demo:http-sqlite
 npm run demo:agent-payment
+npm run demo:agent-payment-bilateral
 npm run demo:agent-resource
+npm run demo:agent-resource-bilateral
 npm run demo:http-resource
 ```
 
@@ -329,7 +331,7 @@ This covers:
 - OpenAPI export, preview, and snapshot checks
 
 Current validated result:
-- `129` tests passing
+- `133` tests passing
 
 ### 3. Demo-Level Runtime Checks
 
@@ -365,6 +367,10 @@ curl -X POST http://127.0.0.1:3212/capabilities/request-payment-approval \
 Canonical request bodies live here:
 - [`docs/examples/http/request-payment-approval.request.json`](docs/examples/http/request-payment-approval.request.json)
 - [`docs/examples/http/request-payment-approval.response.sample.json`](docs/examples/http/request-payment-approval.response.sample.json)
+- [`docs/examples/http/get-action-status.payment.request.json`](docs/examples/http/get-action-status.payment.request.json)
+- [`docs/examples/http/get-action-status.payment.response.sample.json`](docs/examples/http/get-action-status.payment.response.sample.json)
+- [`docs/examples/http/get-action-status.resource.request.json`](docs/examples/http/get-action-status.resource.request.json)
+- [`docs/examples/http/get-action-status.resource.response.sample.json`](docs/examples/http/get-action-status.resource.response.sample.json)
 - [`docs/examples/http/execute-payment.request.json`](docs/examples/http/execute-payment.request.json)
 - [`docs/examples/http/execute-payment.response.sample.json`](docs/examples/http/execute-payment.response.sample.json)
 - [`docs/examples/http/execute-payment.bad-request.response.sample.json`](docs/examples/http/execute-payment.bad-request.response.sample.json)
@@ -413,7 +419,9 @@ npm run demo:http
 npm run demo:http-async
 npm run demo:http-payment
 npm run demo:agent-payment
+npm run demo:agent-payment-bilateral
 npm run demo:agent-resource
+npm run demo:agent-resource-bilateral
 npm run export:openapi
 ```
 

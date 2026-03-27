@@ -11,6 +11,7 @@ This document answers:
 - how AFAL exposes approval sessions to a trusted surface
 - how a trusted surface submits approval results back to AFAL
 - how AFAL resumes authorization and then resumes the underlying action
+- how receiver-side agents can independently confirm final action state after settlement
 - what is stable now versus what is deferred to a later production-grade callback layer
 
 This contract is aligned to the currently implemented AFAL HTTP routes and durable runtime behavior.
@@ -24,12 +25,13 @@ This contract covers the Phase 1 approval lifecycle for actions that require hum
 - payment approval
 - resource approval
 
-It covers four integration operations:
+It covers five integration operations:
 
 1. request a top-level pending approval action
 2. read the persisted approval session
 3. apply the trusted-surface approval result
 4. resume the action after approval
+5. read final action status for receiver/provider-side confirmation
 
 It does **not** currently cover:
 
@@ -99,6 +101,7 @@ Current Phase 1 routes:
 
 - `POST /capabilities/request-payment-approval`
 - `POST /capabilities/request-resource-approval`
+- `POST /actions/get`
 - `POST /approval-sessions/get`
 - `POST /approval-sessions/apply-result`
 - `POST /approval-sessions/resume`
@@ -110,6 +113,7 @@ Recommended payment approval sequence:
 2. `POST /approval-sessions/get`
 3. `POST /approval-sessions/apply-result`
 4. `POST /approval-sessions/resume-action`
+5. `POST /actions/get`
 
 Recommended resource approval sequence:
 
@@ -117,6 +121,7 @@ Recommended resource approval sequence:
 2. `POST /approval-sessions/get`
 3. `POST /approval-sessions/apply-result`
 4. `POST /approval-sessions/resume-action`
+5. `POST /actions/get`
 
 `POST /approval-sessions/resume` is also available when the caller wants the final AMN authorization state without resuming the full AFAL settlement flow.
 
@@ -172,6 +177,9 @@ POST /approval-sessions/apply-result
 
 POST /approval-sessions/resume-action
   -> resumes approved action into settlement and receipt generation
+
+POST /actions/get
+  -> lets the payee-side agent independently confirm final settlement and receipt state
 ```
 
 ---
@@ -319,6 +327,36 @@ Canonical examples:
 - [resume-approved-action.authorization-expired.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/resume-approved-action.authorization-expired.response.sample.json#L1)
 - [resume-approved-action.authorization-rejected.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/resume-approved-action.authorization-rejected.response.sample.json#L1)
 
+### 6. Read Final Action Status
+
+Path:
+
+- `POST /actions/get`
+
+Body:
+
+```json
+{
+  "requestRef": "req-action-status-payment-001",
+  "input": {
+    "actionRef": "payint-0001"
+  }
+}
+```
+
+Purpose:
+
+- let a payee-side or provider-side agent independently confirm final action state after settlement
+- avoid coupling receiver-side confirmation flows to shared in-process state
+- provide a stable read-side AFAL contract for bilateral runtime-agent harnesses
+
+Canonical examples:
+
+- [get-action-status.payment.request.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/get-action-status.payment.request.json#L1)
+- [get-action-status.payment.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/get-action-status.payment.response.sample.json#L1)
+- [get-action-status.resource.request.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/get-action-status.resource.request.json#L1)
+- [get-action-status.resource.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/get-action-status.resource.response.sample.json#L1)
+
 ---
 
 ## Approval Result Semantics
@@ -436,6 +474,7 @@ Current error examples:
 The following are stable enough to implement against in Phase 1:
 
 - approval session routes
+- read-side action status route
 - `approvalSessionRef`-based callback flow
 - `ApprovalResult` object shape
 - `resume-action` semantics
@@ -468,6 +507,7 @@ For current AFAL Phase 1 integration, the recommended trusted-surface pattern is
 6. trusted surface calls `POST /approval-sessions/apply-result`
 7. trusted surface or orchestration layer calls `POST /approval-sessions/resume-action`
 8. AFAL returns final settlement/receipt response
+9. payee/provider-side agent calls `POST /actions/get` to confirm final state independently
 
 This pattern is the bridge from the current durable async execution skeleton to the next integration-ready runtime stage.
 
@@ -482,3 +522,5 @@ The next concrete artifacts that should follow this document are:
 - trusted-surface callback acceptance tests
 - a minimal trusted-surface stub process
 - an auth/idempotency extension proposal for Phase 1.1 or Phase 2
+
+These first four items are now in place.

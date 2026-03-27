@@ -99,6 +99,10 @@ The concrete integration contract for this flow now lives in:
 
 - [docs/specs/trusted-surface-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/trusted-surface-callback-contract.md#L1)
 
+After approval and resume, downstream receiver-side agents can independently confirm the final settled action through AFAL's read-side route:
+
+- `POST /actions/get`
+
 ## Phase 1 UX Rules
 
 The first implementation should optimize for:
@@ -140,6 +144,8 @@ It can:
 - construct a structured `ApprovalResult`
 - submit the approval result back to AFAL
 - optionally resume the approved action into settlement
+
+The bilateral runtime-agent harnesses then use AFAL's read-side action query to let `payee-agent` and `provider-agent` confirm final outcomes without touching internal state directly.
 
 Example usage against the local durable HTTP server:
 
