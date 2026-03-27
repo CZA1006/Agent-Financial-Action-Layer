@@ -150,20 +150,7 @@ flowchart LR
 
 ## Canonical Phase 1 Flows
 
-```mermaid
-flowchart TD
-    A[Owner / Institution] --> B[Agent DID + Credentials]
-    B --> C[Mandate]
-    C --> D[Treasury / Budget / Quota]
-    D --> E{Intent Type}
-    E --> F[Payment Intent]
-    E --> G[Resource Intent]
-    F --> H[AMN Decision / Challenge]
-    G --> H
-    H --> I[Trusted Surface Approval]
-    I --> J[Settlement]
-    J --> K[Receipt + Capability Response]
-```
+![AFAL Canonical Phase 1 Flows](docs/images/afal-canonical-phase-1-flows.png)
 
 Canonical examples:
 - [docs/examples/mvp-agent-payment-flow.md](docs/examples/mvp-agent-payment-flow.md)
