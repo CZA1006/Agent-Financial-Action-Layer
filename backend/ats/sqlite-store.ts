@@ -1,5 +1,3 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import type {
@@ -11,6 +9,12 @@ import type {
   ResourceQuota,
   ResourceReservation,
 } from "../../sdk/types";
+import {
+  initializeSqliteMetadata,
+  isBootstrapNamespaceApplied,
+  markBootstrapNamespaceApplied,
+  openSqliteDatabase,
+} from "../db/sqlite";
 import type { AtsStore } from "./store";
 
 function clone<T>(value: T): T {
@@ -35,11 +39,7 @@ export class SqliteAtsStore implements AtsStore {
   private readonly db: DatabaseSync;
 
   constructor(private readonly options: SqliteAtsStoreOptions) {
-    if (options.filePath !== ":memory:") {
-      mkdirSync(dirname(options.filePath), { recursive: true });
-    }
-
-    this.db = new DatabaseSync(options.filePath);
+    this.db = openSqliteDatabase(options.filePath);
     this.initialize();
   }
 
@@ -116,6 +116,8 @@ export class SqliteAtsStore implements AtsStore {
   }
 
   private initialize(): void {
+    initializeSqliteMetadata(this.db, { schemaName: "afal-sqlite-integration" });
+
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS accounts (
         id TEXT PRIMARY KEY,
@@ -143,6 +145,14 @@ export class SqliteAtsStore implements AtsStore {
       );
     `);
 
+    this.seedAll();
+  }
+
+  private seedAll(): void {
+    if (isBootstrapNamespaceApplied(this.db, "ats")) {
+      return;
+    }
+
     this.seedTable("accounts", this.options.seed?.accounts ?? [], (entry) => entry.accountId);
     this.seedTable(
       "monetary_budgets",
@@ -169,16 +179,11 @@ export class SqliteAtsStore implements AtsStore {
       this.options.seed?.resourceReservations ?? [],
       (entry) => entry.reservationId
     );
+    markBootstrapNamespaceApplied(this.db, "ats");
   }
 
   private seedTable<T>(table: string, entries: T[], getId: (entry: T) => string): void {
-    const row = this.db.prepare(`SELECT COUNT(*) as count FROM ${table}`).get() as { count: number };
-
-    if (row.count > 0) {
-      return;
-    }
-
-    const statement = this.db.prepare(`INSERT INTO ${table} (id, payload) VALUES (?, ?)`);
+    const statement = this.db.prepare(`INSERT OR IGNORE INTO ${table} (id, payload) VALUES (?, ?)`);
 
     for (const entry of entries) {
       statement.run(getId(entry), JSON.stringify(clone(entry)));

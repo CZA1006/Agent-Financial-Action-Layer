@@ -2,18 +2,33 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
+import { InMemoryAfalAdminAuditStore } from "../admin-audit";
 import { createMockAfalPorts, createMockPaymentFlowOrchestrator, createMockResourceFlowOrchestrator } from "../mock";
+import {
+  HttpSettlementNotificationPort,
+  SettlementNotificationOutboxWorker,
+} from "../notifications";
+import { ExternalAdapterRequestError } from "../settlement/http-adapters";
 import { createAfalRuntimeService } from "../service";
 import {
   createAfalApiHandlers,
   handleApplyApprovalResult,
   handleExecutePayment,
   handleGetActionStatus,
+  handleGetAdminAuditEntry,
   handleGetApprovalSession,
+  handleGetNotificationDelivery,
+  handleGetNotificationWorkerStatus,
+  handleListAdminAuditEntries,
+  handleListNotificationDeliveries,
   handleRequestPaymentApproval,
   handleRequestResourceApproval,
+  handleRedeliverNotification,
+  handleRunNotificationWorker,
   handleResumeApprovedAction,
   handleResumeApprovalSession,
+  handleStartNotificationWorker,
+  handleStopNotificationWorker,
   handleSettleResourceUsage,
 } from "./handlers";
 
@@ -172,6 +187,66 @@ describe("AFAL API adapter", () => {
     }
   });
 
+  test("maps transient external adapter unavailability to a 503 response", async () => {
+    const orchestrator = {
+      async executePaymentFlow() {
+        throw new ExternalAdapterRequestError("payment rail unavailable", {
+          statusCode: 503,
+          code: "transient-upstream-unavailable",
+        });
+      },
+    };
+
+    const response = await handleExecutePayment(
+      {
+        capability: "executePayment",
+        requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+        input: {
+          requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+          intent: paymentFlowFixtures.paymentIntentCreated,
+          monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+        },
+      },
+      orchestrator
+    );
+
+    assert.equal(response.ok, false);
+    if (!response.ok) {
+      assert.equal(response.statusCode, 503);
+      assert.equal(response.error.code, "external-adapter-unavailable");
+    }
+  });
+
+  test("maps non-retryable external adapter rejection to a 409 response", async () => {
+    const orchestrator = {
+      async executePaymentFlow() {
+        throw new ExternalAdapterRequestError("counterparty rejected settlement", {
+          statusCode: 409,
+          code: "counterparty-rejected",
+        });
+      },
+    };
+
+    const response = await handleExecutePayment(
+      {
+        capability: "executePayment",
+        requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+        input: {
+          requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+          intent: paymentFlowFixtures.paymentIntentCreated,
+          monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+        },
+      },
+      orchestrator
+    );
+
+    assert.equal(response.ok, false);
+    if (!response.ok) {
+      assert.equal(response.statusCode, 409);
+      assert.equal(response.error.code, "external-adapter-rejected");
+    }
+  });
+
   test("supports generic capability dispatch", async () => {
     const handlers = createAfalApiHandlers();
 
@@ -316,6 +391,178 @@ describe("AFAL API adapter", () => {
         response.data.paymentReceipt?.receiptId,
         paymentFlowFixtures.paymentReceipt.receiptId
       );
+    }
+  });
+
+  test("returns success envelopes for notification delivery admin handlers", async () => {
+    const adminAuditStore = new InMemoryAfalAdminAuditStore();
+    const runtime = createAfalRuntimeService({
+      ports: createMockAfalPorts({
+        notifications: new HttpSettlementNotificationPort({
+          paymentCallbackUrls: {
+            [paymentFlowFixtures.paymentIntentCreated.payee.payeeDid]:
+              "https://receiver.example/payment",
+          },
+          fetchImpl: async () => new Response(null, { status: 202 }),
+        }),
+      }),
+      adminAuditStore,
+    });
+    const pending = await runtime.requestPaymentApproval({
+      capability: "requestPaymentApproval",
+      requestRef: "req-afal-handler-notification-payment-001",
+      input: {
+        requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+        intent: paymentFlowFixtures.paymentIntentCreated,
+        monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+      },
+    });
+    await runtime.applyApprovalResult({
+      capability: "applyApprovalResult",
+      requestRef: "req-afal-handler-notification-apply-001",
+      input: {
+        approvalSessionRef: pending.approvalSession.approvalSessionId,
+        result: paymentFlowFixtures.approvalResult,
+      },
+    });
+    await runtime.resumeApprovedAction({
+      capability: "resumeApprovedAction",
+      requestRef: "req-afal-handler-notification-resume-001",
+      input: {
+        approvalSessionRef: pending.approvalSession.approvalSessionId,
+      },
+    });
+
+    const notificationId = `notif-${pending.intent.intentId}`;
+    const listedResponse = await handleListNotificationDeliveries(
+      {
+        capability: "listNotificationDeliveries",
+        requestRef: "req-afal-handler-notification-list-001",
+        input: {},
+      },
+      runtime
+    );
+    const deliveryResponse = await handleGetNotificationDelivery(
+      {
+        capability: "getNotificationDelivery",
+        requestRef: "req-afal-handler-notification-get-001",
+        input: {
+          notificationId,
+        },
+      },
+      runtime
+    );
+    const redeliverResponse = await handleRedeliverNotification(
+      {
+        capability: "redeliverNotification",
+        requestRef: "req-afal-handler-notification-redeliver-001",
+        input: {
+          notificationId,
+        },
+      },
+      runtime
+    );
+    const auditListResponse = await handleListAdminAuditEntries(
+      {
+        capability: "listAdminAuditEntries",
+        requestRef: "req-afal-handler-audit-list-001",
+        input: {},
+      },
+      runtime
+    );
+    const auditGetResponse = await handleGetAdminAuditEntry(
+      {
+        capability: "getAdminAuditEntry",
+        requestRef: "req-afal-handler-audit-get-001",
+        input: {
+          auditId: "admin-audit-req-afal-handler-notification-redeliver-001",
+        },
+      },
+      runtime
+    );
+
+    assert.equal(listedResponse.ok, true);
+    assert.equal(deliveryResponse.ok, true);
+    assert.equal(redeliverResponse.ok, true);
+    assert.equal(auditListResponse.ok, true);
+    assert.equal(auditGetResponse.ok, true);
+    if (listedResponse.ok) {
+      assert.equal(listedResponse.data.length, 1);
+    }
+    if (deliveryResponse.ok) {
+      assert.equal(deliveryResponse.data.notificationId, notificationId);
+    }
+    if (redeliverResponse.ok) {
+      assert.equal(redeliverResponse.data.delivery.notificationId, notificationId);
+      assert.equal(redeliverResponse.data.delivery.attempts, 2);
+    }
+    if (auditListResponse.ok) {
+      assert.equal(auditListResponse.data.length, 3);
+    }
+    if (auditGetResponse.ok) {
+      assert.equal(auditGetResponse.data.action, "redeliverNotification");
+      assert.equal(auditGetResponse.data.targetRef, notificationId);
+    }
+  });
+
+  test("returns success envelopes for notification worker control handlers", async () => {
+    const runtime = createAfalRuntimeService({
+      notificationWorker: new SettlementNotificationOutboxWorker(
+        {
+          redeliverFailedNotifications: async () => 1,
+        },
+        { intervalMs: 20 }
+      ),
+    });
+
+    const statusResponse = await handleGetNotificationWorkerStatus(
+      {
+        capability: "getNotificationWorkerStatus",
+        requestRef: "req-afal-handler-worker-status-001",
+        input: {},
+      },
+      runtime
+    );
+    const startResponse = await handleStartNotificationWorker(
+      {
+        capability: "startNotificationWorker",
+        requestRef: "req-afal-handler-worker-start-001",
+        input: {},
+      },
+      runtime
+    );
+    const runResponse = await handleRunNotificationWorker(
+      {
+        capability: "runNotificationWorker",
+        requestRef: "req-afal-handler-worker-run-001",
+        input: {},
+      },
+      runtime
+    );
+    const stopResponse = await handleStopNotificationWorker(
+      {
+        capability: "stopNotificationWorker",
+        requestRef: "req-afal-handler-worker-stop-001",
+        input: {},
+      },
+      runtime
+    );
+
+    assert.equal(statusResponse.ok, true);
+    assert.equal(startResponse.ok, true);
+    assert.equal(runResponse.ok, true);
+    assert.equal(stopResponse.ok, true);
+    if (statusResponse.ok) {
+      assert.equal(statusResponse.data.running, false);
+    }
+    if (startResponse.ok) {
+      assert.equal(startResponse.data.running, true);
+    }
+    if (runResponse.ok) {
+      assert.equal(runResponse.data.redelivered, 1);
+    }
+    if (stopResponse.ok) {
+      assert.equal(stopResponse.data.running, false);
     }
   });
 });

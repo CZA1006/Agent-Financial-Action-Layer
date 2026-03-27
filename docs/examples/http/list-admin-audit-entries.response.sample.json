@@ -1,0 +1,39 @@
+{
+  "ok": true,
+  "capability": "listAdminAuditEntries",
+  "requestRef": "req-admin-audit-list-001",
+  "statusCode": 200,
+  "data": [
+    {
+      "auditId": "admin-audit-req-notification-worker-run-001",
+      "requestRef": "req-notification-worker-run-001",
+      "action": "runNotificationWorker",
+      "createdAt": "2026-03-27T09:13:10Z",
+      "details": {
+        "redelivered": 1,
+        "running": true
+      }
+    },
+    {
+      "auditId": "admin-audit-req-notification-delivery-redeliver-001",
+      "requestRef": "req-notification-delivery-redeliver-001",
+      "action": "redeliverNotification",
+      "createdAt": "2026-03-27T09:12:44Z",
+      "targetRef": "notif-payint-0001",
+      "details": {
+        "attempts": 2,
+        "status": "delivered",
+        "redeliveryCount": 1
+      }
+    },
+    {
+      "auditId": "admin-audit-req-notification-delivery-list-001",
+      "requestRef": "req-notification-delivery-list-001",
+      "action": "listNotificationDeliveries",
+      "createdAt": "2026-03-27T09:12:20Z",
+      "details": {
+        "count": 2
+      }
+    }
+  ]
+}

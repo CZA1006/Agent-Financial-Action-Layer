@@ -1,9 +1,12 @@
 import { createAfalApiServiceAdapter } from "../api";
+import type { SettlementNotificationPort } from "../interfaces";
+import type { PaymentRailAdapter, ResourceProviderAdapter } from "../settlement";
 import {
   createSeededSqliteAfalRuntimeService,
   getSeededSqliteAfalPaths,
   type SeededSqliteAfalPaths,
 } from "../service";
+import type { AfalRuntimeServiceOptions } from "../service";
 import { createAfalHttpRouter } from "./router";
 
 export interface SeededSqliteAfalHttpRouter {
@@ -13,14 +16,24 @@ export interface SeededSqliteAfalHttpRouter {
 }
 
 export function createSeededSqliteAfalHttpRouter(
-  dataDir: string
+  dataDir: string,
+  options?: {
+    notifications?: SettlementNotificationPort;
+    notificationWorker?: AfalRuntimeServiceOptions["notificationWorker"];
+    paymentAdapter?: PaymentRailAdapter;
+    resourceAdapter?: ResourceProviderAdapter;
+    operatorAuth?: {
+      token: string;
+      headerName?: string;
+    };
+  }
 ): SeededSqliteAfalHttpRouter {
-  const runtime = createSeededSqliteAfalRuntimeService(dataDir);
+  const runtime = createSeededSqliteAfalRuntimeService(dataDir, options);
   const handlers = createAfalApiServiceAdapter(runtime);
 
   return {
     dataDir,
     paths: getSeededSqliteAfalPaths(dataDir),
-    router: createAfalHttpRouter({ handlers }),
+    router: createAfalHttpRouter({ handlers, operatorAuth: options?.operatorAuth }),
   };
 }

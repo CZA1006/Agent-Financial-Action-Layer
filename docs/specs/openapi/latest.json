@@ -18,6 +18,10 @@
       "description": "AFAL machine-invokable financial capabilities"
     },
     {
+      "name": "Notifications",
+      "description": "Notification outbox, worker, and operator-facing delivery administration"
+    },
+    {
       "name": "Approvals",
       "description": "AFAL trusted-surface approval session operations"
     }
@@ -188,6 +192,9 @@
           },
           "409": {
             "$ref": "#/components/responses/ConflictResponse"
+          },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailableResponse"
           },
           "500": {
             "$ref": "#/components/responses/InternalErrorResponse"
@@ -373,6 +380,9 @@
           "502": {
             "$ref": "#/components/responses/ProviderFailureResponse"
           },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailableResponse"
+          },
           "500": {
             "$ref": "#/components/responses/InternalErrorResponse"
           }
@@ -516,6 +526,468 @@
           },
           "404": {
             "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/notification-deliveries/get": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "getNotificationDelivery",
+        "summary": "Read a persisted settlement notification delivery record",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperatorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetNotificationDeliveryHttpRequest"
+              },
+              "examples": {
+                "canonical-get-notification-delivery": {
+                  "value": {
+                    "requestRef": "req-notification-delivery-get-001",
+                    "input": {
+                      "notificationId": "notif-payint-0001"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification delivery record resolved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetNotificationDeliverySuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/notification-deliveries/list": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "listNotificationDeliveries",
+        "summary": "List persisted settlement notification delivery records",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperatorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListNotificationDeliveriesHttpRequest"
+              },
+              "examples": {
+                "canonical-list-notification-deliveries": {
+                  "value": {
+                    "requestRef": "req-notification-delivery-list-001",
+                    "input": {
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification delivery records listed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListNotificationDeliveriesSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/notification-deliveries/redeliver": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "redeliverNotification",
+        "summary": "Redeliver a persisted settlement notification using the current outbox entry",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperatorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RedeliverNotificationHttpRequest"
+              },
+              "examples": {
+                "canonical-redeliver-notification": {
+                  "value": {
+                    "requestRef": "req-notification-delivery-redeliver-001",
+                    "input": {
+                      "notificationId": "notif-payint-0001"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification delivery redelivered and current delivery record returned",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RedeliverNotificationSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/notification-worker/get": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "getNotificationWorkerStatus",
+        "summary": "Read the notification outbox worker status",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperatorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationWorkerCommandHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification worker status resolved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetNotificationWorkerStatusSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/notification-worker/start": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "startNotificationWorker",
+        "summary": "Start the notification outbox worker",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperatorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationWorkerCommandHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification worker started successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StartNotificationWorkerSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/notification-worker/stop": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "stopNotificationWorker",
+        "summary": "Stop the notification outbox worker",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperatorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationWorkerCommandHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification worker stopped successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/StopNotificationWorkerSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/notification-worker/run": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "runNotificationWorker",
+        "summary": "Trigger a single notification outbox worker cycle immediately",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperatorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/NotificationWorkerCommandHttpRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Notification worker cycle completed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RunNotificationWorkerSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/admin-audit/get": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "getAdminAuditEntry",
+        "summary": "Read a persisted operator audit log entry for notification admin activity",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperatorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/GetAdminAuditEntryHttpRequest"
+              },
+              "examples": {
+                "canonical-get-admin-audit-entry": {
+                  "value": {
+                    "requestRef": "req-admin-audit-get-001",
+                    "input": {
+                      "auditId": "admin-audit-req-notification-delivery-redeliver-001"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operator audit entry resolved successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/GetAdminAuditEntrySuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFoundResponse"
+          },
+          "500": {
+            "$ref": "#/components/responses/InternalErrorResponse"
+          }
+        }
+      }
+    },
+    "/admin-audit/list": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "operationId": "listAdminAuditEntries",
+        "summary": "List persisted operator audit log entries for notification admin activity",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/OperatorTokenHeader"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ListAdminAuditEntriesHttpRequest"
+              },
+              "examples": {
+                "canonical-list-admin-audit-entries": {
+                  "value": {
+                    "requestRef": "req-admin-audit-list-001",
+                    "input": {
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operator audit entries listed successfully",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListAdminAuditEntriesSuccessResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/BadRequestResponse"
+          },
+          "403": {
+            "$ref": "#/components/responses/ForbiddenResponse"
           },
           "500": {
             "$ref": "#/components/responses/InternalErrorResponse"
@@ -696,6 +1168,9 @@
           "502": {
             "$ref": "#/components/responses/ProviderFailureResponse"
           },
+          "503": {
+            "$ref": "#/components/responses/ServiceUnavailableResponse"
+          },
           "500": {
             "$ref": "#/components/responses/InternalErrorResponse"
           }
@@ -704,6 +1179,17 @@
     }
   },
   "components": {
+    "parameters": {
+      "OperatorTokenHeader": {
+        "name": "x-afal-operator-token",
+        "in": "header",
+        "required": false,
+        "description": "Required for notification outbox and worker admin routes when operator auth is configured on the AFAL HTTP server.",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
     "responses": {
       "BadRequestResponse": {
         "description": "Request envelope or transport shape is invalid",
@@ -774,6 +1260,19 @@
                   "error": {
                     "code": "authorization-rejected",
                     "message": "Mock payment flow stopped before settlement because authorization result was \"rejected\""
+                  }
+                }
+              },
+              "operator-auth-required": {
+                "summary": "notification admin route called without the configured operator token",
+                "value": {
+                  "ok": false,
+                  "capability": "getNotificationWorkerStatus",
+                  "requestRef": "req-notification-worker-status-001",
+                  "statusCode": 403,
+                  "error": {
+                    "code": "operator-auth-required",
+                    "message": "Missing or invalid operator token in header \"x-afal-operator-token\""
                   }
                 }
               }
@@ -865,6 +1364,19 @@
                     "message": "Mock resource flow stopped before settlement because authorization result was \"cancelled\""
                   }
                 }
+              },
+              "external-adapter-rejected": {
+                "summary": "external payment rail or provider rejected the action",
+                "value": {
+                  "ok": false,
+                  "capability": "executePayment",
+                  "requestRef": "req-0001",
+                  "statusCode": 409,
+                  "error": {
+                    "code": "external-adapter-rejected",
+                    "message": "counterparty rejected settlement"
+                  }
+                }
               }
             }
           }
@@ -888,6 +1400,31 @@
                   "error": {
                     "code": "provider-failure",
                     "message": "Provider usage confirmation failed"
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "ServiceUnavailableResponse": {
+        "description": "External adapter dependency is temporarily unavailable and the request can be retried",
+        "content": {
+          "application/json": {
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            },
+            "examples": {
+              "external-adapter-unavailable": {
+                "summary": "external payment rail or provider is temporarily unavailable",
+                "value": {
+                  "ok": false,
+                  "capability": "executePayment",
+                  "requestRef": "req-0001",
+                  "statusCode": 503,
+                  "error": {
+                    "code": "external-adapter-unavailable",
+                    "message": "payment rail unavailable"
                   }
                 }
               }
@@ -985,6 +1522,78 @@
           }
         }
       },
+      "GetNotificationDeliveryHttpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "input"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "notificationId"
+            ],
+            "properties": {
+              "notificationId": {
+                "$ref": "#/components/schemas/IdRef"
+              }
+            }
+          }
+        }
+      },
+      "ListNotificationDeliveriesHttpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false
+          }
+        }
+      },
+      "NotificationWorkerCommandHttpRequest": {
+        "$ref": "#/components/schemas/ListNotificationDeliveriesHttpRequest"
+      },
+      "GetAdminAuditEntryHttpRequest": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "requestRef",
+          "input"
+        ],
+        "properties": {
+          "requestRef": {
+            "type": "string"
+          },
+          "input": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "auditId"
+            ],
+            "properties": {
+              "auditId": {
+                "$ref": "#/components/schemas/IdRef"
+              }
+            }
+          }
+        }
+      },
+      "ListAdminAuditEntriesHttpRequest": {
+        "$ref": "#/components/schemas/ListNotificationDeliveriesHttpRequest"
+      },
       "GetApprovalSessionHttpRequest": {
         "type": "object",
         "additionalProperties": false,
@@ -1066,6 +1675,9 @@
       },
       "ResumeApprovedActionHttpRequest": {
         "$ref": "#/components/schemas/ResumeApprovalSessionHttpRequest"
+      },
+      "RedeliverNotificationHttpRequest": {
+        "$ref": "#/components/schemas/GetNotificationDeliveryHttpRequest"
       },
       "PaymentFlowInput": {
         "type": "object",
@@ -1610,8 +2222,17 @@
               "requestResourceApproval",
               "settleResourceUsage",
               "getActionStatus",
+              "getNotificationDelivery",
+              "listNotificationDeliveries",
+              "getAdminAuditEntry",
+              "listAdminAuditEntries",
+              "getNotificationWorkerStatus",
               "getApprovalSession",
               "applyApprovalResult",
+              "redeliverNotification",
+              "startNotificationWorker",
+              "stopNotificationWorker",
+              "runNotificationWorker",
               "resumeApprovalSession",
               "resumeApprovedAction"
             ]
@@ -1627,7 +2248,8 @@
               404,
               409,
               500,
-              502
+              502,
+              503
             ]
           },
           "error": {
@@ -1643,11 +2265,14 @@
                 "enum": [
                   "bad-request",
                   "not-found",
+                  "operator-auth-required",
                   "credential-verification-failed",
                   "authorization-rejected",
                   "authorization-expired",
                   "authorization-cancelled",
                   "provider-failure",
+                  "external-adapter-unavailable",
+                  "external-adapter-rejected",
                   "internal-error"
                 ]
               },
@@ -2666,6 +3291,137 @@
           }
         }
       },
+      "SettlementNotificationDeliveryRecord": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "notificationId",
+          "eventType",
+          "idempotencyKey",
+          "attempts",
+          "status",
+          "redeliveryCount",
+          "lastAttemptAt"
+        ],
+        "properties": {
+          "notificationId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "eventType": {
+            "type": "string",
+            "enum": [
+              "payment.settled",
+              "resource.settled"
+            ]
+          },
+          "targetUrl": {
+            "type": "string"
+          },
+          "idempotencyKey": {
+            "type": "string"
+          },
+          "attempts": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "delivered",
+              "failed",
+              "skipped",
+              "dead-lettered"
+            ]
+          },
+          "redeliveryCount": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastAttemptAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "nextAttemptAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "deadLetteredAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "responseStatus": {
+            "type": "integer"
+          },
+          "errorMessage": {
+            "type": "string"
+          }
+        }
+      },
+      "SettlementNotificationOutboxWorkerStatus": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "running",
+          "intervalMs"
+        ],
+        "properties": {
+          "running": {
+            "type": "boolean"
+          },
+          "intervalMs": {
+            "type": "integer",
+            "minimum": 10
+          },
+          "lastRunAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "lastResult": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "lastError": {
+            "type": "string"
+          }
+        }
+      },
+      "AfalAdminAuditEntry": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "auditId",
+          "requestRef",
+          "action",
+          "createdAt",
+          "details"
+        ],
+        "properties": {
+          "auditId": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "requestRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "action": {
+            "type": "string",
+            "enum": [
+              "getNotificationDelivery",
+              "listNotificationDeliveries",
+              "redeliverNotification",
+              "getNotificationWorkerStatus",
+              "startNotificationWorker",
+              "stopNotificationWorker",
+              "runNotificationWorker"
+            ]
+          },
+          "createdAt": {
+            "$ref": "#/components/schemas/Timestamp"
+          },
+          "targetRef": {
+            "$ref": "#/components/schemas/IdRef"
+          },
+          "details": {
+            "type": "object",
+            "additionalProperties": true
+          }
+        }
+      },
       "GetActionStatusSuccessResponse": {
         "type": "object",
         "additionalProperties": false,
@@ -2701,6 +3457,229 @@
                 "$ref": "#/components/schemas/ResourceActionStatusOutput"
               }
             ]
+          }
+        }
+      },
+      "GetNotificationDeliverySuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "getNotificationDelivery"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/SettlementNotificationDeliveryRecord"
+          }
+        }
+      },
+      "ListNotificationDeliveriesSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "listNotificationDeliveries"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SettlementNotificationDeliveryRecord"
+            }
+          }
+        }
+      },
+      "GetAdminAuditEntrySuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "getAdminAuditEntry"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/AfalAdminAuditEntry"
+          }
+        }
+      },
+      "ListAdminAuditEntriesSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "listAdminAuditEntries"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/AfalAdminAuditEntry"
+            }
+          }
+        }
+      },
+      "GetNotificationWorkerStatusSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "getNotificationWorkerStatus"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/SettlementNotificationOutboxWorkerStatus"
+          }
+        }
+      },
+      "StartNotificationWorkerSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "startNotificationWorker"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/SettlementNotificationOutboxWorkerStatus"
+          }
+        }
+      },
+      "StopNotificationWorkerSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "stopNotificationWorker"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/SettlementNotificationOutboxWorkerStatus"
           }
         }
       },
@@ -2876,6 +3855,97 @@
                 "$ref": "#/components/schemas/ResourceFlowOutput"
               }
             ]
+          }
+        }
+      },
+      "RedeliverNotificationData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "delivery"
+        ],
+        "properties": {
+          "delivery": {
+            "$ref": "#/components/schemas/SettlementNotificationDeliveryRecord"
+          }
+        }
+      },
+      "RedeliverNotificationSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "redeliverNotification"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/RedeliverNotificationData"
+          }
+        }
+      },
+      "RunNotificationWorkerData": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "redelivered",
+          "status"
+        ],
+        "properties": {
+          "redelivered": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "status": {
+            "$ref": "#/components/schemas/SettlementNotificationOutboxWorkerStatus"
+          }
+        }
+      },
+      "RunNotificationWorkerSuccessResponse": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "ok",
+          "capability",
+          "requestRef",
+          "statusCode",
+          "data"
+        ],
+        "properties": {
+          "ok": {
+            "type": "boolean",
+            "const": true
+          },
+          "capability": {
+            "type": "string",
+            "const": "runNotificationWorker"
+          },
+          "requestRef": {
+            "type": "string"
+          },
+          "statusCode": {
+            "type": "integer",
+            "const": 200
+          },
+          "data": {
+            "$ref": "#/components/schemas/RunNotificationWorkerData"
           }
         }
       }

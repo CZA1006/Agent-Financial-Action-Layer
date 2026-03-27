@@ -20,9 +20,12 @@ import type {
   AfalOrchestrationPorts,
   PaymentFlowOrchestrator,
   ResourceFlowOrchestrator,
+  SettlementNotificationPort,
   TrustedSurfacePort,
 } from "../interfaces";
+import { JsonFileAfalAdminAuditStore } from "../admin-audit";
 import { createMockPaymentFlowOrchestrator, createMockResourceFlowOrchestrator } from "../mock";
+import { NoopSettlementNotificationPort } from "../notifications";
 import { AfalIntentStateService, createSeededAfalIntentTemplateResolver } from "../state";
 import { JsonFileAfalIntentStore } from "../state/file-store";
 import {
@@ -60,6 +63,7 @@ export interface SeededDurableAfalPaths {
   afalIntents: string;
   afalSettlement: string;
   afalOutputs: string;
+  afalAdminAudit: string;
 }
 
 export function getSeededDurableAfalPaths(dataDir: string): SeededDurableAfalPaths {
@@ -70,6 +74,7 @@ export function getSeededDurableAfalPaths(dataDir: string): SeededDurableAfalPat
     afalIntents: join(dataDir, "afal-intents.json"),
     afalSettlement: join(dataDir, "afal-settlement.json"),
     afalOutputs: join(dataDir, "afal-outputs.json"),
+    afalAdminAudit: join(dataDir, "afal-admin-audit.json"),
   };
 }
 
@@ -81,7 +86,12 @@ export interface SeededDurableAfalBundle {
   resourceOrchestrator: ResourceFlowOrchestrator;
 }
 
-export function createSeededDurableAfalBundle(dataDir: string): SeededDurableAfalBundle {
+export function createSeededDurableAfalBundle(
+  dataDir: string,
+  options?: {
+    notifications?: SettlementNotificationPort;
+  }
+): SeededDurableAfalBundle {
   const paths = getSeededDurableAfalPaths(dataDir);
   const aipSeed = createSeededAipRecords();
   const atsSeed = createSeededAtsRecords();
@@ -159,6 +169,7 @@ export function createSeededDurableAfalBundle(dataDir: string): SeededDurableAfa
     resourceSettlement: settlement,
     receipts: outputs,
     capabilityResponses: outputs,
+    notifications: options?.notifications ?? new NoopSettlementNotificationPort(),
   };
 
   const paymentOrchestrator = createMockPaymentFlowOrchestrator(ports);
@@ -167,6 +178,12 @@ export function createSeededDurableAfalBundle(dataDir: string): SeededDurableAfa
     ports,
     paymentOrchestrator,
     resourceOrchestrator,
+    adminAuditStore: new JsonFileAfalAdminAuditStore({
+      filePath: paths.afalAdminAudit,
+      seed: {
+        entries: [],
+      },
+    }),
   });
 
   return {

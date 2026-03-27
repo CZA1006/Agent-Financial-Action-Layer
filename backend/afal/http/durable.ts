@@ -13,7 +13,13 @@ export interface SeededDurableAfalHttpRouter {
 }
 
 export function createSeededDurableAfalHttpRouter(
-  dataDir: string
+  dataDir: string,
+  options?: {
+    operatorAuth?: {
+      token: string;
+      headerName?: string;
+    };
+  }
 ): SeededDurableAfalHttpRouter {
   const runtime = createSeededDurableAfalRuntimeService(dataDir);
   const handlers = createAfalApiServiceAdapter(runtime);
@@ -21,6 +27,6 @@ export function createSeededDurableAfalHttpRouter(
   return {
     dataDir,
     paths: getSeededDurableAfalPaths(dataDir),
-    router: createAfalHttpRouter({ handlers }),
+    router: createAfalHttpRouter({ handlers, operatorAuth: options?.operatorAuth }),
   };
 }

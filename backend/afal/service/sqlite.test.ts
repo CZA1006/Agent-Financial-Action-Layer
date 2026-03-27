@@ -65,6 +65,11 @@ test("seeded SQLite AFAL runtime persists ATS and AFAL intent state across resta
     );
 
     assert.equal(second.runtime.ports, second.ports);
+    assert.equal(paths.integrationDb, paths.ats);
+    assert.equal(paths.integrationDb, paths.amn);
+    assert.equal(paths.integrationDb, paths.afalIntents);
+    assert.equal(paths.integrationDb, paths.afalAdminAudit);
+    assert.equal(paths.integrationDb, paths.afalNotificationOutbox);
     assert.equal(
       paymentBudget?.consumedAmount,
       paymentFlowFixtures.monetaryBudgetFinal.consumedAmount

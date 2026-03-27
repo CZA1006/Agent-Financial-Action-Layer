@@ -8,6 +8,11 @@ import type {
   ResourceFlowOutput,
   ResourceApprovalRequestOutput,
 } from "../interfaces";
+import type { AfalAdminAuditEntry } from "../admin-audit";
+import type {
+  SettlementNotificationDeliveryRecord,
+  SettlementNotificationOutboxWorkerStatus,
+} from "../notifications";
 import type {
   ApprovalResult,
   ApprovalSession,
@@ -25,7 +30,16 @@ export type AfalServiceCapability =
   | "getApprovalSession"
   | "applyApprovalResult"
   | "resumeApprovalSession"
-  | "resumeApprovedAction";
+  | "resumeApprovedAction"
+  | "getNotificationDelivery"
+  | "listNotificationDeliveries"
+  | "redeliverNotification"
+  | "getNotificationWorkerStatus"
+  | "startNotificationWorker"
+  | "stopNotificationWorker"
+  | "runNotificationWorker"
+  | "getAdminAuditEntry"
+  | "listAdminAuditEntries";
 
 export interface ExecutePaymentCommand {
   capability: "executePayment";
@@ -92,6 +106,66 @@ export interface ResumeApprovedActionCommand {
   };
 }
 
+export interface GetNotificationDeliveryCommand {
+  capability: "getNotificationDelivery";
+  requestRef: string;
+  input: {
+    notificationId: IdRef;
+  };
+}
+
+export interface ListNotificationDeliveriesCommand {
+  capability: "listNotificationDeliveries";
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
+export interface RedeliverNotificationCommand {
+  capability: "redeliverNotification";
+  requestRef: string;
+  input: {
+    notificationId: IdRef;
+  };
+}
+
+export interface GetNotificationWorkerStatusCommand {
+  capability: "getNotificationWorkerStatus";
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
+export interface StartNotificationWorkerCommand {
+  capability: "startNotificationWorker";
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
+export interface StopNotificationWorkerCommand {
+  capability: "stopNotificationWorker";
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
+export interface RunNotificationWorkerCommand {
+  capability: "runNotificationWorker";
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
+export interface GetAdminAuditEntryCommand {
+  capability: "getAdminAuditEntry";
+  requestRef: string;
+  input: {
+    auditId: IdRef;
+  };
+}
+
+export interface ListAdminAuditEntriesCommand {
+  capability: "listAdminAuditEntries";
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
 export type AfalServiceCommand =
   | RequestPaymentApprovalCommand
   | ExecutePaymentCommand
@@ -101,7 +175,16 @@ export type AfalServiceCommand =
   | GetApprovalSessionCommand
   | ApplyApprovalResultCommand
   | ResumeApprovalSessionCommand
-  | ResumeApprovedActionCommand;
+  | ResumeApprovedActionCommand
+  | GetNotificationDeliveryCommand
+  | ListNotificationDeliveriesCommand
+  | RedeliverNotificationCommand
+  | GetNotificationWorkerStatusCommand
+  | StartNotificationWorkerCommand
+  | StopNotificationWorkerCommand
+  | RunNotificationWorkerCommand
+  | GetAdminAuditEntryCommand
+  | ListAdminAuditEntriesCommand;
 
 export interface ApplyApprovalResultOutput {
   approvalResult: ApprovalResult;
@@ -116,6 +199,15 @@ export interface ResumeApprovalSessionOutput {
   challenge: ChallengeRecord;
 }
 
+export interface RedeliverNotificationOutput {
+  delivery: SettlementNotificationDeliveryRecord;
+}
+
+export interface RunNotificationWorkerOutput {
+  redelivered: number;
+  status: SettlementNotificationOutboxWorkerStatus;
+}
+
 export type AfalServiceResult =
   | PaymentApprovalRequestOutput
   | PaymentFlowOutput
@@ -125,7 +217,14 @@ export type AfalServiceResult =
   | ApprovalSession
   | ApplyApprovalResultOutput
   | ResumeApprovalSessionOutput
-  | ResumeApprovedActionOutput;
+  | ResumeApprovedActionOutput
+  | SettlementNotificationDeliveryRecord
+  | SettlementNotificationDeliveryRecord[]
+  | RedeliverNotificationOutput
+  | SettlementNotificationOutboxWorkerStatus
+  | RunNotificationWorkerOutput
+  | AfalAdminAuditEntry
+  | AfalAdminAuditEntry[];
 
 export interface AfalModuleService {
   requestPaymentApproval(
@@ -145,5 +244,30 @@ export interface AfalModuleService {
   resumeApprovedAction(
     command: ResumeApprovedActionCommand
   ): Promise<ResumeApprovedActionOutput>;
+  getNotificationDelivery(
+    command: GetNotificationDeliveryCommand
+  ): Promise<SettlementNotificationDeliveryRecord>;
+  listNotificationDeliveries(
+    command: ListNotificationDeliveriesCommand
+  ): Promise<SettlementNotificationDeliveryRecord[]>;
+  redeliverNotification(
+    command: RedeliverNotificationCommand
+  ): Promise<RedeliverNotificationOutput>;
+  getNotificationWorkerStatus(
+    command: GetNotificationWorkerStatusCommand
+  ): Promise<SettlementNotificationOutboxWorkerStatus>;
+  startNotificationWorker(
+    command: StartNotificationWorkerCommand
+  ): Promise<SettlementNotificationOutboxWorkerStatus>;
+  stopNotificationWorker(
+    command: StopNotificationWorkerCommand
+  ): Promise<SettlementNotificationOutboxWorkerStatus>;
+  runNotificationWorker(
+    command: RunNotificationWorkerCommand
+  ): Promise<RunNotificationWorkerOutput>;
+  getAdminAuditEntry(command: GetAdminAuditEntryCommand): Promise<AfalAdminAuditEntry>;
+  listAdminAuditEntries(
+    command: ListAdminAuditEntriesCommand
+  ): Promise<AfalAdminAuditEntry[]>;
   invoke(command: AfalServiceCommand): Promise<AfalServiceResult>;
 }

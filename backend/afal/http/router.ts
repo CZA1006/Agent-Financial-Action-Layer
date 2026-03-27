@@ -10,8 +10,13 @@ import type {
   AfalHttpResponse,
   AfalHttpResponseBody,
   ExecutePaymentHttpBody,
+  GetAdminAuditEntryHttpBody,
   GetActionStatusHttpBody,
   GetApprovalSessionHttpBody,
+  GetNotificationDeliveryHttpBody,
+  ListAdminAuditEntriesHttpBody,
+  ListNotificationDeliveriesHttpBody,
+  RedeliverNotificationHttpBody,
   ResumeApprovedActionHttpBody,
   ResumeApprovalSessionHttpBody,
   SettleResourceUsageHttpBody,
@@ -35,13 +40,22 @@ function buildTransportError(args: {
     | "requestResourceApproval"
     | "settleResourceUsage"
     | "getActionStatus"
+    | "getNotificationDelivery"
+    | "listNotificationDeliveries"
+    | "getNotificationWorkerStatus"
+    | "getAdminAuditEntry"
+    | "listAdminAuditEntries"
     | "getApprovalSession"
     | "applyApprovalResult"
+    | "redeliverNotification"
+    | "startNotificationWorker"
+    | "stopNotificationWorker"
+    | "runNotificationWorker"
     | "resumeApprovalSession"
     | "resumeApprovedAction";
   requestRef: string;
-  statusCode: 400 | 404;
-  code: "bad-request" | "not-found";
+  statusCode: 400 | 403 | 404;
+  code: "bad-request" | "not-found" | "operator-auth-required";
   message: string;
 }): AfalApiFailure {
   return {
@@ -54,6 +68,57 @@ function buildTransportError(args: {
       message: args.message,
     },
   };
+}
+
+function getHeaderValue(
+  headers: Record<string, string | undefined> | undefined,
+  headerName: string
+): string | undefined {
+  if (!headers) {
+    return undefined;
+  }
+
+  const direct = headers[headerName];
+  if (direct !== undefined) {
+    return direct;
+  }
+
+  return headers[headerName.toLowerCase()];
+}
+
+function ensureOperatorAuthorization(args: {
+  enabled: boolean;
+  token: string;
+  headerName: string;
+  headers: Record<string, string | undefined> | undefined;
+  capability:
+    | "getNotificationDelivery"
+    | "listNotificationDeliveries"
+    | "redeliverNotification"
+    | "getNotificationWorkerStatus"
+    | "startNotificationWorker"
+    | "stopNotificationWorker"
+    | "runNotificationWorker"
+    | "getAdminAuditEntry"
+    | "listAdminAuditEntries";
+  requestRef: string;
+}): AfalApiFailure | null {
+  if (!args.enabled) {
+    return null;
+  }
+
+  const suppliedToken = getHeaderValue(args.headers, args.headerName);
+  if (suppliedToken === args.token) {
+    return null;
+  }
+
+  return buildTransportError({
+    capability: args.capability,
+    requestRef: args.requestRef,
+    statusCode: 403,
+    code: "operator-auth-required",
+    message: `Missing or invalid operator token in header "${args.headerName}"`,
+  });
 }
 
 function isObjectRecord(value: unknown): value is Record<string, unknown> {
@@ -96,6 +161,52 @@ function isGetActionStatusBody(body: unknown): body is GetActionStatusHttpBody {
   );
 }
 
+function isGetNotificationDeliveryBody(body: unknown): body is GetNotificationDeliveryHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    isObjectRecord(body.input) &&
+    typeof body.input.notificationId === "string"
+  );
+}
+
+function isListNotificationDeliveriesBody(
+  body: unknown
+): body is ListNotificationDeliveriesHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    (body.input === undefined || isObjectRecord(body.input))
+  );
+}
+
+function isNotificationWorkerCommandBody(
+  body: unknown
+): body is ListNotificationDeliveriesHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    (body.input === undefined || isObjectRecord(body.input))
+  );
+}
+
+function isGetAdminAuditEntryBody(body: unknown): body is GetAdminAuditEntryHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    isObjectRecord(body.input) &&
+    typeof body.input.auditId === "string"
+  );
+}
+
+function isListAdminAuditEntriesBody(body: unknown): body is ListAdminAuditEntriesHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    (body.input === undefined || isObjectRecord(body.input))
+  );
+}
+
 function isApplyApprovalResultBody(body: unknown): body is ApplyApprovalResultHttpBody {
   return (
     isObjectRecord(body) &&
@@ -121,6 +232,15 @@ function isResumeApprovedActionBody(body: unknown): body is ResumeApprovedAction
     typeof body.requestRef === "string" &&
     isObjectRecord(body.input) &&
     typeof body.input.approvalSessionRef === "string"
+  );
+}
+
+function isRedeliverNotificationBody(body: unknown): body is RedeliverNotificationHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    isObjectRecord(body.input) &&
+    typeof body.input.notificationId === "string"
   );
 }
 
@@ -150,6 +270,10 @@ export function createAfalHttpRouter(args?: {
   paymentOrchestrator?: PaymentFlowOrchestrator;
   resourceOrchestrator?: ResourceFlowOrchestrator;
   handlers?: AfalApiServiceAdapter;
+  operatorAuth?: {
+    token: string;
+    headerName?: string;
+  };
 }) {
   const apiHandlers =
     args?.handlers ??
@@ -157,6 +281,9 @@ export function createAfalHttpRouter(args?: {
       paymentOrchestrator: args?.paymentOrchestrator,
       resourceOrchestrator: args?.resourceOrchestrator,
     });
+  const operatorToken = args?.operatorAuth?.token;
+  const operatorHeaderName = args?.operatorAuth?.headerName ?? "x-afal-operator-token";
+  const operatorAuthEnabled = typeof operatorToken === "string" && operatorToken.length > 0;
 
   return {
     async handle(request: AfalHttpRequest): Promise<AfalHttpResponse<AfalHttpResponseBody>> {
@@ -369,6 +496,359 @@ export function createAfalHttpRouter(args?: {
         return buildJsonResponse(response.statusCode, response);
       }
 
+      if (request.path === AFAL_HTTP_ROUTES.getNotificationDelivery) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getNotificationDelivery",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "getNotificationDelivery transport only supports POST",
+            })
+          );
+        }
+        if (!isGetNotificationDeliveryBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getNotificationDelivery",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message:
+                "getNotificationDelivery request body must include requestRef and input.notificationId",
+            })
+          );
+        }
+        const operatorAuthFailure = ensureOperatorAuthorization({
+          enabled: operatorAuthEnabled,
+          token: operatorToken ?? "",
+          headerName: operatorHeaderName,
+          headers: request.headers,
+          capability: "getNotificationDelivery",
+          requestRef: request.body.requestRef,
+        });
+        if (operatorAuthFailure) {
+          return buildJsonResponse(operatorAuthFailure.statusCode, operatorAuthFailure);
+        }
+        const response = await apiHandlers.handleGetNotificationDelivery({
+          capability: "getNotificationDelivery",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.listNotificationDeliveries) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "listNotificationDeliveries",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "listNotificationDeliveries transport only supports POST",
+            })
+          );
+        }
+        if (!isListNotificationDeliveriesBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "listNotificationDeliveries",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "listNotificationDeliveries request body must include requestRef",
+            })
+          );
+        }
+        const operatorAuthFailure = ensureOperatorAuthorization({
+          enabled: operatorAuthEnabled,
+          token: operatorToken ?? "",
+          headerName: operatorHeaderName,
+          headers: request.headers,
+          capability: "listNotificationDeliveries",
+          requestRef: request.body.requestRef,
+        });
+        if (operatorAuthFailure) {
+          return buildJsonResponse(operatorAuthFailure.statusCode, operatorAuthFailure);
+        }
+        const response = await apiHandlers.handleListNotificationDeliveries({
+          capability: "listNotificationDeliveries",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.getAdminAuditEntry) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getAdminAuditEntry",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "getAdminAuditEntry transport only supports POST",
+            })
+          );
+        }
+        if (!isGetAdminAuditEntryBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getAdminAuditEntry",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "getAdminAuditEntry request body must include requestRef and input.auditId",
+            })
+          );
+        }
+        const operatorAuthFailure = ensureOperatorAuthorization({
+          enabled: operatorAuthEnabled,
+          token: operatorToken ?? "",
+          headerName: operatorHeaderName,
+          headers: request.headers,
+          capability: "getAdminAuditEntry",
+          requestRef: request.body.requestRef,
+        });
+        if (operatorAuthFailure) {
+          return buildJsonResponse(operatorAuthFailure.statusCode, operatorAuthFailure);
+        }
+        const response = await apiHandlers.handleGetAdminAuditEntry({
+          capability: "getAdminAuditEntry",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.listAdminAuditEntries) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "listAdminAuditEntries",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "listAdminAuditEntries transport only supports POST",
+            })
+          );
+        }
+        if (!isListAdminAuditEntriesBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "listAdminAuditEntries",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "listAdminAuditEntries request body must include requestRef",
+            })
+          );
+        }
+        const operatorAuthFailure = ensureOperatorAuthorization({
+          enabled: operatorAuthEnabled,
+          token: operatorToken ?? "",
+          headerName: operatorHeaderName,
+          headers: request.headers,
+          capability: "listAdminAuditEntries",
+          requestRef: request.body.requestRef,
+        });
+        if (operatorAuthFailure) {
+          return buildJsonResponse(operatorAuthFailure.statusCode, operatorAuthFailure);
+        }
+        const response = await apiHandlers.handleListAdminAuditEntries({
+          capability: "listAdminAuditEntries",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.getNotificationWorkerStatus) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getNotificationWorkerStatus",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "getNotificationWorkerStatus transport only supports POST",
+            })
+          );
+        }
+        if (!isNotificationWorkerCommandBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getNotificationWorkerStatus",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "getNotificationWorkerStatus request body must include requestRef",
+            })
+          );
+        }
+        const operatorAuthFailure = ensureOperatorAuthorization({
+          enabled: operatorAuthEnabled,
+          token: operatorToken ?? "",
+          headerName: operatorHeaderName,
+          headers: request.headers,
+          capability: "getNotificationWorkerStatus",
+          requestRef: request.body.requestRef,
+        });
+        if (operatorAuthFailure) {
+          return buildJsonResponse(operatorAuthFailure.statusCode, operatorAuthFailure);
+        }
+        const response = await apiHandlers.handleGetNotificationWorkerStatus({
+          capability: "getNotificationWorkerStatus",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.startNotificationWorker) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "startNotificationWorker",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "startNotificationWorker transport only supports POST",
+            })
+          );
+        }
+        if (!isNotificationWorkerCommandBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "startNotificationWorker",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "startNotificationWorker request body must include requestRef",
+            })
+          );
+        }
+        const operatorAuthFailure = ensureOperatorAuthorization({
+          enabled: operatorAuthEnabled,
+          token: operatorToken ?? "",
+          headerName: operatorHeaderName,
+          headers: request.headers,
+          capability: "startNotificationWorker",
+          requestRef: request.body.requestRef,
+        });
+        if (operatorAuthFailure) {
+          return buildJsonResponse(operatorAuthFailure.statusCode, operatorAuthFailure);
+        }
+        const response = await apiHandlers.handleStartNotificationWorker({
+          capability: "startNotificationWorker",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.stopNotificationWorker) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "stopNotificationWorker",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "stopNotificationWorker transport only supports POST",
+            })
+          );
+        }
+        if (!isNotificationWorkerCommandBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "stopNotificationWorker",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "stopNotificationWorker request body must include requestRef",
+            })
+          );
+        }
+        const operatorAuthFailure = ensureOperatorAuthorization({
+          enabled: operatorAuthEnabled,
+          token: operatorToken ?? "",
+          headerName: operatorHeaderName,
+          headers: request.headers,
+          capability: "stopNotificationWorker",
+          requestRef: request.body.requestRef,
+        });
+        if (operatorAuthFailure) {
+          return buildJsonResponse(operatorAuthFailure.statusCode, operatorAuthFailure);
+        }
+        const response = await apiHandlers.handleStopNotificationWorker({
+          capability: "stopNotificationWorker",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.runNotificationWorker) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "runNotificationWorker",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "runNotificationWorker transport only supports POST",
+            })
+          );
+        }
+        if (!isNotificationWorkerCommandBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "runNotificationWorker",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "runNotificationWorker request body must include requestRef",
+            })
+          );
+        }
+        const operatorAuthFailure = ensureOperatorAuthorization({
+          enabled: operatorAuthEnabled,
+          token: operatorToken ?? "",
+          headerName: operatorHeaderName,
+          headers: request.headers,
+          capability: "runNotificationWorker",
+          requestRef: request.body.requestRef,
+        });
+        if (operatorAuthFailure) {
+          return buildJsonResponse(operatorAuthFailure.statusCode, operatorAuthFailure);
+        }
+        const response = await apiHandlers.handleRunNotificationWorker({
+          capability: "runNotificationWorker",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
       if (request.path === AFAL_HTTP_ROUTES.getApprovalSession) {
         if (request.method !== "POST") {
           return buildJsonResponse(
@@ -396,6 +876,51 @@ export function createAfalHttpRouter(args?: {
         }
         const response = await apiHandlers.handleGetApprovalSession({
           capability: "getApprovalSession",
+          requestRef: request.body.requestRef,
+          input: request.body.input,
+        });
+        return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.redeliverNotification) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "redeliverNotification",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "redeliverNotification transport only supports POST",
+            })
+          );
+        }
+        if (!isRedeliverNotificationBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "redeliverNotification",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message:
+                "redeliverNotification request body must include requestRef and input.notificationId",
+            })
+          );
+        }
+        const operatorAuthFailure = ensureOperatorAuthorization({
+          enabled: operatorAuthEnabled,
+          token: operatorToken ?? "",
+          headerName: operatorHeaderName,
+          headers: request.headers,
+          capability: "redeliverNotification",
+          requestRef: request.body.requestRef,
+        });
+        if (operatorAuthFailure) {
+          return buildJsonResponse(operatorAuthFailure.statusCode, operatorAuthFailure);
+        }
+        const response = await apiHandlers.handleRedeliverNotification({
+          capability: "redeliverNotification",
           requestRef: request.body.requestRef,
           input: request.body.input,
         });

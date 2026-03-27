@@ -1,0 +1,10 @@
+{
+  "ok": true,
+  "capability": "startNotificationWorker",
+  "requestRef": "req-notification-worker-start-001",
+  "statusCode": 200,
+  "data": {
+    "running": true,
+    "intervalMs": 1000
+  }
+}

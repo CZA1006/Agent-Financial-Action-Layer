@@ -271,6 +271,51 @@ export interface ResourceActionStatusOutput {
 
 export type ActionStatusOutput = PaymentActionStatusOutput | ResourceActionStatusOutput;
 
+export interface PaymentSettlementNotification {
+  notificationId: IdRef;
+  eventType: "payment.settled";
+  requestRef: IdRef;
+  actionRef: IdRef;
+  approvalSessionRef: IdRef;
+  payeeDid: Did;
+  intentStatus: PaymentIntent["status"];
+  settlementRef: IdRef;
+  receiptRef: IdRef;
+  asset: string;
+  amount: string;
+  chain: string;
+  settledAt: Timestamp;
+}
+
+export interface ResourceSettlementNotification {
+  notificationId: IdRef;
+  eventType: "resource.settled";
+  requestRef: IdRef;
+  actionRef: IdRef;
+  approvalSessionRef: IdRef;
+  providerId: string;
+  providerDid: Did;
+  intentStatus: ResourceIntent["status"];
+  usageReceiptRef: IdRef;
+  settlementRef: IdRef;
+  receiptRef: IdRef;
+  asset: string;
+  amount: string;
+  resourceClass: string;
+  resourceUnit: string;
+  quantity: number;
+  settledAt: Timestamp;
+}
+
+export type SettlementNotification =
+  | PaymentSettlementNotification
+  | ResourceSettlementNotification;
+
+export interface SettlementNotificationPort {
+  notifyPaymentSettlement(notification: PaymentSettlementNotification): Promise<void>;
+  notifyResourceSettlement(notification: ResourceSettlementNotification): Promise<void>;
+}
+
 export type ResumeApprovedActionOutput = PaymentFlowOutput | ResourceFlowOutput;
 
 export interface PaymentFlowOrchestrator {
@@ -299,4 +344,5 @@ export interface AfalOrchestrationPorts {
   resourceSettlement: ResourceSettlementPort;
   receipts: ReceiptPort;
   capabilityResponses: CapabilityResponsePort;
+  notifications?: SettlementNotificationPort;
 }

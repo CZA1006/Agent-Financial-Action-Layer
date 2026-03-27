@@ -1,0 +1,17 @@
+{
+  "ok": true,
+  "capability": "getNotificationDelivery",
+  "requestRef": "req-notification-delivery-get-001",
+  "statusCode": 200,
+  "data": {
+    "notificationId": "notif-payint-0001",
+    "eventType": "payment.settled",
+    "targetUrl": "http://127.0.0.1:4213/settlement-events",
+    "idempotencyKey": "notif-payint-0001",
+    "attempts": 1,
+    "redeliveryCount": 0,
+    "status": "delivered",
+    "lastAttemptAt": "2026-03-26T10:40:12Z",
+    "responseStatus": 202
+  }
+}

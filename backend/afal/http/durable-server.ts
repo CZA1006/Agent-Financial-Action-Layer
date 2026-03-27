@@ -16,6 +16,7 @@ export interface AfalNodeHttpTransportRequest {
   method?: string;
   url?: string;
   bodyText?: string;
+  headers?: Record<string, string | undefined>;
 }
 
 export interface AfalNodeHttpTransportResponse {
@@ -61,6 +62,8 @@ function inferCapability(
   | "requestResourceApproval"
   | "settleResourceUsage"
   | "getActionStatus"
+  | "getAdminAuditEntry"
+  | "listAdminAuditEntries"
   | "getApprovalSession"
   | "applyApprovalResult"
   | "resumeApprovalSession"
@@ -76,6 +79,12 @@ function inferCapability(
   }
   if (pathname === AFAL_HTTP_ROUTES.getActionStatus) {
     return "getActionStatus";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.getAdminAuditEntry) {
+    return "getAdminAuditEntry";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.listAdminAuditEntries) {
+    return "listAdminAuditEntries";
   }
   if (pathname === AFAL_HTTP_ROUTES.getApprovalSession) {
     return "getApprovalSession";
@@ -134,6 +143,7 @@ export async function handleAfalNodeHttpRequest(
     method: request.method ?? "GET",
     path: pathname,
     body,
+    headers: request.headers,
   });
 
   return stringifyNodeResponse(response.statusCode, response.body);
@@ -149,6 +159,12 @@ export function createAfalNodeHttpRequestListener(
         method: request.method,
         url: request.url,
         bodyText,
+        headers: Object.fromEntries(
+          Object.entries(request.headers).map(([key, value]) => [
+            key,
+            Array.isArray(value) ? value.join(", ") : value,
+          ])
+        ),
       });
 
       response.writeHead(result.statusCode, result.headers);
@@ -171,8 +187,16 @@ export function createAfalNodeHttpRequestListener(
   };
 }
 
-export function createSeededDurableAfalHttpServer(dataDir: string): SeededDurableAfalHttpServer {
-  const durable = createSeededDurableAfalHttpRouter(dataDir);
+export function createSeededDurableAfalHttpServer(
+  dataDir: string,
+  options?: {
+    operatorAuth?: {
+      token: string;
+      headerName?: string;
+    };
+  }
+): SeededDurableAfalHttpServer {
+  const durable = createSeededDurableAfalHttpRouter(dataDir, options);
 
   return {
     ...durable,
@@ -184,11 +208,17 @@ export async function startSeededDurableAfalHttpServer(args?: {
   dataDir?: string;
   host?: string;
   port?: number;
+  operatorAuth?: {
+    token: string;
+    headerName?: string;
+  };
 }): Promise<RunningSeededDurableAfalHttpServer> {
   const dataDir = args?.dataDir ?? join(process.cwd(), ".afal-durable-http-data");
   const host = args?.host ?? DEFAULT_HOST;
   const port = args?.port ?? DEFAULT_PORT;
-  const durable = createSeededDurableAfalHttpServer(dataDir);
+  const durable = createSeededDurableAfalHttpServer(dataDir, {
+    operatorAuth: args?.operatorAuth,
+  });
 
   await new Promise<void>((resolve, reject) => {
     durable.server.once("error", reject);

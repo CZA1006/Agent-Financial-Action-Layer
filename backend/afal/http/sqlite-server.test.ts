@@ -7,6 +7,7 @@ import { test } from "node:test";
 import { paymentFlowFixtures } from "../../../sdk/fixtures";
 import { SqliteAtsStore } from "../../ats";
 import { JsonFileAfalOutputStore } from "../outputs/file-store";
+import { HttpSettlementNotificationPort } from "../notifications";
 import { createSeededSqliteAfalHttpServer, handleAfalNodeHttpRequest } from "./sqlite-server";
 import { AFAL_HTTP_ROUTES } from "./types";
 
@@ -71,6 +72,62 @@ test("SQLite AFAL HTTP server adapter rejects invalid JSON request bodies", asyn
     assert.equal(response.statusCode, 400);
     assert.equal(parsed.ok, false);
     assert.equal(parsed.error?.code, "bad-request");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("SQLite AFAL HTTP server adapter enforces operator auth on notification admin routes", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "afal-sqlite-http-server-auth-"));
+
+  try {
+    const sqlite = createSeededSqliteAfalHttpServer(dir, {
+      notifications: new HttpSettlementNotificationPort({
+        paymentCallbackUrls: {
+          [paymentFlowFixtures.paymentIntentCreated.payee.payeeDid]:
+            "https://receiver.example/payment",
+        },
+        fetchImpl: async () => new Response(null, { status: 202 }),
+      }),
+      notificationWorker: {
+        start: false,
+      },
+      operatorAuth: {
+        token: "operator-secret",
+      },
+    });
+
+    const unauthorized = await handleAfalNodeHttpRequest(sqlite, {
+      method: "POST",
+      url: AFAL_HTTP_ROUTES.listNotificationDeliveries,
+      bodyText: JSON.stringify({
+        requestRef: "req-http-notification-list-auth-server-001",
+        input: {},
+      }),
+    });
+    const authorized = await handleAfalNodeHttpRequest(sqlite, {
+      method: "POST",
+      url: AFAL_HTTP_ROUTES.listNotificationDeliveries,
+      headers: {
+        "x-afal-operator-token": "operator-secret",
+      },
+      bodyText: JSON.stringify({
+        requestRef: "req-http-notification-list-auth-server-002",
+        input: {},
+      }),
+    });
+
+    const unauthorizedBody = JSON.parse(unauthorized.bodyText) as {
+      ok: boolean;
+      error?: { code?: string };
+    };
+    const authorizedBody = JSON.parse(authorized.bodyText) as { ok: boolean };
+
+    assert.equal(unauthorized.statusCode, 403);
+    assert.equal(unauthorizedBody.ok, false);
+    assert.equal(unauthorizedBody.error?.code, "operator-auth-required");
+    assert.equal(authorized.statusCode, 200);
+    assert.equal(authorizedBody.ok, true);
   } finally {
     await rm(dir, { recursive: true, force: true });
   }

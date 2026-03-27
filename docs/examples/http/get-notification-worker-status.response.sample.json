@@ -1,0 +1,12 @@
+{
+  "ok": true,
+  "capability": "getNotificationWorkerStatus",
+  "requestRef": "req-notification-worker-status-001",
+  "statusCode": 200,
+  "data": {
+    "running": true,
+    "intervalMs": 1000,
+    "lastRunAt": "2026-03-27T09:15:00Z",
+    "lastResult": 1
+  }
+}

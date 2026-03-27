@@ -1,4 +1,10 @@
-import type { IdRef, SettlementRecord } from "../../../sdk/types";
+import type {
+  AuthorizationDecision,
+  IdRef,
+  PaymentIntent,
+  ResourceIntent,
+  SettlementRecord,
+} from "../../../sdk/types";
 import type {
   PaymentSettlementPort,
   ProviderUsageConfirmation,
@@ -28,4 +34,17 @@ export interface PaymentSettlementTemplateResolver {
 export interface ResourceSettlementTemplateResolver {
   resolveResourceUsageTemplate(actionRef: IdRef): ProviderUsageConfirmation | undefined;
   resolveResourceSettlementTemplate(actionRef: IdRef): SettlementRecord | undefined;
+}
+
+export interface PaymentRailAdapter {
+  executePayment(intent: PaymentIntent, decision: AuthorizationDecision): Promise<SettlementRecord>;
+}
+
+export interface ResourceProviderAdapter {
+  confirmResourceUsage(intent: ResourceIntent): Promise<ProviderUsageConfirmation>;
+  settleResourceUsage(args: {
+    intent: ResourceIntent;
+    decision: AuthorizationDecision;
+    usage: ProviderUsageConfirmation;
+  }): Promise<SettlementRecord>;
 }

@@ -10,6 +10,8 @@ import type {
   AfalCapabilityRequest,
   AfalCapabilityResponse,
   ApplyApprovalResultResponse,
+  GetAdminAuditEntryRequest,
+  GetAdminAuditEntryResponse,
   GetActionStatusRequest,
   GetActionStatusResponse,
   GetApprovalSessionRequest,
@@ -26,6 +28,22 @@ import type {
   ResumeApprovalSessionResponse,
   ResourceCapabilityRequest,
   ResourceCapabilityResponse,
+  GetNotificationDeliveryRequest,
+  GetNotificationDeliveryResponse,
+  GetNotificationWorkerStatusRequest,
+  GetNotificationWorkerStatusResponse,
+  ListAdminAuditEntriesRequest,
+  ListAdminAuditEntriesResponse,
+  ListNotificationDeliveriesRequest,
+  ListNotificationDeliveriesResponse,
+  RedeliverNotificationRequest,
+  RedeliverNotificationResponse,
+  RunNotificationWorkerRequest,
+  RunNotificationWorkerResponse,
+  StartNotificationWorkerRequest,
+  StartNotificationWorkerResponse,
+  StopNotificationWorkerRequest,
+  StopNotificationWorkerResponse,
 } from "./types";
 import { mapAfalFailure } from "./failures";
 
@@ -228,6 +246,213 @@ export async function handleResumeApprovedAction(
   }
 }
 
+export async function handleGetNotificationDelivery(
+  request: GetNotificationDeliveryRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<GetNotificationDeliveryResponse> {
+  try {
+    const data = await service.getNotificationDelivery({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleListNotificationDeliveries(
+  request: ListNotificationDeliveriesRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<ListNotificationDeliveriesResponse> {
+  try {
+    const data = await service.listNotificationDeliveries({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleRedeliverNotification(
+  request: RedeliverNotificationRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<RedeliverNotificationResponse> {
+  try {
+    const data = await service.redeliverNotification({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleGetNotificationWorkerStatus(
+  request: GetNotificationWorkerStatusRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<GetNotificationWorkerStatusResponse> {
+  try {
+    const data = await service.getNotificationWorkerStatus({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleStartNotificationWorker(
+  request: StartNotificationWorkerRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<StartNotificationWorkerResponse> {
+  try {
+    const data = await service.startNotificationWorker({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleStopNotificationWorker(
+  request: StopNotificationWorkerRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<StopNotificationWorkerResponse> {
+  try {
+    const data = await service.stopNotificationWorker({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleRunNotificationWorker(
+  request: RunNotificationWorkerRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<RunNotificationWorkerResponse> {
+  try {
+    const data = await service.runNotificationWorker({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleGetAdminAuditEntry(
+  request: GetAdminAuditEntryRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<GetAdminAuditEntryResponse> {
+  try {
+    const data = await service.getAdminAuditEntry({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
+export async function handleListAdminAuditEntries(
+  request: ListAdminAuditEntriesRequest,
+  service: AfalModuleService = createAfalRuntimeService()
+): Promise<ListAdminAuditEntriesResponse> {
+  try {
+    const data = await service.listAdminAuditEntries({
+      capability: request.capability,
+      requestRef: request.requestRef,
+      input: request.input,
+    });
+    const response: AfalApiSuccess<typeof data> = {
+      ok: true,
+      capability: request.capability,
+      requestRef: request.requestRef,
+      statusCode: 200,
+      data,
+    };
+    return response;
+  } catch (error) {
+    return mapAfalFailure(request.capability, request.requestRef, error);
+  }
+}
+
 export function createAfalApiHandlers(args?: {
   paymentOrchestrator?: PaymentFlowOrchestrator;
   resourceOrchestrator?: ResourceFlowOrchestrator;
@@ -264,6 +489,24 @@ export function createAfalApiHandlers(args?: {
       handleResumeApprovalSession(request, runtime),
     handleResumeApprovedAction: (request: ResumeApprovedActionRequest) =>
       handleResumeApprovedAction(request, runtime),
+    handleGetNotificationDelivery: (request: GetNotificationDeliveryRequest) =>
+      handleGetNotificationDelivery(request, runtime),
+    handleListNotificationDeliveries: (request: ListNotificationDeliveriesRequest) =>
+      handleListNotificationDeliveries(request, runtime),
+    handleRedeliverNotification: (request: RedeliverNotificationRequest) =>
+      handleRedeliverNotification(request, runtime),
+    handleGetNotificationWorkerStatus: (request: GetNotificationWorkerStatusRequest) =>
+      handleGetNotificationWorkerStatus(request, runtime),
+    handleStartNotificationWorker: (request: StartNotificationWorkerRequest) =>
+      handleStartNotificationWorker(request, runtime),
+    handleStopNotificationWorker: (request: StopNotificationWorkerRequest) =>
+      handleStopNotificationWorker(request, runtime),
+    handleRunNotificationWorker: (request: RunNotificationWorkerRequest) =>
+      handleRunNotificationWorker(request, runtime),
+    handleGetAdminAuditEntry: (request: GetAdminAuditEntryRequest) =>
+      handleGetAdminAuditEntry(request, runtime),
+    handleListAdminAuditEntries: (request: ListAdminAuditEntriesRequest) =>
+      handleListAdminAuditEntries(request, runtime),
     invokeCapability: async (request: AfalCapabilityRequest): Promise<AfalCapabilityResponse> => {
       if (request.capability === "executePayment") {
         return handleExecutePayment(request, paymentOrchestrator);
@@ -289,8 +532,35 @@ export function createAfalApiHandlers(args?: {
       if (request.capability === "resumeApprovalSession") {
         return handleResumeApprovalSession(request, runtime);
       }
+      if (request.capability === "resumeApprovedAction") {
+        return handleResumeApprovedAction(request, runtime);
+      }
+      if (request.capability === "getNotificationDelivery") {
+        return handleGetNotificationDelivery(request, runtime);
+      }
+      if (request.capability === "listNotificationDeliveries") {
+        return handleListNotificationDeliveries(request, runtime);
+      }
+      if (request.capability === "getNotificationWorkerStatus") {
+        return handleGetNotificationWorkerStatus(request, runtime);
+      }
+      if (request.capability === "startNotificationWorker") {
+        return handleStartNotificationWorker(request, runtime);
+      }
+      if (request.capability === "stopNotificationWorker") {
+        return handleStopNotificationWorker(request, runtime);
+      }
+      if (request.capability === "runNotificationWorker") {
+        return handleRunNotificationWorker(request, runtime);
+      }
+      if (request.capability === "getAdminAuditEntry") {
+        return handleGetAdminAuditEntry(request, runtime);
+      }
+      if (request.capability === "listAdminAuditEntries") {
+        return handleListAdminAuditEntries(request, runtime);
+      }
 
-      return handleResumeApprovedAction(request, runtime);
+      return handleRedeliverNotification(request, runtime);
     },
   };
 }

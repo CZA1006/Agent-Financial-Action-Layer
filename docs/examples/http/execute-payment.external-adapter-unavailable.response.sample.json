@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "capability": "executePayment",
+  "requestRef": "req-0001",
+  "statusCode": 503,
+  "error": {
+    "code": "external-adapter-unavailable",
+    "message": "payment rail unavailable"
+  }
+}

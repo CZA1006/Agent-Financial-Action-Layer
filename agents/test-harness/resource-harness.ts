@@ -14,12 +14,17 @@ import {
   startSeededSqliteAfalHttpServer,
   type RunningSeededSqliteAfalHttpServer,
 } from "../../backend/afal/http/sqlite-server";
+import {
+  startTrustedSurfaceStubServer,
+  type RunningTrustedSurfaceStubServer,
+} from "../../app/trusted-surface/server";
 
 const THIS_DIR = dirname(fileURLToPath(import.meta.url));
 
 export interface AgentResourceHarnessResult {
   summary: {
     baseUrl: string;
+    trustedSurfaceUrl?: string;
     requesterAgentId: string;
     approvalAgentId: string;
     approvalSessionRef: string;
@@ -104,11 +109,15 @@ async function runJsonProcess(args: string[]): Promise<unknown> {
 
 export async function runSpawnedAgentResourceHarness(args?: {
   baseUrl?: string;
+  trustedSurfaceUrl?: string;
   dataDir?: string;
   host?: string;
   port?: number;
+  trustedSurfaceHost?: string;
+  trustedSurfacePort?: number;
 }): Promise<AgentResourceHarnessResult> {
   let server: RunningSeededSqliteAfalHttpServer | undefined;
+  let trustedSurface: RunningTrustedSurfaceStubServer | undefined;
   let tempDataDir: string | undefined;
 
   try {
@@ -129,6 +138,16 @@ export async function runSpawnedAgentResourceHarness(args?: {
       throw new Error("resource harness requires either baseUrl or a startable local server");
     }
 
+    trustedSurface =
+      args?.trustedSurfaceUrl
+        ? undefined
+        : await startTrustedSurfaceStubServer({
+            afalBaseUrl: baseUrl,
+            host: args?.trustedSurfaceHost,
+            port: args?.trustedSurfacePort ?? 0,
+          });
+    const trustedSurfaceUrl = args?.trustedSurfaceUrl ?? trustedSurface?.url;
+
     const requester = (await runJsonProcess([
       "--import",
       "tsx/esm",
@@ -141,15 +160,17 @@ export async function runSpawnedAgentResourceHarness(args?: {
       "--import",
       "tsx/esm",
       join(THIS_DIR, "approval-agent.ts"),
-      "--base-url",
-      baseUrl,
       "--approval-session-ref",
       requester.summary.approvalSessionRef,
+      ...(trustedSurfaceUrl
+        ? ["--trusted-surface-url", trustedSurfaceUrl]
+        : ["--base-url", baseUrl]),
     ])) as ApprovalAgentResult;
 
     return {
       summary: {
         baseUrl,
+        trustedSurfaceUrl,
         requesterAgentId: requester.summary.agentId,
         approvalAgentId: approval.summary.agentId,
         approvalSessionRef: requester.summary.approvalSessionRef,
@@ -161,6 +182,9 @@ export async function runSpawnedAgentResourceHarness(args?: {
       approval,
     };
   } finally {
+    if (trustedSurface) {
+      await trustedSurface.close();
+    }
     if (server) {
       await server.close();
     }
@@ -172,15 +196,21 @@ export async function runSpawnedAgentResourceHarness(args?: {
 
 function parseArgs(argv: string[]): {
   baseUrl?: string;
+  trustedSurfaceUrl?: string;
   dataDir?: string;
   host?: string;
   port?: number;
+  trustedSurfaceHost?: string;
+  trustedSurfacePort?: number;
 } {
   const result: {
     baseUrl?: string;
+    trustedSurfaceUrl?: string;
     dataDir?: string;
     host?: string;
     port?: number;
+    trustedSurfaceHost?: string;
+    trustedSurfacePort?: number;
   } = {};
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -195,6 +225,11 @@ function parseArgs(argv: string[]): {
       index += 1;
       continue;
     }
+    if (arg === "--trusted-surface-url") {
+      result.trustedSurfaceUrl = argv[index + 1];
+      index += 1;
+      continue;
+    }
     if (arg === "--host") {
       result.host = argv[index + 1];
       index += 1;
@@ -203,6 +238,17 @@ function parseArgs(argv: string[]): {
     if (arg === "--port") {
       const raw = argv[index + 1];
       result.port = raw ? Number(raw) : undefined;
+      index += 1;
+      continue;
+    }
+    if (arg === "--trusted-surface-host") {
+      result.trustedSurfaceHost = argv[index + 1];
+      index += 1;
+      continue;
+    }
+    if (arg === "--trusted-surface-port") {
+      const raw = argv[index + 1];
+      result.trustedSurfacePort = raw ? Number(raw) : undefined;
       index += 1;
     }
   }

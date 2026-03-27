@@ -5,17 +5,28 @@ import {
   type ResourceFlowFixtures,
 } from "../../../sdk/fixtures";
 import type { IdRef, PaymentIntent, ResourceIntent } from "../../../sdk/types";
+import type {
+  AfalAdminAuditAction,
+  AfalAdminAuditEntry,
+  AfalAdminAuditStore,
+} from "../admin-audit";
 import type { AtsAdminPort } from "../../ats";
 import type { OutputAdminPort } from "../outputs";
 import type { SettlementAdminPort } from "../settlement";
 import type {
+  SettlementNotificationDeliveryRecord,
+  SettlementNotificationOutboxWorkerStatus,
+} from "../notifications";
+import type {
   ActionStatusOutput,
   AfalOrchestrationPorts,
+  PaymentSettlementNotification,
   PaymentFlowInput,
   PaymentFlowOrchestrator,
   PaymentFlowOutput,
   PaymentApprovalRequestOutput,
   ResumeApprovedActionOutput,
+  ResourceSettlementNotification,
   ResourceFlowInput,
   ResourceFlowOrchestrator,
   ResourceFlowOutput,
@@ -28,11 +39,22 @@ import type {
   AfalServiceResult,
   ExecutePaymentCommand,
   GetActionStatusCommand,
+  GetAdminAuditEntryCommand,
   GetApprovalSessionCommand,
+  GetNotificationDeliveryCommand,
+  GetNotificationWorkerStatusCommand,
+  ListAdminAuditEntriesCommand,
+  ListNotificationDeliveriesCommand,
   RequestPaymentApprovalCommand,
+  RedeliverNotificationCommand,
   RequestResourceApprovalCommand,
+  RunNotificationWorkerCommand,
+  RunNotificationWorkerOutput,
   ResumeApprovalSessionCommand,
   ResumeApprovedActionCommand,
+  RedeliverNotificationOutput,
+  StartNotificationWorkerCommand,
+  StopNotificationWorkerCommand,
   SettleResourceUsageCommand,
 } from "./interfaces";
 import {
@@ -46,6 +68,13 @@ export interface AfalRuntimeServiceOptions {
   ports?: AfalOrchestrationPorts;
   paymentOrchestrator?: PaymentFlowOrchestrator;
   resourceOrchestrator?: ResourceFlowOrchestrator;
+  notificationWorker?: {
+    getStatus(): SettlementNotificationOutboxWorkerStatus;
+    start(): void;
+    stop(): Promise<void>;
+    tick(): Promise<number>;
+  };
+  adminAuditStore?: AfalAdminAuditStore;
 }
 
 function clone<T>(value: T): T {
@@ -168,6 +197,44 @@ function canGetUsageConfirmation(
   return "getUsageConfirmation" in port && typeof port.getUsageConfirmation === "function";
 }
 
+function canAdministerNotifications(
+  port: AfalOrchestrationPorts["notifications"]
+): port is NonNullable<AfalOrchestrationPorts["notifications"]> & {
+  listDeliveryRecords(): Promise<SettlementNotificationDeliveryRecord[]>;
+  redeliverNotification(notificationId: IdRef): Promise<void>;
+} {
+  return Boolean(
+    port &&
+      "listDeliveryRecords" in port &&
+      typeof port.listDeliveryRecords === "function" &&
+      "redeliverNotification" in port &&
+      typeof port.redeliverNotification === "function"
+  );
+}
+
+function hasNotificationWorker(
+  worker: AfalRuntimeServiceOptions["notificationWorker"]
+): worker is NonNullable<AfalRuntimeServiceOptions["notificationWorker"]> {
+  return Boolean(
+    worker &&
+      typeof worker.getStatus === "function" &&
+      typeof worker.start === "function" &&
+      typeof worker.stop === "function" &&
+      typeof worker.tick === "function"
+  );
+}
+
+function hasAdminAuditStore(
+  store: AfalRuntimeServiceOptions["adminAuditStore"]
+): store is AfalAdminAuditStore {
+  return Boolean(
+    store &&
+      typeof store.getAuditEntry === "function" &&
+      typeof store.listAuditEntries === "function" &&
+      typeof store.putAuditEntry === "function"
+  );
+}
+
 function isUnknownIntentError(error: unknown): boolean {
   return (
     error instanceof Error &&
@@ -195,6 +262,8 @@ export class AfalRuntimeService
   readonly ports: AfalOrchestrationPorts;
   readonly paymentOrchestrator: PaymentFlowOrchestrator;
   readonly resourceOrchestrator: ResourceFlowOrchestrator;
+  readonly notificationWorker?: AfalRuntimeServiceOptions["notificationWorker"];
+  readonly adminAuditStore?: AfalRuntimeServiceOptions["adminAuditStore"];
 
   constructor(options: AfalRuntimeServiceOptions = {}) {
     const ports = options.ports ?? createMockAfalPorts();
@@ -203,6 +272,8 @@ export class AfalRuntimeService
       options.paymentOrchestrator ?? createMockPaymentFlowOrchestrator(ports);
     this.resourceOrchestrator =
       options.resourceOrchestrator ?? createMockResourceFlowOrchestrator(ports);
+    this.notificationWorker = options.notificationWorker;
+    this.adminAuditStore = options.adminAuditStore;
   }
 
   async executePaymentFlow(input: PaymentFlowInput): Promise<PaymentFlowOutput> {
@@ -412,12 +483,169 @@ export class AfalRuntimeService
     return this.ports.amn.getApprovalSession(command.input.approvalSessionRef);
   }
 
+  async getNotificationDelivery(command: GetNotificationDeliveryCommand) {
+    const delivery = await this.resolveNotificationDelivery(command.input.notificationId);
+    await this.recordAdminAudit({
+      requestRef: command.requestRef,
+      action: "getNotificationDelivery",
+      targetRef: command.input.notificationId,
+      details: {
+        status: delivery.status,
+        attempts: delivery.attempts,
+      },
+    });
+    return delivery;
+  }
+
+  async listNotificationDeliveries(command: ListNotificationDeliveriesCommand) {
+    if (!canAdministerNotifications(this.ports.notifications)) {
+      throw new Error("Settlement notification outbox is not configured");
+    }
+
+    const deliveries = await this.ports.notifications.listDeliveryRecords();
+    await this.recordAdminAudit({
+      requestRef: command.requestRef,
+      action: "listNotificationDeliveries",
+      details: {
+        count: deliveries.length,
+      },
+    });
+    return deliveries;
+  }
+
   async applyApprovalResult(command: ApplyApprovalResultCommand) {
     return this.ports.amn.applyApprovalResult(command.input);
   }
 
   async resumeApprovalSession(command: ResumeApprovalSessionCommand) {
     return this.ports.amn.resumeAuthorizationSession(command.input.approvalSessionRef);
+  }
+
+  async redeliverNotification(
+    command: RedeliverNotificationCommand
+  ): Promise<RedeliverNotificationOutput> {
+    if (!canAdministerNotifications(this.ports.notifications)) {
+      throw new Error("Settlement notification outbox is not configured");
+    }
+
+    await this.ports.notifications.redeliverNotification(command.input.notificationId);
+    const delivery = await this.resolveNotificationDelivery(command.input.notificationId);
+
+    await this.recordAdminAudit({
+      requestRef: command.requestRef,
+      action: "redeliverNotification",
+      targetRef: command.input.notificationId,
+      details: {
+        attempts: delivery.attempts,
+        status: delivery.status,
+        redeliveryCount: delivery.redeliveryCount,
+      },
+    });
+
+    return { delivery };
+  }
+
+  async getNotificationWorkerStatus(
+    command: GetNotificationWorkerStatusCommand
+  ): Promise<SettlementNotificationOutboxWorkerStatus> {
+    if (!hasNotificationWorker(this.notificationWorker)) {
+      throw new Error("Settlement notification worker is not configured");
+    }
+
+    const status = this.notificationWorker.getStatus();
+    await this.recordAdminAudit({
+      requestRef: command.requestRef,
+      action: "getNotificationWorkerStatus",
+      details: {
+        running: status.running,
+        intervalMs: status.intervalMs,
+      },
+    });
+    return status;
+  }
+
+  async startNotificationWorker(
+    command: StartNotificationWorkerCommand
+  ): Promise<SettlementNotificationOutboxWorkerStatus> {
+    if (!hasNotificationWorker(this.notificationWorker)) {
+      throw new Error("Settlement notification worker is not configured");
+    }
+
+    this.notificationWorker.start();
+    const status = this.notificationWorker.getStatus();
+    await this.recordAdminAudit({
+      requestRef: command.requestRef,
+      action: "startNotificationWorker",
+      details: {
+        running: status.running,
+        intervalMs: status.intervalMs,
+      },
+    });
+    return status;
+  }
+
+  async stopNotificationWorker(
+    command: StopNotificationWorkerCommand
+  ): Promise<SettlementNotificationOutboxWorkerStatus> {
+    if (!hasNotificationWorker(this.notificationWorker)) {
+      throw new Error("Settlement notification worker is not configured");
+    }
+
+    await this.notificationWorker.stop();
+    const status = this.notificationWorker.getStatus();
+    await this.recordAdminAudit({
+      requestRef: command.requestRef,
+      action: "stopNotificationWorker",
+      details: {
+        running: status.running,
+        intervalMs: status.intervalMs,
+      },
+    });
+    return status;
+  }
+
+  async runNotificationWorker(
+    command: RunNotificationWorkerCommand
+  ): Promise<RunNotificationWorkerOutput> {
+    if (!hasNotificationWorker(this.notificationWorker)) {
+      throw new Error("Settlement notification worker is not configured");
+    }
+
+    const redelivered = await this.notificationWorker.tick();
+    const output = {
+      redelivered,
+      status: this.notificationWorker.getStatus(),
+    };
+    await this.recordAdminAudit({
+      requestRef: command.requestRef,
+      action: "runNotificationWorker",
+      details: {
+        redelivered: output.redelivered,
+        running: output.status.running,
+      },
+    });
+    return output;
+  }
+
+  async getAdminAuditEntry(command: GetAdminAuditEntryCommand): Promise<AfalAdminAuditEntry> {
+    if (!hasAdminAuditStore(this.adminAuditStore)) {
+      throw new Error("AFAL admin audit log is not configured");
+    }
+
+    const entry = await this.adminAuditStore.getAuditEntry(command.input.auditId);
+    assertKnown(entry, `Unknown admin audit "${command.input.auditId}"`);
+    return entry;
+  }
+
+  async listAdminAuditEntries(
+    _command: ListAdminAuditEntriesCommand
+  ): Promise<AfalAdminAuditEntry[]> {
+    if (!hasAdminAuditStore(this.adminAuditStore)) {
+      throw new Error("AFAL admin audit log is not configured");
+    }
+
+    const entries = await this.adminAuditStore.listAuditEntries();
+    return [...entries].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
   }
 
   async resumeApprovedAction(
@@ -508,6 +736,59 @@ export class AfalRuntimeService
       resourceReceipt: receipts.find((receipt) => receipt.receiptType === "resource"),
       capabilityResponse: selectLatestCapabilityResponse(capabilityResponses),
     };
+  }
+
+  private async resolveNotificationDelivery(
+    notificationId: IdRef
+  ): Promise<SettlementNotificationDeliveryRecord> {
+    if (!canAdministerNotifications(this.ports.notifications)) {
+      throw new Error("Settlement notification outbox is not configured");
+    }
+
+    const deliveries = await this.ports.notifications.listDeliveryRecords();
+    const delivery = deliveries.find((candidate) => candidate.notificationId === notificationId);
+    assertKnown(delivery, `Unknown settlement notification "${notificationId}"`);
+    return delivery;
+  }
+
+  private async recordAdminAudit(args: {
+    requestRef: IdRef;
+    action: AfalAdminAuditAction;
+    targetRef?: IdRef;
+    details: Record<string, unknown>;
+  }): Promise<void> {
+    if (!hasAdminAuditStore(this.adminAuditStore)) {
+      return;
+    }
+
+    await this.adminAuditStore.putAuditEntry({
+      auditId: `admin-audit-${args.requestRef}`,
+      requestRef: args.requestRef,
+      action: args.action,
+      createdAt: new Date().toISOString(),
+      targetRef: args.targetRef,
+      details: clone(args.details),
+    });
+  }
+
+  private async dispatchPaymentSettlementNotification(
+    notification: PaymentSettlementNotification
+  ): Promise<void> {
+    try {
+      await this.ports.notifications?.notifyPaymentSettlement(notification);
+    } catch {
+      // Notification delivery is best-effort in the current integration slice.
+    }
+  }
+
+  private async dispatchResourceSettlementNotification(
+    notification: ResourceSettlementNotification
+  ): Promise<void> {
+    try {
+      await this.ports.notifications?.notifyResourceSettlement(notification);
+    } catch {
+      // Notification delivery is best-effort in the current integration slice.
+    }
   }
 
   private async resumeApprovedPaymentAction(args: {
@@ -620,6 +901,21 @@ export class AfalRuntimeService
       finalDecisionRef: args.finalDecision.decisionId,
       settlementRef: settlement.settlementId,
       receiptRef: paymentReceipt.receiptId,
+    });
+    await this.dispatchPaymentSettlementNotification({
+      notificationId: `notif-${settledIntent.intentId}`,
+      eventType: "payment.settled",
+      requestRef: args.requestRef,
+      actionRef: settledIntent.intentId,
+      approvalSessionRef: args.approvalSession.approvalSessionId,
+      payeeDid: settledIntent.payee.payeeDid,
+      intentStatus: settledIntent.status,
+      settlementRef: settlement.settlementId,
+      receiptRef: paymentReceipt.receiptId,
+      asset: settledIntent.asset,
+      amount: settledIntent.amount,
+      chain: settledIntent.chain,
+      settledAt: settlement.settledAt ?? settlement.executedAt ?? paymentReceipt.issuedAt,
     });
 
     return {
@@ -761,6 +1057,25 @@ export class AfalRuntimeService
       receiptRef: resourceReceipt.receiptId,
       usageReceiptRef: usageConfirmation.usageReceiptRef,
     });
+    await this.dispatchResourceSettlementNotification({
+      notificationId: `notif-${settledIntent.intentId}`,
+      eventType: "resource.settled",
+      requestRef: args.requestRef,
+      actionRef: settledIntent.intentId,
+      approvalSessionRef: args.approvalSession.approvalSessionId,
+      providerId: settledIntent.provider.providerId,
+      providerDid: settledIntent.provider.providerDid,
+      intentStatus: settledIntent.status,
+      usageReceiptRef: usageConfirmation.usageReceiptRef,
+      settlementRef: settlement.settlementId,
+      receiptRef: resourceReceipt.receiptId,
+      asset: settlement.asset,
+      amount: settlement.amount,
+      resourceClass: settledIntent.resource.resourceClass,
+      resourceUnit: settledIntent.resource.resourceUnit,
+      quantity: settledIntent.resource.quantity,
+      settledAt: settlement.settledAt ?? settlement.executedAt ?? resourceReceipt.issuedAt,
+    });
 
     return {
       intent: settledIntent,
@@ -804,12 +1119,48 @@ export class AfalRuntimeService
       return this.getApprovalSession(command);
     }
 
+    if (command.capability === "getNotificationDelivery") {
+      return this.getNotificationDelivery(command);
+    }
+
+    if (command.capability === "listNotificationDeliveries") {
+      return this.listNotificationDeliveries(command);
+    }
+
+    if (command.capability === "getNotificationWorkerStatus") {
+      return this.getNotificationWorkerStatus(command);
+    }
+
     if (command.capability === "applyApprovalResult") {
       return this.applyApprovalResult(command);
     }
 
     if (command.capability === "resumeApprovalSession") {
       return this.resumeApprovalSession(command);
+    }
+
+    if (command.capability === "redeliverNotification") {
+      return this.redeliverNotification(command);
+    }
+
+    if (command.capability === "startNotificationWorker") {
+      return this.startNotificationWorker(command);
+    }
+
+    if (command.capability === "stopNotificationWorker") {
+      return this.stopNotificationWorker(command);
+    }
+
+    if (command.capability === "runNotificationWorker") {
+      return this.runNotificationWorker(command);
+    }
+
+    if (command.capability === "getAdminAuditEntry") {
+      return this.getAdminAuditEntry(command);
+    }
+
+    if (command.capability === "listAdminAuditEntries") {
+      return this.listAdminAuditEntries(command);
     }
 
     return this.resumeApprovedAction(command);

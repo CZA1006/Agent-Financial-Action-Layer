@@ -34,6 +34,7 @@ import type {
   ResourceFlowOutput,
   TrustedSurfacePort,
 } from "../interfaces";
+import { NoopSettlementNotificationPort } from "../notifications";
 
 type KnownFlow = "payment" | "resource";
 type AnyFixtures = PaymentFlowFixtures | ResourceFlowFixtures;
@@ -185,6 +186,7 @@ export function createMockAfalPorts(
     resourceSettlement: settlement,
     receipts: outputs,
     capabilityResponses: outputs,
+    notifications: new NoopSettlementNotificationPort(),
   };
 
   return {

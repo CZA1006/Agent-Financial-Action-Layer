@@ -1,0 +1,24 @@
+{
+  "method": "POST",
+  "path": "/payments/execute",
+  "headers": {
+    "content-type": "application/json",
+    "x-afal-service-token": "payment-rail-secret",
+    "x-afal-service-id": "afal-runtime",
+    "x-afal-request-timestamp": "2026-03-27T10:00:00.000Z",
+    "x-afal-request-signature": "sha256(afal-runtime:req-payment-rail-payint-0001:2026-03-27T10:00:00.000Z:payment-rail-signing-secret)"
+  },
+  "body": {
+    "requestRef": "req-payment-rail-payint-0001",
+    "input": {
+      "intent": {
+        "intentId": "payint-0001",
+        "intentType": "payment"
+      },
+      "decision": {
+        "decisionId": "dec-0002",
+        "result": "approved"
+      }
+    }
+  }
+}

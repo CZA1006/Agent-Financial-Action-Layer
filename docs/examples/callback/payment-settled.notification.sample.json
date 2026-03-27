@@ -1,0 +1,15 @@
+{
+  "notificationId": "notif-payint-0001",
+  "eventType": "payment.settled",
+  "requestRef": "req-0001",
+  "actionRef": "payint-0001",
+  "approvalSessionRef": "aps-chall-0001",
+  "payeeDid": "did:afal:agent:fraud-service-01",
+  "intentStatus": "settled",
+  "settlementRef": "stl-0001",
+  "receiptRef": "rcpt-pay-0001",
+  "asset": "USDC",
+  "amount": "45.00",
+  "chain": "base",
+  "settledAt": "2026-03-24T12:08:10Z"
+}

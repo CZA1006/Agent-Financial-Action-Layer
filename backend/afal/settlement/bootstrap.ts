@@ -5,6 +5,7 @@ import type {
   PaymentSettlementTemplateResolver,
   ResourceSettlementTemplateResolver,
 } from "./interfaces";
+import { SeededPaymentRailAdapter, SeededResourceProviderAdapter } from "./adapters";
 import { AfalSettlementService } from "./service";
 import { InMemoryAfalSettlementStore } from "./store";
 
@@ -57,9 +58,19 @@ export function createSeededInMemoryAfalSettlementStore(): InMemoryAfalSettlemen
   return new InMemoryAfalSettlementStore();
 }
 
+export function createSeededPaymentRailAdapter(): SeededPaymentRailAdapter {
+  return new SeededPaymentRailAdapter(createSeededAfalSettlementTemplateResolver());
+}
+
+export function createSeededResourceProviderAdapter(): SeededResourceProviderAdapter {
+  return new SeededResourceProviderAdapter(createSeededAfalSettlementTemplateResolver());
+}
+
 export function createSeededAfalSettlementService(): AfalSettlementService {
   return new AfalSettlementService({
     store: createSeededInMemoryAfalSettlementStore(),
     templateResolver: createSeededAfalSettlementTemplateResolver(),
+    paymentAdapter: createSeededPaymentRailAdapter(),
+    resourceAdapter: createSeededResourceProviderAdapter(),
   });
 }

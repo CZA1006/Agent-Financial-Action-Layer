@@ -2,7 +2,7 @@
 
 ## Purpose
 
-This document defines the next implementation stage for AFAL after the current docs-first, schema-first, contract-first milestone.
+This document defines the next implementation stage for AFAL after the original docs-first, schema-first, contract-first milestone.
 
 It answers a narrower question than the whitepaper:
 
@@ -11,7 +11,7 @@ It answers a narrower question than the whitepaper:
 - what each module must deliver first
 - what should explicitly wait
 
-The goal is to move AFAL from:
+The original goal of this roadmap was to move AFAL from:
 
 - stable schemas
 - canonical examples
@@ -29,6 +29,10 @@ This roadmap is for the current repo state, not for the original "start from zer
 ---
 
 ## Current Stage
+
+This roadmap has now been partially executed.
+
+AFAL is no longer only at the "docs + mock orchestration" point.
 
 AFAL has already completed the following foundation work:
 
@@ -62,19 +66,29 @@ AFAL has already completed the following foundation work:
 - AFAL has a formal module runtime service above seeded orchestration
 - API and HTTP transport contracts exist
 - OpenAPI artifacts can be versioned, published, previewed, and snapshotted
+- seeded durable JSON-backed execution exists across the canonical flows
+- SQLite-backed integration slices exist for ATS, AMN approval state, and AFAL intent state
+- trusted-surface callback persistence and approved-action resume exist over the HTTP surface
+- bilateral runtime-agent harnesses exist for payment and resource flows
+- receiver callback delivery now includes outbox persistence, worker redelivery, dead-letter metadata, operator auth, and admin audit
+- a shared SQLite integration database now backs the execution-critical slice, notification outbox, and admin audit
+- an independent trusted-surface review service stub exists as a separate HTTP process
+- explicit payment-rail and resource-provider adapter contracts now exist above AFAL-owned settlement recording
+- network-shaped mock payment-rail and provider-service stubs now exist and can be called over HTTP
+- the external service path now includes shared-token auth and signed request metadata placeholders
 
 What does **not** exist yet:
 
 - durable AIP persistence beyond in-memory seeded state
-- durable ATS persistence beyond in-memory seeded state
-- durable AMN persistence beyond in-memory seeded state
-- trusted-surface approval storage and callback handling across process boundaries
+- durable ATS persistence beyond the current seeded slices
+- durable AMN persistence beyond the current seeded slices
+- full trusted-surface approval handling across independently deployed services
 - real stablecoin settlement integration
 - real provider billing / usage confirmation integration
 - real on-chain interfaces beyond documentation
 
-So the next stage is not another schema pass.
-The next stage is replacing seeded in-memory module state with durable service implementations while keeping the existing contract surface stable.
+So the next stage is no longer another schema pass, and it is no longer only about proving one execution path.
+The repo is now in the first externally integrated Phase 1 slice where the main remaining work is replacing local HTTP stubs and seeded implementations with stronger adapters and control-plane boundaries while keeping the current contract surface stable.
 
 ---
 

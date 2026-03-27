@@ -4,6 +4,7 @@ import {
   runTrustedSurfaceStub,
   type TrustedSurfaceStubRunResult,
 } from "../../app/trusted-surface/stub";
+import { createTrustedSurfaceServiceHttpClient } from "../../app/trusted-surface/server";
 import { createAfalHttpClient, type AgentHarnessClient } from "./http-client";
 
 export interface ApprovalAgentResult {
@@ -47,8 +48,44 @@ export async function runApprovalAgent(
   };
 }
 
-function parseArgs(argv: string[]): { baseUrl: string; approvalSessionRef: string } {
-  let baseUrl = "";
+export async function runApprovalAgentViaTrustedSurfaceService(
+  trustedSurfaceUrl: string,
+  options: {
+    approvalSessionRef: string;
+    requestRefPrefix?: string;
+  }
+): Promise<ApprovalAgentResult> {
+  const response = await createTrustedSurfaceServiceHttpClient(trustedSurfaceUrl).reviewApprovalSession({
+    requestRef: `${options.requestRefPrefix ?? "req-agent-approval"}-service`,
+    input: {
+      approvalSessionRef: options.approvalSessionRef,
+      requestRefPrefix: options.requestRefPrefix ?? "req-agent-approval",
+      decidedAt: "2026-03-24T12:07:00Z",
+      comment: "Approved via runtime-agent harness",
+    },
+  });
+
+  return {
+    summary: {
+      agentId: response.approvalResult.approvedBy,
+      approvalSessionRef: response.summary.approvalSessionRef,
+      result: response.summary.result,
+      resumedAction: response.summary.resumedAction,
+      finalIntentStatus: response.summary.finalIntentStatus,
+      settlementRef: response.summary.settlementRef,
+      receiptRef: response.summary.receiptRef,
+    },
+    response,
+  };
+}
+
+function parseArgs(argv: string[]): {
+  baseUrl?: string;
+  trustedSurfaceUrl?: string;
+  approvalSessionRef: string;
+} {
+  let baseUrl: string | undefined;
+  let trustedSurfaceUrl: string | undefined;
   let approvalSessionRef = "";
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -58,27 +95,39 @@ function parseArgs(argv: string[]): { baseUrl: string; approvalSessionRef: strin
       index += 1;
       continue;
     }
+    if (arg === "--trusted-surface-url") {
+      trustedSurfaceUrl = argv[index + 1] ?? "";
+      index += 1;
+      continue;
+    }
     if (arg === "--approval-session-ref") {
       approvalSessionRef = argv[index + 1] ?? "";
       index += 1;
     }
   }
 
-  if (!baseUrl || !approvalSessionRef) {
-    throw new Error("approval-agent requires --base-url and --approval-session-ref");
+  if ((!baseUrl && !trustedSurfaceUrl) || !approvalSessionRef) {
+    throw new Error(
+      "approval-agent requires --approval-session-ref and either --base-url or --trusted-surface-url"
+    );
   }
 
   return {
     baseUrl,
+    trustedSurfaceUrl,
     approvalSessionRef,
   };
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const result = await runApprovalAgent(createAfalHttpClient(args.baseUrl), {
-    approvalSessionRef: args.approvalSessionRef,
-  });
+  const result = args.trustedSurfaceUrl
+    ? await runApprovalAgentViaTrustedSurfaceService(args.trustedSurfaceUrl, {
+        approvalSessionRef: args.approvalSessionRef,
+      })
+    : await runApprovalAgent(createAfalHttpClient(args.baseUrl ?? ""), {
+        approvalSessionRef: args.approvalSessionRef,
+      });
   console.log(JSON.stringify(result, null, 2));
 }
 

@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "capability": "executePayment",
+  "requestRef": "req-0001",
+  "statusCode": 409,
+  "error": {
+    "code": "external-adapter-rejected",
+    "message": "counterparty rejected settlement"
+  }
+}

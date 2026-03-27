@@ -6,6 +6,8 @@ import type {
   AfalCapabilityRequest,
   AfalCapabilityResponse,
   ApplyApprovalResultResponse,
+  GetAdminAuditEntryRequest,
+  GetAdminAuditEntryResponse,
   GetActionStatusRequest,
   GetActionStatusResponse,
   GetApprovalSessionRequest,
@@ -22,6 +24,22 @@ import type {
   ResumeApprovalSessionResponse,
   ResourceCapabilityRequest,
   ResourceCapabilityResponse,
+  GetNotificationDeliveryRequest,
+  GetNotificationDeliveryResponse,
+  GetNotificationWorkerStatusRequest,
+  GetNotificationWorkerStatusResponse,
+  ListAdminAuditEntriesRequest,
+  ListAdminAuditEntriesResponse,
+  ListNotificationDeliveriesRequest,
+  ListNotificationDeliveriesResponse,
+  RedeliverNotificationRequest,
+  RedeliverNotificationResponse,
+  RunNotificationWorkerRequest,
+  RunNotificationWorkerResponse,
+  StartNotificationWorkerRequest,
+  StartNotificationWorkerResponse,
+  StopNotificationWorkerRequest,
+  StopNotificationWorkerResponse,
 } from "./types";
 import { mapAfalFailure } from "./failures";
 
@@ -49,6 +67,33 @@ export interface AfalApiServiceAdapter {
   handleResumeApprovedAction(
     request: ResumeApprovedActionRequest
   ): Promise<ResumeApprovedActionResponse>;
+  handleGetNotificationDelivery(
+    request: GetNotificationDeliveryRequest
+  ): Promise<GetNotificationDeliveryResponse>;
+  handleListNotificationDeliveries(
+    request: ListNotificationDeliveriesRequest
+  ): Promise<ListNotificationDeliveriesResponse>;
+  handleRedeliverNotification(
+    request: RedeliverNotificationRequest
+  ): Promise<RedeliverNotificationResponse>;
+  handleGetNotificationWorkerStatus(
+    request: GetNotificationWorkerStatusRequest
+  ): Promise<GetNotificationWorkerStatusResponse>;
+  handleStartNotificationWorker(
+    request: StartNotificationWorkerRequest
+  ): Promise<StartNotificationWorkerResponse>;
+  handleStopNotificationWorker(
+    request: StopNotificationWorkerRequest
+  ): Promise<StopNotificationWorkerResponse>;
+  handleRunNotificationWorker(
+    request: RunNotificationWorkerRequest
+  ): Promise<RunNotificationWorkerResponse>;
+  handleGetAdminAuditEntry(
+    request: GetAdminAuditEntryRequest
+  ): Promise<GetAdminAuditEntryResponse>;
+  handleListAdminAuditEntries(
+    request: ListAdminAuditEntriesRequest
+  ): Promise<ListAdminAuditEntriesResponse>;
   invokeCapability(request: AfalCapabilityRequest): Promise<AfalCapabilityResponse>;
 }
 
@@ -211,6 +256,177 @@ export function createAfalApiServiceAdapter(
     handleResumeApprovedAction: async (request) => {
       try {
         const data = await service.resumeApprovedAction({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleGetNotificationDelivery: async (request) => {
+      try {
+        const data = await service.getNotificationDelivery({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleListNotificationDeliveries: async (request) => {
+      try {
+        const data = await service.listNotificationDeliveries({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleRedeliverNotification: async (request) => {
+      try {
+        const data = await service.redeliverNotification({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleGetNotificationWorkerStatus: async (request) => {
+      try {
+        const data = await service.getNotificationWorkerStatus({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleStartNotificationWorker: async (request) => {
+      try {
+        const data = await service.startNotificationWorker({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleStopNotificationWorker: async (request) => {
+      try {
+        const data = await service.stopNotificationWorker({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleRunNotificationWorker: async (request) => {
+      try {
+        const data = await service.runNotificationWorker({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleGetAdminAuditEntry: async (request) => {
+      try {
+        const data = await service.getAdminAuditEntry({
+          capability: request.capability,
+          requestRef: request.requestRef,
+          input: request.input,
+        });
+        const response: AfalApiSuccess<typeof data> = {
+          ok: true,
+          capability: request.capability,
+          requestRef: request.requestRef,
+          statusCode: 200,
+          data,
+        };
+        return response;
+      } catch (error) {
+        return mapAfalFailure(request.capability, request.requestRef, error);
+      }
+    },
+    handleListAdminAuditEntries: async (request) => {
+      try {
+        const data = await service.listAdminAuditEntries({
           capability: request.capability,
           requestRef: request.requestRef,
           input: request.input,

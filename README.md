@@ -14,13 +14,15 @@ Together, these modules form the substrate for agent financial actions across pa
 AFAL is no longer just a whitepaper or schema set.
 
 Current stage:
-- **Phase 1 integration-ready runtime, bilateral multi-flow runtime-agent harness**
+- **Late Phase 1 integration-ready runtime with bilateral runtime-agent flows and operator-managed callback recovery**
 - docs/specs/contracts are frozen enough to demo
 - AIP / ATS / AMN / AFAL runtime all run in seeded durable local mode
 - top-level approval requests, trusted-surface callback persistence, and post-approval resume-to-settlement are all wired end to end
-- ATS, AMN approval state, and AFAL intent state now also run in a seeded SQLite-backed integration mode
+- ATS, AMN approval state, AFAL intent state, admin audit, and notification outbox now also run in a seeded SQLite-backed integration mode
 - the same SQLite-backed integration slice is now reachable through the AFAL HTTP contract
 - bilateral runtime-agent harnesses now drive both payment and resource callback-and-resume flows through independent agent processes
+- receiver-side settlement callbacks now have durable outbox records, automatic background redelivery, and dead-letter metadata in the SQLite-backed HTTP slice
+- operator-only notification delivery, worker, and admin-audit routes now exist for callback recovery and inspection
 
 The repo now includes:
 - frozen Phase 1 schemas and canonical examples
@@ -31,23 +33,23 @@ The repo now includes:
 - top-level `pending-approval` capability entrypoints for payment and resource requests
 - AFAL-level `resume-approved-action` execution for post-approval settlement and receipt completion
 - local durable mode backed by JSON file stores
-- initial SQLite-backed integration mode for ATS, AMN approval state, and AFAL intent state
+- initial SQLite-backed integration mode for ATS, AMN approval state, AFAL intent state, admin audit, and notification outbox
 - SQLite-backed AFAL HTTP runtime, server shell, demo, and acceptance path
 - bilateral runtime-agent harnesses over the SQLite-backed AFAL HTTP contract
+- active payee/provider-side callback delivery plus operator-managed notification recovery paths
 - OpenAPI draft, stable publish artifacts, snapshot releases, and preview UI
 - automated verification across runtime, API, HTTP, OpenAPI export, and durable persistence
 
 Current validated state:
 - `npm run typecheck` passes
-- `npm run test:mock` passes
-- the test suite currently contains `133` passing tests
+- targeted harness, notification, API, HTTP, and OpenAPI tests pass
 - both canonical flows run in:
   - seeded in-memory mode
   - seeded local durable mode
   - durable HTTP mode
   - seeded SQLite integration mode
   - SQLite-backed HTTP integration mode
-  - initial runtime-agent harness modes over SQLite HTTP
+  - runtime-agent harness modes over SQLite HTTP
 
 ## Quickstart
 
@@ -175,7 +177,7 @@ Canonical examples:
 | AIP | storage-backed skeleton, API adapter, JSON durable store |
 | ATS | storage-backed skeleton, API adapter, JSON durable store, reservation/hold/release semantics |
 | AMN | storage-backed skeleton, API adapter, JSON durable store, SQLite store, approval-session persistence and recovery |
-| AFAL runtime | seeded runtime, durable runtime, SQLite integration runtime, intent state, settlement, outputs, payment/resource runtime-agent harnesses |
+| AFAL runtime | seeded runtime, durable runtime, SQLite integration runtime, intent state, settlement, outputs, payment/resource runtime-agent harnesses, receiver callback outbox and worker control |
 | HTTP surface | framework-free router, durable HTTP wiring, SQLite HTTP wiring, thin Node server shells |
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
@@ -186,20 +188,27 @@ Already real in local development terms:
 - module boundaries and type surfaces
 - store/service separation
 - durable local persistence through JSON file stores
-- initial SQLite-backed integration persistence for ATS, AMN approval state, and AFAL intent state
+- initial SQLite-backed integration persistence for ATS, AMN approval state, AFAL intent state, admin audit, and notification outbox
 - persistent approval sessions and resumable trusted-surface state transitions
 - persisted pending executions that can resume approved actions into settlement and receipts
 - state transitions for identity, budget, mandate, intent, settlement, and receipts
 - HTTP capability routing and OpenAPI publication pipeline
 - bilateral runtime-agent harnesses that exercise AFAL through independent subprocess roles
+- receiver-side settlement callbacks with durable outbox tracking, worker-driven redelivery, dead-letter metadata, operator auth, and admin audit
+- independent trusted-surface review service that approval agents can call over HTTP
+- explicit payment-rail and provider-settlement adapter boundaries above AFAL-owned settlement recording
+- shared SQLite integration database for ATS, AMN approval state, AFAL intent state, notification outbox, and admin audit
+- network-shaped mock payment-rail and provider service stubs that AFAL can call over HTTP
+- shared-token auth plus signed request metadata placeholders between AFAL HTTP adapters and the external payment/provider stubs
+- bounded retry plus failure classification for transient-vs-terminal external adapter failures
 
 Still intentionally not production-real:
 - real database backend
 - real stablecoin settlement integration
 - real provider usage and billing integration
-- real trusted-surface callback handling across independent deployed services
+- real trusted-surface callback handling across independent deployed services beyond the current local stub
 - real chain contracts and anchoring
-- production auth, deployment, observability, and multi-tenant operations
+- production auth, deployment, observability, multi-tenant operations, and operator control plane
 
 ## How To Run The Project
 
@@ -224,29 +233,41 @@ npm run demo:http-payment
 npm run demo:http-sqlite
 npm run demo:agent-payment
 npm run demo:agent-payment-bilateral
+npm run demo:notification-admin
 npm run demo:agent-resource
 npm run demo:agent-resource-bilateral
+npm run demo:external-adapters
+npm run demo:external-adapters-retry
 npm run demo:http-resource
 ```
 
 What these do:
 - `demo:mock` runs the payment and resource flows in seeded in-memory mode
 - `demo:durable` runs the same flows in seeded local durable mode and writes state to `.afal-durable-data/`
-- `demo:sqlite` runs the same flows in the seeded SQLite integration mode and writes ATS, AMN approval state, and AFAL intent state to `.sqlite` files under `.afal-sqlite-data/`
+- `demo:sqlite` runs the same flows in the seeded SQLite integration mode and writes a shared `afal-integration.sqlite` plus AFAL settlement/output artifacts under `.afal-sqlite-data/`
 - `demo:http` starts the durable HTTP server, sends the canonical payment request, compares the response with the sample file, and prints the response
-- `demo:http-async` runs the async payment path end to end: request approval, trusted-surface stub callback, then resume the approved action into settlement
+- `demo:http-async` runs the async payment path end to end: request approval, independent trusted-surface service callback, then resume the approved action into settlement
 - `demo:http-payment` runs the canonical payment request through the durable HTTP layer and writes state to `.afal-durable-http-data/`
 - `demo:http-sqlite` runs the canonical payment request through the SQLite-backed HTTP layer and writes state to `.afal-sqlite-http-data/`
 - `demo:agent-payment` runs the requester-side payment harness over the SQLite-backed HTTP layer: one `payer-agent` creates a pending approval session and one `approval-agent` completes callback-and-resume into settlement
-- `demo:agent-payment-bilateral` extends that payment harness with a `payee-agent` that independently confirms the final settled action over AFAL's HTTP query surface
+- `demo:agent-payment-bilateral` extends that payment harness with a payee-side callback receiver that actively accepts the final settlement notification after AFAL resumes the approved action
+- `demo:notification-admin` runs the payment callback path with an intentionally failed first receiver attempt, then exercises operator-only notification delivery, worker, and admin-audit routes to recover delivery
 - `demo:agent-resource` runs the requester-side resource harness for the canonical resource approval flow
-- `demo:agent-resource-bilateral` extends that resource harness with a `provider-agent` that independently confirms final usage and settlement over AFAL's HTTP query surface
+- `demo:agent-resource-bilateral` extends that resource harness with a provider-side callback receiver that actively accepts the final usage and settlement notification after AFAL resumes the approved action
+- `demo:external-adapters` runs AFAL against independent payment-rail and provider-service stubs over HTTP while persisting integration state in a shared SQLite database
+- `demo:external-adapters-retry` runs the same external service path but injects transient upstream failures and proves the HTTP adapters can recover through bounded retries
 - `demo:http-resource` starts the durable HTTP server, sends the canonical resource request, compares the response with the sample file, and prints the response
 
 Trusted-surface stub:
 
 ```bash
 npm run trusted-surface:stub -- --base-url http://127.0.0.1:3212 --approval-session-ref aps-chall-0001
+```
+
+Independent trusted-surface service stub:
+
+```bash
+npm run trusted-surface:serve -- --afal-base-url http://127.0.0.1:3212
 ```
 
 ### Run The Local Durable HTTP Server
@@ -345,7 +366,7 @@ npm run demo:http-payment
 What each command proves:
 - `demo:mock` proves the canonical payment and resource flows run in seeded in-memory mode
 - `demo:durable` proves the same flows run in seeded local durable mode and persist state under `.afal-durable-data/`
-- `demo:http-async` proves the async approval chain works through the HTTP layer: pending approval, callback application, and resumed settlement
+- `demo:http-async` proves the async approval chain works through the HTTP layer and a separate trusted-surface service: pending approval, callback application, and resumed settlement
 - `demo:http-payment` proves the canonical payment request runs through the durable HTTP layer and writes durable state under `.afal-durable-http-data/`
 
 ### 4. Local HTTP Capability Check
@@ -376,6 +397,8 @@ Canonical request bodies live here:
 - [`docs/examples/http/execute-payment.bad-request.response.sample.json`](docs/examples/http/execute-payment.bad-request.response.sample.json)
 - [`docs/examples/http/execute-payment.authorization-expired.response.sample.json`](docs/examples/http/execute-payment.authorization-expired.response.sample.json)
 - [`docs/examples/http/execute-payment.authorization-rejected.response.sample.json`](docs/examples/http/execute-payment.authorization-rejected.response.sample.json)
+- [`docs/examples/http/execute-payment.external-adapter-unavailable.response.sample.json`](docs/examples/http/execute-payment.external-adapter-unavailable.response.sample.json)
+- [`docs/examples/http/execute-payment.external-adapter-rejected.response.sample.json`](docs/examples/http/execute-payment.external-adapter-rejected.response.sample.json)
 - [`docs/examples/http/resume-approved-action.request.json`](docs/examples/http/resume-approved-action.request.json)
 - [`docs/examples/http/resume-approved-action.response.sample.json`](docs/examples/http/resume-approved-action.response.sample.json)
 - [`docs/examples/http/resume-approved-action.authorization-expired.response.sample.json`](docs/examples/http/resume-approved-action.authorization-expired.response.sample.json)
@@ -383,6 +406,8 @@ Canonical request bodies live here:
 - [`docs/examples/http/settle-resource-usage.request.json`](docs/examples/http/settle-resource-usage.request.json)
 - [`docs/examples/http/settle-resource-usage.response.sample.json`](docs/examples/http/settle-resource-usage.response.sample.json)
 - [`docs/examples/http/settle-resource-usage.provider-failure.response.sample.json`](docs/examples/http/settle-resource-usage.provider-failure.response.sample.json)
+- [`docs/examples/http/settle-resource-usage.external-adapter-unavailable.response.sample.json`](docs/examples/http/settle-resource-usage.external-adapter-unavailable.response.sample.json)
+- [`docs/examples/http/settle-resource-usage.external-adapter-rejected.response.sample.json`](docs/examples/http/settle-resource-usage.external-adapter-rejected.response.sample.json)
 
 ### 5. OpenAPI Contract Check
 
@@ -420,6 +445,7 @@ npm run demo:http-async
 npm run demo:http-payment
 npm run demo:agent-payment
 npm run demo:agent-payment-bilateral
+npm run demo:notification-admin
 npm run demo:agent-resource
 npm run demo:agent-resource-bilateral
 npm run export:openapi
@@ -511,7 +537,7 @@ npm run accept:sqlite
 - `backend/afal/service/` — AFAL runtime and durable runtime wiring
 - `backend/afal/api/` — capability request/response adapter
 - `backend/afal/http/` — framework-free HTTP contract and durable server shell
-- `agents/test-harness/` — bilateral payment/resource runtime-agent harnesses over the AFAL HTTP contract
+- `agents/test-harness/` — bilateral payment/resource runtime-agent harnesses and notification admin demo flows over the AFAL HTTP contract
 
 ## Key Documents
 
@@ -521,12 +547,16 @@ npm run accept:sqlite
 - [docs/product/mvp-scope.md](docs/product/mvp-scope.md)
 - [docs/product/implementation-roadmap-next-stage.md](docs/product/implementation-roadmap-next-stage.md)
 - [docs/product/next-stage-integration-plan.md](docs/product/next-stage-integration-plan.md)
+- [docs/product/notification-operator-handbook.md](docs/product/notification-operator-handbook.md)
+- [docs/product/notification-operator-playbook.md](docs/product/notification-operator-playbook.md)
 - [tasks/milestone-mvp.md](tasks/milestone-mvp.md)
 
 ### Specs And Contracts
 
 - [docs/specs/afal-http-openapi-draft.yaml](docs/specs/afal-http-openapi-draft.yaml)
 - [docs/specs/trusted-surface-callback-contract.md](docs/specs/trusted-surface-callback-contract.md)
+- [docs/specs/receiver-settlement-callback-contract.md](docs/specs/receiver-settlement-callback-contract.md)
+- [docs/specs/external-service-auth-contract.md](docs/specs/external-service-auth-contract.md)
 - [docs/specs/openapi/latest.yaml](docs/specs/openapi/latest.yaml)
 - [docs/specs/openapi/latest.json](docs/specs/openapi/latest.json)
 - [docs/specs/openapi/manifest.json](docs/specs/openapi/manifest.json)
@@ -548,13 +578,15 @@ AFAL currently demonstrates:
 - initial SQLite-backed integration persistence for execution-critical state
 - capability-oriented HTTP transport
 - persistent approval callback and resume semantics
-- minimal runtime-agent orchestration paths over the real HTTP contract
+- bilateral runtime-agent orchestration paths over the real HTTP contract
+- receiver callback delivery with operator-visible outbox, worker, and admin-audit controls
 - versioned OpenAPI publication
 
 AFAL does not yet claim:
 - production settlement
 - production-grade trusted-surface callbacks
+- full operator control plane or hosted dashboards
 - chain-native enforcement
 - market venue execution
 
-That is the next stage after the current seeded durable runtime milestone.
+That means the repo has moved beyond the original seeded durable runtime milestone and now sits in a late Phase 1 integration-and-operations slice, still short of production deployment.

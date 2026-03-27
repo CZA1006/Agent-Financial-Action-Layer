@@ -2,7 +2,12 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
+import { InMemoryAfalAdminAuditStore } from "../admin-audit";
 import { createMockAfalPorts } from "../mock";
+import {
+  HttpSettlementNotificationPort,
+  SettlementNotificationOutboxWorker,
+} from "../notifications";
 import { AfalRuntimeService, createAfalRuntimeService } from "./runtime";
 
 test("AFAL runtime service executes both canonical flows through default orchestrators", async () => {
@@ -158,4 +163,138 @@ test("AFAL runtime service exposes module-service command entrypoints", async ()
     assert.fail("expected resumeApprovedAction to return a settled payment flow");
   }
   assert.equal(pendingExecution.status, "resumed");
+});
+
+test("AFAL runtime service exposes notification delivery admin entrypoints when configured", async () => {
+  let deliveries = 0;
+  const adminAuditStore = new InMemoryAfalAdminAuditStore();
+  const notifications = new HttpSettlementNotificationPort({
+    paymentCallbackUrls: {
+      [paymentFlowFixtures.paymentIntentCreated.payee.payeeDid]: "https://receiver.example/payment",
+    },
+    fetchImpl: async () => {
+      deliveries += 1;
+      return new Response(null, { status: 202 });
+    },
+  });
+  const service = createAfalRuntimeService({
+    ports: createMockAfalPorts({ notifications }),
+    adminAuditStore,
+  });
+  const pending = await service.requestPaymentApproval({
+    capability: "requestPaymentApproval",
+    requestRef: "req-runtime-notification-pending-001",
+    input: {
+      requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+      intent: paymentFlowFixtures.paymentIntentCreated,
+      monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+    },
+  });
+  await service.applyApprovalResult({
+    capability: "applyApprovalResult",
+    requestRef: "req-runtime-notification-apply-001",
+    input: {
+      approvalSessionRef: pending.approvalSession.approvalSessionId,
+      result: paymentFlowFixtures.approvalResult,
+    },
+  });
+  await service.resumeApprovedAction({
+    capability: "resumeApprovedAction",
+    requestRef: "req-runtime-notification-resume-001",
+    input: {
+      approvalSessionRef: pending.approvalSession.approvalSessionId,
+    },
+  });
+
+  const listed = await service.listNotificationDeliveries({
+    capability: "listNotificationDeliveries",
+    requestRef: "req-runtime-notification-list-001",
+    input: {},
+  });
+  const notificationId = `notif-${pending.intent.intentId}`;
+  const delivery = await service.getNotificationDelivery({
+    capability: "getNotificationDelivery",
+    requestRef: "req-runtime-notification-get-001",
+    input: {
+      notificationId,
+    },
+  });
+  const redelivered = await service.redeliverNotification({
+    capability: "redeliverNotification",
+    requestRef: "req-runtime-notification-redeliver-001",
+    input: {
+      notificationId,
+    },
+  });
+
+  assert.equal(deliveries, 2);
+  assert.equal(listed.length, 1);
+  assert.equal(delivery.notificationId, notificationId);
+  assert.equal(delivery.status, "delivered");
+  assert.equal(redelivered.delivery.notificationId, notificationId);
+  assert.equal(redelivered.delivery.attempts, 2);
+
+  const audits = await service.listAdminAuditEntries({
+    capability: "listAdminAuditEntries",
+    requestRef: "req-runtime-audit-list-001",
+    input: {},
+  });
+  const audit = await service.getAdminAuditEntry({
+    capability: "getAdminAuditEntry",
+    requestRef: "req-runtime-audit-get-001",
+    input: {
+      auditId: "admin-audit-req-runtime-notification-redeliver-001",
+    },
+  });
+
+  assert.equal(audits.length, 3);
+  assert.equal(audit.action, "redeliverNotification");
+  assert.equal(audit.targetRef, notificationId);
+  assert.equal(audit.requestRef, "req-runtime-notification-redeliver-001");
+});
+
+test("AFAL runtime service exposes notification worker control entrypoints when configured", async () => {
+  let redelivered = 0;
+  const worker = new SettlementNotificationOutboxWorker(
+    {
+      redeliverFailedNotifications: async () => {
+        redelivered += 1;
+        return 1;
+      },
+    },
+    {
+      intervalMs: 20,
+    }
+  );
+  const service = createAfalRuntimeService({
+    notificationWorker: worker,
+  });
+
+  const initial = await service.getNotificationWorkerStatus({
+    capability: "getNotificationWorkerStatus",
+    requestRef: "req-runtime-worker-status-001",
+    input: {},
+  });
+  const started = await service.startNotificationWorker({
+    capability: "startNotificationWorker",
+    requestRef: "req-runtime-worker-start-001",
+    input: {},
+  });
+  const ran = await service.runNotificationWorker({
+    capability: "runNotificationWorker",
+    requestRef: "req-runtime-worker-run-001",
+    input: {},
+  });
+  const stopped = await service.stopNotificationWorker({
+    capability: "stopNotificationWorker",
+    requestRef: "req-runtime-worker-stop-001",
+    input: {},
+  });
+
+  assert.equal(initial.running, false);
+  assert.equal(started.running, true);
+  assert.equal(ran.redelivered, 1);
+  assert.equal(ran.status.lastResult, 1);
+  assert.equal(redelivered, 1);
+  assert.equal(stopped.running, false);
 });

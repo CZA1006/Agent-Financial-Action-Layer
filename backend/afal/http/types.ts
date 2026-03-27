@@ -3,14 +3,23 @@ import type { PaymentFlowInput, ResourceFlowInput } from "../interfaces";
 import type {
   AfalApiFailure,
   ApplyApprovalResultResponse,
+  GetAdminAuditEntryResponse,
   GetActionStatusResponse,
   GetApprovalSessionResponse,
+  GetNotificationDeliveryResponse,
+  GetNotificationWorkerStatusResponse,
   RequestPaymentApprovalResponse,
+  ListAdminAuditEntriesResponse,
+  ListNotificationDeliveriesResponse,
   PaymentCapabilityResponse,
   RequestResourceApprovalResponse,
+  RedeliverNotificationResponse,
+  RunNotificationWorkerResponse,
   ResumeApprovedActionResponse,
   ResourceCapabilityResponse,
   ResumeApprovalSessionResponse,
+  StartNotificationWorkerResponse,
+  StopNotificationWorkerResponse,
 } from "../api";
 
 export const AFAL_HTTP_ROUTES = {
@@ -19,6 +28,15 @@ export const AFAL_HTTP_ROUTES = {
   requestResourceApproval: "/capabilities/request-resource-approval",
   settleResourceUsage: "/capabilities/settle-resource-usage",
   getActionStatus: "/actions/get",
+  getNotificationDelivery: "/notification-deliveries/get",
+  listNotificationDeliveries: "/notification-deliveries/list",
+  redeliverNotification: "/notification-deliveries/redeliver",
+  getNotificationWorkerStatus: "/notification-worker/get",
+  startNotificationWorker: "/notification-worker/start",
+  stopNotificationWorker: "/notification-worker/stop",
+  runNotificationWorker: "/notification-worker/run",
+  getAdminAuditEntry: "/admin-audit/get",
+  listAdminAuditEntries: "/admin-audit/list",
   getApprovalSession: "/approval-sessions/get",
   applyApprovalResult: "/approval-sessions/apply-result",
   resumeApprovalSession: "/approval-sessions/resume",
@@ -61,6 +79,35 @@ export interface GetActionStatusHttpBody {
   };
 }
 
+export interface GetNotificationDeliveryHttpBody {
+  requestRef: string;
+  input: {
+    notificationId: string;
+  };
+}
+
+export interface ListNotificationDeliveriesHttpBody {
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
+export interface NotificationWorkerCommandHttpBody {
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
+export interface GetAdminAuditEntryHttpBody {
+  requestRef: string;
+  input: {
+    auditId: string;
+  };
+}
+
+export interface ListAdminAuditEntriesHttpBody {
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
 export interface ApplyApprovalResultHttpBody {
   requestRef: string;
   input: {
@@ -83,21 +130,39 @@ export interface ResumeApprovedActionHttpBody {
   };
 }
 
+export interface RedeliverNotificationHttpBody {
+  requestRef: string;
+  input: {
+    notificationId: string;
+  };
+}
+
 export type AfalHttpBody =
   | RequestPaymentApprovalHttpBody
   | ExecutePaymentHttpBody
   | RequestResourceApprovalHttpBody
   | SettleResourceUsageHttpBody
   | GetActionStatusHttpBody
+  | GetNotificationDeliveryHttpBody
+  | ListNotificationDeliveriesHttpBody
+  | NotificationWorkerCommandHttpBody
+  | GetAdminAuditEntryHttpBody
+  | ListAdminAuditEntriesHttpBody
   | GetApprovalSessionHttpBody
   | ApplyApprovalResultHttpBody
   | ResumeApprovalSessionHttpBody
-  | ResumeApprovedActionHttpBody;
+  | ResumeApprovedActionHttpBody
+  | RedeliverNotificationHttpBody;
+
+export interface AfalHttpHeaders {
+  [headerName: string]: string | undefined;
+}
 
 export interface AfalHttpRequest {
   method: string;
   path: string;
   body?: unknown;
+  headers?: AfalHttpHeaders;
 }
 
 export interface AfalHttpResponse<TBody> {
@@ -114,9 +179,18 @@ export type AfalHttpSuccessBody =
   | RequestResourceApprovalResponse
   | ResourceCapabilityResponse
   | GetActionStatusResponse
+  | GetNotificationDeliveryResponse
+  | ListNotificationDeliveriesResponse
+  | GetNotificationWorkerStatusResponse
+  | GetAdminAuditEntryResponse
+  | ListAdminAuditEntriesResponse
   | GetApprovalSessionResponse
   | ApplyApprovalResultResponse
   | ResumeApprovalSessionResponse
-  | ResumeApprovedActionResponse;
+  | ResumeApprovedActionResponse
+  | RedeliverNotificationResponse
+  | StartNotificationWorkerResponse
+  | StopNotificationWorkerResponse
+  | RunNotificationWorkerResponse;
 export type AfalHttpErrorBody = AfalApiFailure;
 export type AfalHttpResponseBody = AfalHttpSuccessBody | AfalHttpErrorBody;

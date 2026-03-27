@@ -20,18 +20,23 @@ import type {
   AfalOrchestrationPorts,
   PaymentFlowOrchestrator,
   ResourceFlowOrchestrator,
+  SettlementNotificationPort,
   TrustedSurfacePort,
 } from "../interfaces";
+import { SqliteAfalAdminAuditStore } from "../admin-audit";
 import { createMockPaymentFlowOrchestrator, createMockResourceFlowOrchestrator } from "../mock";
+import { NoopSettlementNotificationPort } from "../notifications";
 import { AfalIntentStateService, SqliteAfalIntentStore, createSeededAfalIntentTemplateResolver } from "../state";
 import {
   AfalSettlementService,
   createSeededAfalSettlementTemplateResolver,
+  type PaymentRailAdapter,
+  type ResourceProviderAdapter,
 } from "../settlement";
 import { JsonFileAfalSettlementStore } from "../settlement/file-store";
 import { AfalOutputService, createSeededAfalOutputTemplateResolver } from "../outputs";
 import { JsonFileAfalOutputStore } from "../outputs/file-store";
-import { AfalRuntimeService } from "./runtime";
+import { AfalRuntimeService, type AfalRuntimeServiceOptions } from "./runtime";
 
 function clone<T>(value: T): T {
   return JSON.parse(JSON.stringify(value)) as T;
@@ -54,21 +59,28 @@ class SqliteIntegrationTrustedSurfacePort implements TrustedSurfacePort {
 
 export interface SeededSqliteAfalPaths {
   aip: string;
+  integrationDb: string;
   ats: string;
   amn: string;
   afalIntents: string;
+  afalNotificationOutbox: string;
   afalSettlement: string;
   afalOutputs: string;
+  afalAdminAudit: string;
 }
 
 export function getSeededSqliteAfalPaths(dataDir: string): SeededSqliteAfalPaths {
+  const integrationDb = join(dataDir, "afal-integration.sqlite");
   return {
     aip: join(dataDir, "aip-store.json"),
-    ats: join(dataDir, "ats-store.sqlite"),
-    amn: join(dataDir, "amn-store.sqlite"),
-    afalIntents: join(dataDir, "afal-intents.sqlite"),
+    integrationDb,
+    ats: integrationDb,
+    amn: integrationDb,
+    afalIntents: integrationDb,
+    afalNotificationOutbox: integrationDb,
     afalSettlement: join(dataDir, "afal-settlement.json"),
     afalOutputs: join(dataDir, "afal-outputs.json"),
+    afalAdminAudit: integrationDb,
   };
 }
 
@@ -80,7 +92,15 @@ export interface SeededSqliteAfalBundle {
   resourceOrchestrator: ResourceFlowOrchestrator;
 }
 
-export function createSeededSqliteAfalBundle(dataDir: string): SeededSqliteAfalBundle {
+export function createSeededSqliteAfalBundle(
+  dataDir: string,
+  options?: {
+    notifications?: SettlementNotificationPort;
+    notificationWorker?: AfalRuntimeServiceOptions["notificationWorker"];
+    paymentAdapter?: PaymentRailAdapter;
+    resourceAdapter?: ResourceProviderAdapter;
+  }
+): SeededSqliteAfalBundle {
   const paths = getSeededSqliteAfalPaths(dataDir);
   const aipSeed = createSeededAipRecords();
   const atsSeed = createSeededAtsRecords();
@@ -136,6 +156,8 @@ export function createSeededSqliteAfalBundle(dataDir: string): SeededSqliteAfalB
       },
     }),
     templateResolver: createSeededAfalSettlementTemplateResolver(),
+    paymentAdapter: options?.paymentAdapter,
+    resourceAdapter: options?.resourceAdapter,
   });
   const outputs = new AfalOutputService({
     store: new JsonFileAfalOutputStore({
@@ -158,6 +180,7 @@ export function createSeededSqliteAfalBundle(dataDir: string): SeededSqliteAfalB
     resourceSettlement: settlement,
     receipts: outputs,
     capabilityResponses: outputs,
+    notifications: options?.notifications ?? new NoopSettlementNotificationPort(),
   };
 
   const paymentOrchestrator = createMockPaymentFlowOrchestrator(ports);
@@ -166,6 +189,13 @@ export function createSeededSqliteAfalBundle(dataDir: string): SeededSqliteAfalB
     ports,
     paymentOrchestrator,
     resourceOrchestrator,
+    notificationWorker: options?.notificationWorker,
+    adminAuditStore: new SqliteAfalAdminAuditStore({
+      filePath: paths.afalAdminAudit,
+      seed: {
+        entries: [],
+      },
+    }),
   });
 
   return {
@@ -177,6 +207,14 @@ export function createSeededSqliteAfalBundle(dataDir: string): SeededSqliteAfalB
   };
 }
 
-export function createSeededSqliteAfalRuntimeService(dataDir: string): AfalRuntimeService {
-  return createSeededSqliteAfalBundle(dataDir).runtime;
+export function createSeededSqliteAfalRuntimeService(
+  dataDir: string,
+  options?: {
+    notifications?: SettlementNotificationPort;
+    notificationWorker?: AfalRuntimeServiceOptions["notificationWorker"];
+    paymentAdapter?: PaymentRailAdapter;
+    resourceAdapter?: ResourceProviderAdapter;
+  }
+): AfalRuntimeService {
+  return createSeededSqliteAfalBundle(dataDir, options).runtime;
 }

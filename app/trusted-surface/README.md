@@ -135,8 +135,9 @@ Phase 1 work in this folder should produce:
 A minimal stub now exists at:
 
 - [stub.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/app/trusted-surface/stub.ts#L1)
+- [server.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/app/trusted-surface/server.ts#L1)
 
-It is a small integration helper, not a UI.
+`stub.ts` is a small integration helper, not a UI.
 
 It can:
 
@@ -145,7 +146,18 @@ It can:
 - submit the approval result back to AFAL
 - optionally resume the approved action into settlement
 
-The bilateral runtime-agent harnesses then use AFAL's read-side action query to let `payee-agent` and `provider-agent` confirm final outcomes without touching internal state directly.
+`server.ts` turns the same logic into a true independent HTTP service stub.
+
+It can:
+
+- expose `GET /health`
+- expose `POST /approval-sessions/review`
+- read the approval session from AFAL over HTTP
+- persist the approval result
+- optionally resume the approved action
+- run as a separate process from both AFAL and the approval agent harness
+
+The bilateral runtime-agent harnesses now let payee-side and provider-side receiver agents accept an active settlement callback after AFAL resumes the approved action. AFAL still keeps the read-side action query available for reconciliation and follow-up reads.
 
 Example usage against the local durable HTTP server:
 
@@ -153,4 +165,13 @@ Example usage against the local durable HTTP server:
 node --import tsx/esm app/trusted-surface/stub.ts \
   --base-url http://127.0.0.1:3212 \
   --approval-session-ref aps-chall-0001
+```
+
+Example service usage:
+
+```bash
+npm run trusted-surface:serve -- \
+  --afal-base-url http://127.0.0.1:3212 \
+  --host 127.0.0.1 \
+  --port 3312
 ```

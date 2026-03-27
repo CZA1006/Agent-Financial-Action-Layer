@@ -49,6 +49,33 @@ Use the whitepaper for:
 Do **not** rely on the whitepaper alone for implementation.  
 Before coding, the relevant sections should be translated into concrete specs and task lists.
 
+## Current Implementation Status
+
+The repository has now moved beyond whitepaper-only or schema-only work.
+
+Current implementation stage:
+
+- late Phase 1 externally integrated runtime slice
+- seeded durable local execution across AIP / ATS / AMN / AFAL
+- shared SQLite-backed integration database for execution-critical state, admin audit, and notification outbox
+- trusted-surface approval callback and resume routes plus an independent trusted-surface review service stub
+- bilateral runtime-agent harnesses for payment and resource flows
+- receiver callback delivery with durable outbox, worker redelivery, and operator recovery surfaces
+- explicit payment-rail/provider adapter boundaries and network-shaped mock external services that AFAL can call over HTTP
+- a minimal service-to-service auth boundary for those external services, including signed request metadata placeholders
+
+So the whitepaper should now be read as:
+
+- the long-range strategic and protocol direction
+
+while the concrete current source of implementation truth is:
+
+- `README.md`
+- `docs/specs/`
+- `docs/examples/`
+- `docs/product/`
+- `backend/`
+
 ## Related Folders
 
 - `docs/architecture/` — module-level architecture docs

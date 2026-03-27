@@ -1,8 +1,12 @@
-import { mkdirSync } from "node:fs";
-import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 
 import type { IdRef, PaymentIntent, ResourceIntent } from "../../../sdk/types";
+import {
+  initializeSqliteMetadata,
+  isBootstrapNamespaceApplied,
+  markBootstrapNamespaceApplied,
+  openSqliteDatabase,
+} from "../../db/sqlite";
 import type { PendingApprovalExecution } from "./interfaces";
 import type { AfalIntentStore } from "./store";
 
@@ -25,11 +29,7 @@ export class SqliteAfalIntentStore implements AfalIntentStore {
   private readonly db: DatabaseSync;
 
   constructor(private readonly options: SqliteAfalIntentStoreOptions) {
-    if (options.filePath !== ":memory:") {
-      mkdirSync(dirname(options.filePath), { recursive: true });
-    }
-
-    this.db = new DatabaseSync(options.filePath);
+    this.db = openSqliteDatabase(options.filePath);
     this.initialize();
   }
 
@@ -72,6 +72,8 @@ export class SqliteAfalIntentStore implements AfalIntentStore {
   }
 
   private initialize(): void {
+    initializeSqliteMetadata(this.db, { schemaName: "afal-sqlite-integration" });
+
     this.db.exec(`
       CREATE TABLE IF NOT EXISTS payment_intents (
         id TEXT PRIMARY KEY,
@@ -86,6 +88,14 @@ export class SqliteAfalIntentStore implements AfalIntentStore {
         payload TEXT NOT NULL
       );
     `);
+
+    this.seedAll();
+  }
+
+  private seedAll(): void {
+    if (isBootstrapNamespaceApplied(this.db, "afal-intents")) {
+      return;
+    }
 
     this.seedTable(
       "payment_intents",
@@ -102,16 +112,11 @@ export class SqliteAfalIntentStore implements AfalIntentStore {
       this.options.seed?.pendingExecutions ?? [],
       (entry) => entry.approvalSessionRef
     );
+    markBootstrapNamespaceApplied(this.db, "afal-intents");
   }
 
   private seedTable<T>(table: string, entries: T[], getId: (entry: T) => string): void {
-    const row = this.db.prepare(`SELECT COUNT(*) as count FROM ${table}`).get() as { count: number };
-
-    if (row.count > 0) {
-      return;
-    }
-
-    const statement = this.db.prepare(`INSERT INTO ${table} (id, payload) VALUES (?, ?)`);
+    const statement = this.db.prepare(`INSERT OR IGNORE INTO ${table} (id, payload) VALUES (?, ?)`);
 
     for (const entry of entries) {
       statement.run(getId(entry), JSON.stringify(clone(entry)));

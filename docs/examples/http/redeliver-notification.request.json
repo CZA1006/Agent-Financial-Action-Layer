@@ -1,0 +1,6 @@
+{
+  "requestRef": "req-notification-delivery-redeliver-001",
+  "input": {
+    "notificationId": "notif-payint-0001"
+  }
+}

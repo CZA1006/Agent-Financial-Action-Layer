@@ -1,0 +1,19 @@
+{
+  "notificationId": "notif-resint-0001",
+  "eventType": "resource.settled",
+  "requestRef": "req-1001",
+  "actionRef": "resint-0001",
+  "approvalSessionRef": "aps-chall-1001",
+  "providerId": "provider-openai",
+  "providerDid": "did:afal:institution:provider-openai",
+  "intentStatus": "settled",
+  "usageReceiptRef": "usage-1001",
+  "settlementRef": "stl-1001",
+  "receiptRef": "rcpt-res-1001",
+  "asset": "USDC",
+  "amount": "18.50",
+  "resourceClass": "inference",
+  "resourceUnit": "tokens",
+  "quantity": 500000,
+  "settledAt": "2026-03-24T12:23:10Z"
+}

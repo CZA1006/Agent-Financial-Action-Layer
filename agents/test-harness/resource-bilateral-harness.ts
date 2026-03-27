@@ -6,7 +6,10 @@ import { dirname, join } from "node:path";
 
 import { type AgentHarnessClient } from "./http-client";
 import { runApprovalAgent, type ApprovalAgentResult } from "./approval-agent";
-import { runProviderAgent, type ProviderAgentResult } from "./provider-agent";
+import {
+  startProviderCallbackAgent,
+  type ProviderCallbackAgentResult,
+} from "./provider-callback-agent";
 import {
   runResourceRequesterAgent,
   type ResourceRequesterAgentResult,
@@ -15,12 +18,23 @@ import {
   startSeededSqliteAfalHttpServer,
   type RunningSeededSqliteAfalHttpServer,
 } from "../../backend/afal/http/sqlite-server";
+import {
+  startTrustedSurfaceStubServer,
+  type RunningTrustedSurfaceStubServer,
+} from "../../app/trusted-surface/server";
+import {
+  HttpSettlementNotificationPort,
+  SqliteSettlementNotificationOutboxStore,
+} from "../../backend/afal/notifications";
+import { resourceFlowFixtures } from "../../sdk/fixtures";
+import { getSeededSqliteAfalPaths } from "../../backend/afal/service";
 
 const THIS_DIR = dirname(fileURLToPath(import.meta.url));
 
 export interface BilateralResourceHarnessResult {
   summary: {
     baseUrl: string;
+    trustedSurfaceUrl?: string;
     requesterAgentId: string;
     approvalAgentId: string;
     providerAgentId: string;
@@ -33,7 +47,7 @@ export interface BilateralResourceHarnessResult {
   };
   requester: ResourceRequesterAgentResult;
   approval: ApprovalAgentResult;
-  provider: ProviderAgentResult;
+  provider: ProviderCallbackAgentResult;
 }
 
 export async function runBilateralResourceHarness(
@@ -43,35 +57,38 @@ export async function runBilateralResourceHarness(
     providerRequestRef?: string;
   }
 ): Promise<BilateralResourceHarnessResult> {
-  const requester = await runResourceRequesterAgent(client, {
-    requestRef: options?.requesterRequestRef,
-  });
-  const approval = await runApprovalAgent(client, {
-    approvalSessionRef: requester.summary.approvalSessionRef,
-    requestRefPrefix: "req-agent-resource-approval",
-  });
-  const provider = await runProviderAgent(client, {
-    actionRef: requester.summary.actionRef,
-    requestRef: options?.providerRequestRef,
-  });
+  const providerAgent = await startProviderCallbackAgent();
 
-  return {
-    summary: {
-      baseUrl: "in-process",
-      requesterAgentId: requester.summary.agentId,
-      approvalAgentId: approval.summary.agentId,
-      providerAgentId: provider.summary.agentId,
+  try {
+    const requester = await runResourceRequesterAgent(client, {
+      requestRef: options?.requesterRequestRef,
+    });
+    const approval = await runApprovalAgent(client, {
       approvalSessionRef: requester.summary.approvalSessionRef,
-      actionRef: requester.summary.actionRef,
-      finalIntentStatus: provider.summary.intentStatus,
-      usageReceiptRef: provider.summary.usageReceiptRef,
-      settlementRef: provider.summary.settlementRef,
-      receiptRef: provider.summary.receiptRef,
-    },
-    requester,
-    approval,
-    provider,
-  };
+      requestRefPrefix: "req-agent-resource-approval",
+    });
+    const provider = await providerAgent.waitForNotification();
+
+    return {
+      summary: {
+        baseUrl: "in-process",
+        requesterAgentId: requester.summary.agentId,
+        approvalAgentId: approval.summary.agentId,
+        providerAgentId: provider.summary.agentId,
+        approvalSessionRef: requester.summary.approvalSessionRef,
+        actionRef: requester.summary.actionRef,
+        finalIntentStatus: provider.summary.intentStatus,
+        usageReceiptRef: provider.summary.usageReceiptRef,
+        settlementRef: provider.summary.settlementRef,
+        receiptRef: provider.summary.receiptRef,
+      },
+      requester,
+      approval,
+      provider,
+    };
+  } finally {
+    await providerAgent.close();
+  }
 }
 
 async function runJsonProcess(args: string[]): Promise<unknown> {
@@ -118,14 +135,27 @@ async function runJsonProcess(args: string[]): Promise<unknown> {
 
 export async function runSpawnedBilateralResourceHarness(args?: {
   baseUrl?: string;
+  trustedSurfaceUrl?: string;
   dataDir?: string;
   host?: string;
   port?: number;
+  trustedSurfaceHost?: string;
+  trustedSurfacePort?: number;
+  providerFailFirstAttempts?: number;
+  notificationWorkerIntervalMs?: number;
 }): Promise<BilateralResourceHarnessResult> {
   let server: RunningSeededSqliteAfalHttpServer | undefined;
+  let trustedSurface: RunningTrustedSurfaceStubServer | undefined;
   let tempDataDir: string | undefined;
+  let providerAgent:
+    | Awaited<ReturnType<typeof startProviderCallbackAgent>>
+    | undefined;
 
   try {
+    providerAgent = await startProviderCallbackAgent({
+      failFirstAttempts: args?.providerFailFirstAttempts,
+    });
+
     if (!args?.baseUrl) {
       if (!args?.dataDir) {
         tempDataDir = await mkdtemp(join(tmpdir(), "afal-agent-resource-bilateral-"));
@@ -135,6 +165,20 @@ export async function runSpawnedBilateralResourceHarness(args?: {
         dataDir: args?.dataDir ?? tempDataDir,
         host: args?.host,
         port: args?.port,
+        notifications: new HttpSettlementNotificationPort({
+          resourceCallbackUrls: {
+            [resourceFlowFixtures.resourceIntentCreated.provider.providerDid]:
+              providerAgent.callbackUrl,
+          },
+          outboxStore: new SqliteSettlementNotificationOutboxStore({
+            filePath: getSeededSqliteAfalPaths(
+              args?.dataDir ?? tempDataDir ?? process.cwd()
+            ).afalNotificationOutbox,
+          }),
+        }),
+        notificationWorker: {
+          intervalMs: args?.notificationWorkerIntervalMs,
+        },
       });
     }
 
@@ -142,6 +186,16 @@ export async function runSpawnedBilateralResourceHarness(args?: {
     if (!baseUrl) {
       throw new Error("resource bilateral harness requires either baseUrl or a startable local server");
     }
+
+    trustedSurface =
+      args?.trustedSurfaceUrl
+        ? undefined
+        : await startTrustedSurfaceStubServer({
+            afalBaseUrl: baseUrl,
+            host: args?.trustedSurfaceHost,
+            port: args?.trustedSurfacePort ?? 0,
+          });
+    const trustedSurfaceUrl = args?.trustedSurfaceUrl ?? trustedSurface?.url;
 
     const requester = (await runJsonProcess([
       "--import",
@@ -155,25 +209,19 @@ export async function runSpawnedBilateralResourceHarness(args?: {
       "--import",
       "tsx/esm",
       join(THIS_DIR, "approval-agent.ts"),
-      "--base-url",
-      baseUrl,
       "--approval-session-ref",
       requester.summary.approvalSessionRef,
+      ...(trustedSurfaceUrl
+        ? ["--trusted-surface-url", trustedSurfaceUrl]
+        : ["--base-url", baseUrl]),
     ])) as ApprovalAgentResult;
 
-    const provider = (await runJsonProcess([
-      "--import",
-      "tsx/esm",
-      join(THIS_DIR, "provider-agent.ts"),
-      "--base-url",
-      baseUrl,
-      "--action-ref",
-      requester.summary.actionRef,
-    ])) as ProviderAgentResult;
+    const provider = await providerAgent.waitForNotification();
 
     return {
       summary: {
         baseUrl,
+        trustedSurfaceUrl,
         requesterAgentId: requester.summary.agentId,
         approvalAgentId: approval.summary.agentId,
         providerAgentId: provider.summary.agentId,
@@ -189,8 +237,14 @@ export async function runSpawnedBilateralResourceHarness(args?: {
       provider,
     };
   } finally {
+    if (trustedSurface) {
+      await trustedSurface.close();
+    }
     if (server) {
       await server.close();
+    }
+    if (providerAgent) {
+      await providerAgent.close();
     }
     if (tempDataDir) {
       await rm(tempDataDir, { recursive: true, force: true });
@@ -200,15 +254,25 @@ export async function runSpawnedBilateralResourceHarness(args?: {
 
 function parseArgs(argv: string[]): {
   baseUrl?: string;
+  trustedSurfaceUrl?: string;
   dataDir?: string;
   host?: string;
   port?: number;
+  trustedSurfaceHost?: string;
+  trustedSurfacePort?: number;
+  providerFailFirstAttempts?: number;
+  notificationWorkerIntervalMs?: number;
 } {
   const result: {
     baseUrl?: string;
+    trustedSurfaceUrl?: string;
     dataDir?: string;
     host?: string;
     port?: number;
+    trustedSurfaceHost?: string;
+    trustedSurfacePort?: number;
+    providerFailFirstAttempts?: number;
+    notificationWorkerIntervalMs?: number;
   } = {};
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -223,6 +287,11 @@ function parseArgs(argv: string[]): {
       index += 1;
       continue;
     }
+    if (arg === "--trusted-surface-url") {
+      result.trustedSurfaceUrl = argv[index + 1];
+      index += 1;
+      continue;
+    }
     if (arg === "--host") {
       result.host = argv[index + 1];
       index += 1;
@@ -231,6 +300,29 @@ function parseArgs(argv: string[]): {
     if (arg === "--port") {
       const raw = argv[index + 1];
       result.port = raw ? Number(raw) : undefined;
+      index += 1;
+      continue;
+    }
+    if (arg === "--trusted-surface-host") {
+      result.trustedSurfaceHost = argv[index + 1];
+      index += 1;
+      continue;
+    }
+    if (arg === "--trusted-surface-port") {
+      const raw = argv[index + 1];
+      result.trustedSurfacePort = raw ? Number(raw) : undefined;
+      index += 1;
+      continue;
+    }
+    if (arg === "--provider-fail-first-attempts") {
+      const raw = argv[index + 1];
+      result.providerFailFirstAttempts = raw ? Number(raw) : undefined;
+      index += 1;
+      continue;
+    }
+    if (arg === "--notification-worker-interval-ms") {
+      const raw = argv[index + 1];
+      result.notificationWorkerIntervalMs = raw ? Number(raw) : undefined;
       index += 1;
     }
   }

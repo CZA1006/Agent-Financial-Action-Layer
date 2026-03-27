@@ -2,12 +2,17 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
+import { InMemoryAfalAdminAuditStore } from "../admin-audit";
 import { createAfalRuntimeService } from "../service";
 import {
   createMockAfalPorts,
   createMockPaymentFlowOrchestrator,
   createMockResourceFlowOrchestrator,
 } from "../mock";
+import {
+  HttpSettlementNotificationPort,
+  SettlementNotificationOutboxWorker,
+} from "../notifications";
 import { createAfalApiHandlers } from "../api";
 import { createAfalHttpRouter, AFAL_HTTP_ROUTES } from "./index";
 
@@ -357,6 +362,348 @@ describe("AFAL HTTP transport contract", () => {
       }
     } else {
       assert.fail("expected getActionStatus success response");
+    }
+  });
+
+  test("routes notification delivery admin POST requests after settlement", async () => {
+    const adminAuditStore = new InMemoryAfalAdminAuditStore();
+    const runtime = createAfalRuntimeService({
+      ports: createMockAfalPorts({
+        notifications: new HttpSettlementNotificationPort({
+          paymentCallbackUrls: {
+            [paymentFlowFixtures.paymentIntentCreated.payee.payeeDid]:
+              "https://receiver.example/payment",
+          },
+          fetchImpl: async () => new Response(null, { status: 202 }),
+        }),
+      }),
+      adminAuditStore,
+    });
+    const router = createAfalHttpRouter({ handlers: createAfalApiHandlers({ service: runtime }) });
+    const pending = await runtime.requestPaymentApproval({
+      capability: "requestPaymentApproval",
+      requestRef: "req-http-notification-payment-001",
+      input: {
+        requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+        intent: paymentFlowFixtures.paymentIntentCreated,
+        monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+      },
+    });
+    await runtime.applyApprovalResult({
+      capability: "applyApprovalResult",
+      requestRef: "req-http-notification-apply-001",
+      input: {
+        approvalSessionRef: pending.approvalSession.approvalSessionId,
+        result: paymentFlowFixtures.approvalResult,
+      },
+    });
+    await runtime.resumeApprovedAction({
+      capability: "resumeApprovedAction",
+      requestRef: "req-http-notification-resume-001",
+      input: {
+        approvalSessionRef: pending.approvalSession.approvalSessionId,
+      },
+    });
+    const notificationId = `notif-${pending.intent.intentId}`;
+
+    const listResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.listNotificationDeliveries,
+      body: {
+        requestRef: "req-http-notification-list-001",
+        input: {},
+      },
+    });
+    const getResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.getNotificationDelivery,
+      body: {
+        requestRef: "req-http-notification-get-001",
+        input: {
+          notificationId,
+        },
+      },
+    });
+    const redeliverResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.redeliverNotification,
+      body: {
+        requestRef: "req-http-notification-redeliver-001",
+        input: {
+          notificationId,
+        },
+      },
+    });
+    const auditListResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.listAdminAuditEntries,
+      body: {
+        requestRef: "req-http-admin-audit-list-001",
+        input: {},
+      },
+    });
+    const auditGetResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.getAdminAuditEntry,
+      body: {
+        requestRef: "req-http-admin-audit-get-001",
+        input: {
+          auditId: "admin-audit-req-http-notification-redeliver-001",
+        },
+      },
+    });
+
+    assert.equal(listResponse.statusCode, 200);
+    assert.equal(getResponse.statusCode, 200);
+    assert.equal(redeliverResponse.statusCode, 200);
+    assert.equal(auditListResponse.statusCode, 200);
+    assert.equal(auditGetResponse.statusCode, 200);
+    assert.equal(listResponse.body.ok, true);
+    assert.equal(getResponse.body.ok, true);
+    assert.equal(redeliverResponse.body.ok, true);
+    assert.equal(auditListResponse.body.ok, true);
+    assert.equal(auditGetResponse.body.ok, true);
+    if (
+      listResponse.body.ok &&
+      listResponse.body.capability === "listNotificationDeliveries" &&
+      Array.isArray(listResponse.body.data)
+    ) {
+      assert.equal(listResponse.body.data.length, 1);
+    } else {
+      assert.fail("expected listNotificationDeliveries success response");
+    }
+    if (
+      getResponse.body.ok &&
+      getResponse.body.capability === "getNotificationDelivery" &&
+      "notificationId" in getResponse.body.data
+    ) {
+      assert.equal(getResponse.body.data.notificationId, notificationId);
+    } else {
+      assert.fail("expected getNotificationDelivery success response");
+    }
+    if (
+      redeliverResponse.body.ok &&
+      redeliverResponse.body.capability === "redeliverNotification" &&
+      "delivery" in redeliverResponse.body.data
+    ) {
+      assert.equal(redeliverResponse.body.data.delivery.notificationId, notificationId);
+      assert.equal(redeliverResponse.body.data.delivery.attempts, 2);
+    } else {
+      assert.fail("expected redeliverNotification success response");
+    }
+    if (
+      auditListResponse.body.ok &&
+      auditListResponse.body.capability === "listAdminAuditEntries" &&
+      Array.isArray(auditListResponse.body.data)
+    ) {
+      assert.equal(auditListResponse.body.data.length, 3);
+    } else {
+      assert.fail("expected listAdminAuditEntries success response");
+    }
+    if (
+      auditGetResponse.body.ok &&
+      auditGetResponse.body.capability === "getAdminAuditEntry" &&
+      "auditId" in auditGetResponse.body.data
+    ) {
+      assert.equal(
+        auditGetResponse.body.data.auditId,
+        "admin-audit-req-http-notification-redeliver-001"
+      );
+      assert.equal(auditGetResponse.body.data.action, "redeliverNotification");
+    } else {
+      assert.fail("expected getAdminAuditEntry success response");
+    }
+  });
+
+  test("rejects notification admin routes without the configured operator token", async () => {
+    const runtime = createAfalRuntimeService({
+      ports: createMockAfalPorts({
+        notifications: new HttpSettlementNotificationPort({
+          paymentCallbackUrls: {
+            [paymentFlowFixtures.paymentIntentCreated.payee.payeeDid]:
+              "https://receiver.example/payment",
+          },
+          fetchImpl: async () => new Response(null, { status: 202 }),
+        }),
+      }),
+      notificationWorker: new SettlementNotificationOutboxWorker(
+        {
+          redeliverFailedNotifications: async () => 1,
+        },
+        { intervalMs: 20 }
+      ),
+    });
+    const router = createAfalHttpRouter({
+      handlers: createAfalApiHandlers({ service: runtime }),
+      operatorAuth: {
+        token: "operator-secret",
+      },
+    });
+
+    const deliveryResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.listNotificationDeliveries,
+      body: {
+        requestRef: "req-http-notification-list-auth-001",
+        input: {},
+      },
+    });
+    const workerResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.getNotificationWorkerStatus,
+      body: {
+        requestRef: "req-http-worker-status-auth-001",
+        input: {},
+      },
+    });
+    const auditResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.listAdminAuditEntries,
+      body: {
+        requestRef: "req-http-admin-audit-list-auth-001",
+        input: {},
+      },
+    });
+
+    assert.equal(deliveryResponse.statusCode, 403);
+    assert.equal(workerResponse.statusCode, 403);
+    assert.equal(auditResponse.statusCode, 403);
+    assert.equal(deliveryResponse.body.ok, false);
+    assert.equal(workerResponse.body.ok, false);
+    assert.equal(auditResponse.body.ok, false);
+    if (!deliveryResponse.body.ok) {
+      assert.equal(deliveryResponse.body.error.code, "operator-auth-required");
+    }
+    if (!workerResponse.body.ok) {
+      assert.equal(workerResponse.body.error.code, "operator-auth-required");
+    }
+    if (!auditResponse.body.ok) {
+      assert.equal(auditResponse.body.error.code, "operator-auth-required");
+    }
+  });
+
+  test("accepts notification admin routes with the configured operator token", async () => {
+    const runtime = createAfalRuntimeService({
+      notificationWorker: new SettlementNotificationOutboxWorker(
+        {
+          redeliverFailedNotifications: async () => 1,
+        },
+        { intervalMs: 20 }
+      ),
+    });
+    const router = createAfalHttpRouter({
+      handlers: createAfalApiHandlers({ service: runtime }),
+      operatorAuth: {
+        token: "operator-secret",
+      },
+    });
+
+    const response = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.getNotificationWorkerStatus,
+      headers: {
+        "x-afal-operator-token": "operator-secret",
+      },
+      body: {
+        requestRef: "req-http-worker-status-auth-002",
+        input: {},
+      },
+    });
+
+    assert.equal(response.statusCode, 200);
+    assert.equal(response.body.ok, true);
+    if (response.body.ok) {
+      assert.equal(response.body.capability, "getNotificationWorkerStatus");
+    }
+  });
+
+  test("routes notification worker control POST requests", async () => {
+    const runtime = createAfalRuntimeService({
+      notificationWorker: new SettlementNotificationOutboxWorker(
+        {
+          redeliverFailedNotifications: async () => 1,
+        },
+        { intervalMs: 20 }
+      ),
+    });
+    const router = createAfalHttpRouter({ handlers: createAfalApiHandlers({ service: runtime }) });
+
+    const statusResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.getNotificationWorkerStatus,
+      body: {
+        requestRef: "req-http-worker-status-001",
+        input: {},
+      },
+    });
+    const startResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.startNotificationWorker,
+      body: {
+        requestRef: "req-http-worker-start-001",
+        input: {},
+      },
+    });
+    const runResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.runNotificationWorker,
+      body: {
+        requestRef: "req-http-worker-run-001",
+        input: {},
+      },
+    });
+    const stopResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.stopNotificationWorker,
+      body: {
+        requestRef: "req-http-worker-stop-001",
+        input: {},
+      },
+    });
+
+    assert.equal(statusResponse.statusCode, 200);
+    assert.equal(startResponse.statusCode, 200);
+    assert.equal(runResponse.statusCode, 200);
+    assert.equal(stopResponse.statusCode, 200);
+    assert.equal(statusResponse.body.ok, true);
+    assert.equal(startResponse.body.ok, true);
+    assert.equal(runResponse.body.ok, true);
+    assert.equal(stopResponse.body.ok, true);
+    if (
+      statusResponse.body.ok &&
+      statusResponse.body.capability === "getNotificationWorkerStatus" &&
+      "running" in statusResponse.body.data
+    ) {
+      assert.equal(statusResponse.body.data.running, false);
+    } else {
+      assert.fail("expected getNotificationWorkerStatus success response");
+    }
+    if (
+      startResponse.body.ok &&
+      startResponse.body.capability === "startNotificationWorker" &&
+      "running" in startResponse.body.data
+    ) {
+      assert.equal(startResponse.body.data.running, true);
+    } else {
+      assert.fail("expected startNotificationWorker success response");
+    }
+    if (
+      runResponse.body.ok &&
+      runResponse.body.capability === "runNotificationWorker" &&
+      "redelivered" in runResponse.body.data
+    ) {
+      assert.equal(runResponse.body.data.redelivered, 1);
+    } else {
+      assert.fail("expected runNotificationWorker success response");
+    }
+    if (
+      stopResponse.body.ok &&
+      stopResponse.body.capability === "stopNotificationWorker" &&
+      "running" in stopResponse.body.data
+    ) {
+      assert.equal(stopResponse.body.data.running, false);
+    } else {
+      assert.fail("expected stopNotificationWorker success response");
     }
   });
 });

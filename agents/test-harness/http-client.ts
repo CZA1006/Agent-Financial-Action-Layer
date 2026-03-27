@@ -4,13 +4,21 @@ import type {
   ResourceApprovalRequestOutput,
   ResumeApprovedActionOutput,
 } from "../../backend/afal/interfaces";
+import type { AfalAdminAuditEntry } from "../../backend/afal/admin-audit";
 import type {
   AfalApiFailure,
   AfalApiSuccess,
 } from "../../backend/afal/api/types";
 import { AFAL_HTTP_ROUTES } from "../../backend/afal/http/types";
 import type { ApprovalResult, ApprovalSession, IdRef } from "../../sdk/types";
-import type { ApplyApprovalResultOutput } from "../../backend/afal/service";
+import type {
+  ApplyApprovalResultOutput,
+  RunNotificationWorkerOutput,
+} from "../../backend/afal/service";
+import type {
+  SettlementNotificationDeliveryRecord,
+  SettlementNotificationOutboxWorkerStatus,
+} from "../../backend/afal/notifications";
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../sdk/fixtures";
 
 export interface AgentHarnessClient {
@@ -40,12 +48,34 @@ export interface AgentHarnessClient {
     requestRef: string;
     approvalSessionRef: IdRef;
   }): Promise<ResumeApprovedActionOutput>;
+  getNotificationDelivery(args: {
+    requestRef: string;
+    notificationId: IdRef;
+  }): Promise<SettlementNotificationDeliveryRecord>;
+  listNotificationDeliveries(args: { requestRef: string }): Promise<
+    SettlementNotificationDeliveryRecord[]
+  >;
+  getAdminAuditEntry(args: {
+    requestRef: string;
+    auditId: IdRef;
+  }): Promise<AfalAdminAuditEntry>;
+  listAdminAuditEntries(args: { requestRef: string }): Promise<AfalAdminAuditEntry[]>;
+  getNotificationWorkerStatus(args: {
+    requestRef: string;
+  }): Promise<SettlementNotificationOutboxWorkerStatus>;
+  runNotificationWorker(args: { requestRef: string }): Promise<RunNotificationWorkerOutput>;
+}
+
+export interface AgentHarnessClientOptions {
+  operatorToken?: string;
+  operatorHeaderName?: string;
 }
 
 export interface NodeTransportRequest {
   method?: string;
   url?: string;
   bodyText?: string;
+  headers?: Record<string, string | undefined>;
 }
 
 export interface NodeTransportResponse {
@@ -118,8 +148,23 @@ function buildCanonicalResourceApprovalRequest(args?: {
   };
 }
 
-export function createAfalHttpClient(baseUrl: string): AgentHarnessClient {
+export function createAfalHttpClient(
+  baseUrl: string,
+  options?: AgentHarnessClientOptions
+): AgentHarnessClient {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
+  const operatorHeaderName = options?.operatorHeaderName ?? "x-afal-operator-token";
+
+  function withOperatorHeaders(headers: Record<string, string>): Record<string, string> {
+    if (!options?.operatorToken) {
+      return headers;
+    }
+
+    return {
+      ...headers,
+      [operatorHeaderName]: options.operatorToken,
+    };
+  }
 
   return {
     async requestPaymentApproval(args) {
@@ -127,9 +172,9 @@ export function createAfalHttpClient(baseUrl: string): AgentHarnessClient {
         `${normalizedBaseUrl}${AFAL_HTTP_ROUTES.requestPaymentApproval}`,
         {
           method: "POST",
-          headers: {
+          headers: withOperatorHeaders({
             "content-type": "application/json",
-          },
+          }),
           body: JSON.stringify(buildCanonicalPaymentApprovalRequest(args)),
         }
       );
@@ -143,9 +188,9 @@ export function createAfalHttpClient(baseUrl: string): AgentHarnessClient {
         `${normalizedBaseUrl}${AFAL_HTTP_ROUTES.requestResourceApproval}`,
         {
           method: "POST",
-          headers: {
+          headers: withOperatorHeaders({
             "content-type": "application/json",
-          },
+          }),
           body: JSON.stringify(buildCanonicalResourceApprovalRequest(args)),
         }
       );
@@ -157,9 +202,9 @@ export function createAfalHttpClient(baseUrl: string): AgentHarnessClient {
     async getActionStatus(args) {
       const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.getActionStatus}`, {
         method: "POST",
-        headers: {
+        headers: withOperatorHeaders({
           "content-type": "application/json",
-        },
+        }),
         body: JSON.stringify({
           requestRef: args.requestRef,
           input: {
@@ -175,9 +220,9 @@ export function createAfalHttpClient(baseUrl: string): AgentHarnessClient {
     async getApprovalSession(args) {
       const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.getApprovalSession}`, {
         method: "POST",
-        headers: {
+        headers: withOperatorHeaders({
           "content-type": "application/json",
-        },
+        }),
         body: JSON.stringify({
           requestRef: args.requestRef,
           input: {
@@ -193,9 +238,9 @@ export function createAfalHttpClient(baseUrl: string): AgentHarnessClient {
     async applyApprovalResult(args) {
       const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.applyApprovalResult}`, {
         method: "POST",
-        headers: {
+        headers: withOperatorHeaders({
           "content-type": "application/json",
-        },
+        }),
         body: JSON.stringify({
           requestRef: args.requestRef,
           input: {
@@ -212,9 +257,9 @@ export function createAfalHttpClient(baseUrl: string): AgentHarnessClient {
     async resumeApprovedAction(args) {
       const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.resumeApprovedAction}`, {
         method: "POST",
-        headers: {
+        headers: withOperatorHeaders({
           "content-type": "application/json",
-        },
+        }),
         body: JSON.stringify({
           requestRef: args.requestRef,
           input: {
@@ -226,15 +271,137 @@ export function createAfalHttpClient(baseUrl: string): AgentHarnessClient {
       const body = await parseJsonResponse<AfalApiSuccess<ResumeApprovedActionOutput>>(response);
       return body.data;
     },
+
+    async getNotificationDelivery(args) {
+      const response = await fetch(
+        `${normalizedBaseUrl}${AFAL_HTTP_ROUTES.getNotificationDelivery}`,
+        {
+          method: "POST",
+          headers: withOperatorHeaders({
+            "content-type": "application/json",
+          }),
+          body: JSON.stringify({
+            requestRef: args.requestRef,
+            input: {
+              notificationId: args.notificationId,
+            },
+          }),
+        }
+      );
+
+      const body =
+        await parseJsonResponse<AfalApiSuccess<SettlementNotificationDeliveryRecord>>(response);
+      return body.data;
+    },
+
+    async listNotificationDeliveries(args) {
+      const response = await fetch(
+        `${normalizedBaseUrl}${AFAL_HTTP_ROUTES.listNotificationDeliveries}`,
+        {
+          method: "POST",
+          headers: withOperatorHeaders({
+            "content-type": "application/json",
+          }),
+          body: JSON.stringify({
+            requestRef: args.requestRef,
+            input: {},
+          }),
+        }
+      );
+
+      const body =
+        await parseJsonResponse<AfalApiSuccess<SettlementNotificationDeliveryRecord[]>>(response);
+      return body.data;
+    },
+
+    async getAdminAuditEntry(args) {
+      const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.getAdminAuditEntry}`, {
+        method: "POST",
+        headers: withOperatorHeaders({
+          "content-type": "application/json",
+        }),
+        body: JSON.stringify({
+          requestRef: args.requestRef,
+          input: {
+            auditId: args.auditId,
+          },
+        }),
+      });
+
+      const body = await parseJsonResponse<AfalApiSuccess<AfalAdminAuditEntry>>(response);
+      return body.data;
+    },
+
+    async listAdminAuditEntries(args) {
+      const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.listAdminAuditEntries}`, {
+        method: "POST",
+        headers: withOperatorHeaders({
+          "content-type": "application/json",
+        }),
+        body: JSON.stringify({
+          requestRef: args.requestRef,
+          input: {},
+        }),
+      });
+
+      const body = await parseJsonResponse<AfalApiSuccess<AfalAdminAuditEntry[]>>(response);
+      return body.data;
+    },
+
+    async getNotificationWorkerStatus(args) {
+      const response = await fetch(
+        `${normalizedBaseUrl}${AFAL_HTTP_ROUTES.getNotificationWorkerStatus}`,
+        {
+          method: "POST",
+          headers: withOperatorHeaders({
+            "content-type": "application/json",
+          }),
+          body: JSON.stringify({
+            requestRef: args.requestRef,
+            input: {},
+          }),
+        }
+      );
+
+      const body =
+        await parseJsonResponse<AfalApiSuccess<SettlementNotificationOutboxWorkerStatus>>(response);
+      return body.data;
+    },
+
+    async runNotificationWorker(args) {
+      const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.runNotificationWorker}`, {
+        method: "POST",
+        headers: withOperatorHeaders({
+          "content-type": "application/json",
+        }),
+        body: JSON.stringify({
+          requestRef: args.requestRef,
+          input: {},
+        }),
+      });
+
+      const body = await parseJsonResponse<AfalApiSuccess<RunNotificationWorkerOutput>>(response);
+      return body.data;
+    },
   };
 }
 
-export function createAfalNodeTransportClient(handler: NodeTransportHandler): AgentHarnessClient {
+export function createAfalNodeTransportClient(
+  handler: NodeTransportHandler,
+  options?: AgentHarnessClientOptions
+): AgentHarnessClient {
+  const operatorHeaderName = options?.operatorHeaderName ?? "x-afal-operator-token";
+
   async function request<T>(path: string, payload: unknown): Promise<T> {
     const response = await handler({
       method: "POST",
       url: path,
       bodyText: JSON.stringify(payload),
+      headers: options?.operatorToken
+        ? {
+            [operatorHeaderName]: options.operatorToken,
+          }
+        : undefined,
     });
     const body = JSON.parse(response.bodyText) as T | AfalApiFailure;
     return assertSuccess(body);
@@ -299,6 +466,76 @@ export function createAfalNodeTransportClient(handler: NodeTransportHandler): Ag
           input: {
             approvalSessionRef: args.approvalSessionRef,
           },
+        }
+      );
+      return body.data;
+    },
+
+    async getNotificationDelivery(args) {
+      const body = await request<AfalApiSuccess<SettlementNotificationDeliveryRecord>>(
+        AFAL_HTTP_ROUTES.getNotificationDelivery,
+        {
+          requestRef: args.requestRef,
+          input: {
+            notificationId: args.notificationId,
+          },
+        }
+      );
+      return body.data;
+    },
+
+    async listNotificationDeliveries(args) {
+      const body = await request<AfalApiSuccess<SettlementNotificationDeliveryRecord[]>>(
+        AFAL_HTTP_ROUTES.listNotificationDeliveries,
+        {
+          requestRef: args.requestRef,
+          input: {},
+        }
+      );
+      return body.data;
+    },
+
+    async getAdminAuditEntry(args) {
+      const body = await request<AfalApiSuccess<AfalAdminAuditEntry>>(
+        AFAL_HTTP_ROUTES.getAdminAuditEntry,
+        {
+          requestRef: args.requestRef,
+          input: {
+            auditId: args.auditId,
+          },
+        }
+      );
+      return body.data;
+    },
+
+    async listAdminAuditEntries(args) {
+      const body = await request<AfalApiSuccess<AfalAdminAuditEntry[]>>(
+        AFAL_HTTP_ROUTES.listAdminAuditEntries,
+        {
+          requestRef: args.requestRef,
+          input: {},
+        }
+      );
+      return body.data;
+    },
+
+    async getNotificationWorkerStatus(args) {
+      const body = await request<AfalApiSuccess<SettlementNotificationOutboxWorkerStatus>>(
+        AFAL_HTTP_ROUTES.getNotificationWorkerStatus,
+        {
+          requestRef: args.requestRef,
+          input: {},
+        }
+      );
+      return body.data;
+    },
+
+    async runNotificationWorker(args) {
+      const body = await request<AfalApiSuccess<RunNotificationWorkerOutput>>(
+        AFAL_HTTP_ROUTES.runNotificationWorker,
+        {
+          requestRef: args.requestRef,
+          input: {},
         }
       );
       return body.data;

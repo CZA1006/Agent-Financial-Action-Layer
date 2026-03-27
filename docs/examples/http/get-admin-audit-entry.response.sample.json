@@ -1,0 +1,18 @@
+{
+  "ok": true,
+  "capability": "getAdminAuditEntry",
+  "requestRef": "req-admin-audit-get-001",
+  "statusCode": 200,
+  "data": {
+    "auditId": "admin-audit-req-notification-delivery-redeliver-001",
+    "requestRef": "req-notification-delivery-redeliver-001",
+    "action": "redeliverNotification",
+    "createdAt": "2026-03-27T09:12:44Z",
+    "targetRef": "notif-payint-0001",
+    "details": {
+      "attempts": 2,
+      "status": "delivered",
+      "redeliveryCount": 1
+    }
+  }
+}

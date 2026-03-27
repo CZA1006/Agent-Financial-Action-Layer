@@ -1,15 +1,25 @@
 import type {
   ApplyApprovalResultRequest,
+  GetAdminAuditEntryRequest,
   GetActionStatusRequest,
   GetApprovalSessionRequest,
+  GetNotificationDeliveryRequest,
+  GetNotificationWorkerStatusRequest,
+  ListAdminAuditEntriesRequest,
+  ListNotificationDeliveriesRequest,
   RequestPaymentApprovalRequest,
   PaymentCapabilityRequest,
+  RedeliverNotificationRequest,
   ResumeApprovedActionRequest,
+  RunNotificationWorkerRequest,
   RequestResourceApprovalRequest,
+  StartNotificationWorkerRequest,
+  StopNotificationWorkerRequest,
   ResumeApprovalSessionRequest,
   ResourceCapabilityRequest,
   AfalApiFailure,
 } from "./types";
+import { ExternalAdapterRequestError } from "../settlement/http-adapters";
 
 function toErrorMessage(error: unknown): string {
   if (error instanceof Error) {
@@ -27,7 +37,16 @@ export function mapAfalFailure(
     | RequestResourceApprovalRequest["capability"]
     | GetActionStatusRequest["capability"]
     | GetApprovalSessionRequest["capability"]
+    | GetNotificationDeliveryRequest["capability"]
+    | ListNotificationDeliveriesRequest["capability"]
+    | GetNotificationWorkerStatusRequest["capability"]
+    | GetAdminAuditEntryRequest["capability"]
+    | ListAdminAuditEntriesRequest["capability"]
     | ApplyApprovalResultRequest["capability"]
+    | RedeliverNotificationRequest["capability"]
+    | StartNotificationWorkerRequest["capability"]
+    | StopNotificationWorkerRequest["capability"]
+    | RunNotificationWorkerRequest["capability"]
     | ResumeApprovalSessionRequest["capability"]
     | ResumeApprovedActionRequest["capability"],
   requestRef: string,
@@ -42,7 +61,9 @@ export function mapAfalFailure(
     message.includes("Unknown resource quota") ||
     message.includes("Unknown monetary budget") ||
     message.includes("Unknown actionRef") ||
-    message.includes("Unknown approvalSessionRef")
+    message.includes("Unknown approvalSessionRef") ||
+    message.includes("Unknown settlement notification") ||
+    message.includes("Unknown admin audit")
   ) {
     return {
       ok: false,
@@ -119,6 +140,38 @@ export function mapAfalFailure(
         message,
       },
     };
+  }
+
+  if (error instanceof ExternalAdapterRequestError) {
+    if (error.statusCode === 409 || error.statusCode === 422) {
+      return {
+        ok: false,
+        capability,
+        requestRef,
+        statusCode: 409,
+        error: {
+          code: "external-adapter-rejected",
+          message,
+        },
+      };
+    }
+
+    if (
+      error.statusCode === 502 ||
+      error.statusCode === 503 ||
+      error.statusCode === 504
+    ) {
+      return {
+        ok: false,
+        capability,
+        requestRef,
+        statusCode: 503,
+        error: {
+          code: "external-adapter-unavailable",
+          message,
+        },
+      };
+    }
   }
 
   return {

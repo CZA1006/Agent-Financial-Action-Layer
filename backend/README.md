@@ -22,11 +22,28 @@ In Phase 1, the backend should be designed as a **clear service boundary layer**
 The goal of `backend/` in the current phase is to:
 - define service boundaries
 - define module responsibilities
-- scaffold service folders
+- carry the seeded durable and SQLite-backed execution slices
 - align backend interfaces with schemas
-- prepare for minimal end-to-end demo flows
+- support end-to-end approval, settlement, callback, and operator recovery flows
 
-The backend is where AFAL becomes operational, but Phase 1 should still prioritize structure over heavy implementation.
+The backend is where AFAL becomes operational, and the repo has now moved beyond pure scaffolding.
+
+Current backend reality includes:
+
+- storage-backed AIP / ATS / AMN / AFAL service layers
+- durable JSON-backed execution mode
+- SQLite-backed integration mode for ATS, AMN approval state, AFAL intent state, admin audit, and notification outbox
+- a shared SQLite integration database bootstrap path for the execution-critical slice
+- an independent trusted-surface review service stub that drives approval callback and resume over HTTP
+- explicit payment-rail and provider-settlement adapter boundaries for AFAL settlement execution
+- network-shaped mock payment-rail and provider-service stubs that AFAL can call over HTTP
+- shared-token auth plus signed request metadata placeholders between AFAL and the external payment/provider HTTP stubs
+- bounded retry semantics for transient failures in the external payment/provider HTTP adapter path
+- explicit non-retryable external failure handling for terminal payment/provider rejections
+- the external service auth boundary is documented in `docs/specs/external-service-auth-contract.md`
+- trusted-surface approval session persistence and resume behavior
+- receiver callback delivery, outbox persistence, worker redelivery, and admin audit logging
+- framework-free HTTP routes for capabilities, approval sessions, notification administration, and worker control
 
 ---
 
@@ -34,12 +51,12 @@ The backend is where AFAL becomes operational, but Phase 1 should still prioriti
 
 Examples of code or artifacts that belong in `backend/`:
 
-- identity service scaffolding
-- credential service scaffolding
-- policy engine scaffolding
-- challenge service scaffolding
-- action router scaffolding
-- audit service scaffolding
+- identity and credential service logic
+- treasury and reservation semantics
+- mandate, challenge, and approval-session logic
+- action routing and post-approval resume logic
+- settlement orchestration and receipt generation
+- callback delivery, notification outbox, worker, and admin audit logic
 - service-level README files
 - interface contracts between modules
 - request / response validation boundaries
@@ -68,7 +85,7 @@ The following should **not** be the focus of `backend/` in Phase 1:
 
 ## Working Principle
 
-**Service boundaries first, implementations second.**
+**Stable service boundaries first, then narrow execution slices that prove the contract.**
 
 The backend should be aligned with:
 - `docs/architecture/`
@@ -81,8 +98,10 @@ If a service boundary is unclear, document it before implementing it.
 
 ## Immediate Next Step
 
-Phase 1 backend work should focus on:
-- service scaffolding
-- interfaces for AIP / AMN / ATS / AFAL modules
-- minimal orchestration for payment and resource intent flows
-- audit-friendly request / decision / receipt boundaries
+The backend has now moved from an integration-ready execution layer into the first externally integrated slice.
+
+Immediate next backend work should focus on:
+- keeping JSON + shared-SQLite runtime slices coherent with the HTTP contract
+- hardening the independent trusted-surface, payment-rail, and provider-service integration stubs
+- preparing the transition from local HTTP stubs to stronger external adapters and auth boundaries
+- preserving the current contract surface while replacing more seeded behavior underneath it

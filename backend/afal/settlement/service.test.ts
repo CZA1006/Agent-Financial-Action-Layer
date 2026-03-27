@@ -3,6 +3,8 @@ import { test } from "node:test";
 
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
 import {
+  createSeededPaymentRailAdapter,
+  createSeededResourceProviderAdapter,
   createSeededAfalSettlementRecords,
   createSeededAfalSettlementService,
 } from "./bootstrap";
@@ -28,9 +30,67 @@ test("AFAL settlement service creates seeded payment and resource settlement rec
   assert.equal(resourceSettlement.settlementId, resourceFlowFixtures.settlementRecord.settlementId);
 });
 
+test("seeded external settlement adapters return canonical payment and provider records", async () => {
+  const paymentAdapter = createSeededPaymentRailAdapter();
+  const resourceAdapter = createSeededResourceProviderAdapter();
+
+  const paymentSettlement = await paymentAdapter.executePayment(
+    paymentFlowFixtures.paymentIntentCreated,
+    paymentFlowFixtures.authorizationDecisionFinal
+  );
+  const resourceUsage = await resourceAdapter.confirmResourceUsage(
+    resourceFlowFixtures.resourceIntentCreated
+  );
+  const resourceSettlement = await resourceAdapter.settleResourceUsage({
+    intent: resourceFlowFixtures.resourceIntentCreated,
+    decision: resourceFlowFixtures.authorizationDecisionFinal,
+    usage: resourceUsage,
+  });
+
+  assert.equal(paymentSettlement.settlementId, paymentFlowFixtures.settlementRecord.settlementId);
+  assert.equal(resourceUsage.usageReceiptRef, resourceFlowFixtures.providerUsageConfirmation.usageReceiptRef);
+  assert.equal(resourceSettlement.settlementId, resourceFlowFixtures.settlementRecord.settlementId);
+});
+
 test("AFAL settlement service persists settlement and usage records through the injected store", async () => {
   const store = new InMemoryAfalSettlementStore();
-  const service = new AfalSettlementService({ store });
+  let paymentCalls = 0;
+  let usageCalls = 0;
+  let resourceSettlementCalls = 0;
+  const service = new AfalSettlementService({
+    store,
+    paymentAdapter: {
+      async executePayment(intent, decision) {
+        paymentCalls += 1;
+        return {
+          ...paymentFlowFixtures.settlementRecord,
+          actionRef: intent.intentId,
+          decisionRef: decision.decisionId,
+        };
+      },
+    },
+    resourceAdapter: {
+      async confirmResourceUsage(intent) {
+        usageCalls += 1;
+        return {
+          ...resourceFlowFixtures.providerUsageConfirmation,
+          providerId: intent.provider.providerId,
+          providerDid: intent.provider.providerDid,
+          resourceClass: intent.resource.resourceClass,
+          resourceUnit: intent.resource.resourceUnit,
+          quantity: intent.resource.quantity,
+        };
+      },
+      async settleResourceUsage(args) {
+        resourceSettlementCalls += 1;
+        return {
+          ...resourceFlowFixtures.settlementRecord,
+          actionRef: args.intent.intentId,
+          decisionRef: args.decision.decisionId,
+        };
+      },
+    },
+  });
 
   const usage = await service.confirmResourceUsage({
     intentId: "resint-generated-001",
@@ -73,6 +133,9 @@ test("AFAL settlement service persists settlement and usage records through the 
   const persistedUsage = await store.getUsageConfirmation(usage.usageReceiptRef);
   const persistedSettlement = await store.getSettlement(settlement.settlementId);
 
+  assert.equal(paymentCalls, 1);
+  assert.equal(usageCalls, 1);
+  assert.equal(resourceSettlementCalls, 0);
   assert.equal(persistedUsage?.usageReceiptRef, usage.usageReceiptRef);
   assert.equal(persistedSettlement?.settlementId, settlement.settlementId);
 });

@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "capability": "settleResourceUsage",
+  "requestRef": "req-1001",
+  "statusCode": 503,
+  "error": {
+    "code": "external-adapter-unavailable",
+    "message": "provider settlement temporarily unavailable"
+  }
+}

@@ -28,7 +28,7 @@ It assumes the current repo already has:
 
 AFAL's current stage is:
 
-- **Phase 1 integration-ready runtime, bilateral multi-flow runtime-agent harness**
+- **Externally integrated runtime, first external slice**
 
 What that means in practical terms:
 
@@ -41,6 +41,13 @@ What that means in practical terms:
 - post-approval execution can resume into settlement and receipt generation
 - local HTTP demos, SQLite HTTP demos, and local acceptance pass
 - bilateral runtime-agent harnesses can drive canonical payment and resource approval flows through independent agent subprocesses
+- receiver callbacks are actively delivered to payee/provider-side agents
+- callback failures can be tracked through a durable outbox, worker state, and admin audit routes
+- operator-protected recovery routes now exist for manual redelivery and worker control
+- an independent trusted-surface review service can drive approval callback and resume over HTTP
+- AFAL can run against a shared SQLite integration database instead of isolated SQLite files per slice
+- AFAL settlement execution can call independent mock payment-rail and provider-service stubs over HTTP through explicit external adapter contracts
+- the external payment/provider path now carries shared-token auth plus signed request metadata placeholders
 
 What this stage still is **not**:
 
@@ -58,23 +65,26 @@ The current target stage is:
 
 - **Phase 1 integration-ready runtime**
 
-This stage is successful when AFAL is no longer just a local durable demo system, but a runtime that can be cleanly integrated with:
+This stage has been substantially reached and is now crossing into the first externally integrated slice. AFAL is no longer just a local durable demo system, but a runtime that can be cleanly integrated with:
 
 - an external trusted-surface service
-- a real database adapter
+- a shared database adapter
 - real test agents running as independent processes
-- future payment/provider adapters
+- payment/provider services over explicit external adapter boundaries
+- a minimal service-to-service auth boundary for those external payment/provider services
 
 In short:
 
 - previous stage = runnable local skeleton
-- current stage = integration-ready execution layer
+- current stage = integration-ready execution and callback-recovery layer with the first independent external services
 
 ---
 
 ## Stage Goal
 
-The goal of this stage is to make AFAL ready for **runtime-agent testing**.
+The original goal of this stage was to make AFAL ready for **runtime-agent testing**.
+
+That goal has now been met for the current local integration slice, and the repo has started to add the first operator-facing recovery surfaces on top of it.
 
 That means the system should support:
 
@@ -156,7 +166,7 @@ Current progress:
 
 - Workstream 1 is in place for Phase 1 callback-and-resume behavior and includes a minimal trusted-surface stub.
 - Workstream 2 is in place for the first integration-critical SQLite slice.
-- Workstream 3 has started with payment and resource runtime-agent harnesses, including bilateral payee/provider-side confirmation.
+- Workstream 3 has started with payment and resource runtime-agent harnesses, including bilateral payee/provider-side callback delivery.
 
 ---
 

@@ -1,0 +1,20 @@
+{
+  "method": "POST",
+  "path": "/resource-usage/confirm",
+  "headers": {
+    "content-type": "application/json",
+    "x-afal-service-token": "provider-service-secret",
+    "x-afal-service-id": "afal-runtime",
+    "x-afal-request-timestamp": "2026-03-27T10:00:00.000Z",
+    "x-afal-request-signature": "sha256(afal-runtime:req-provider-usage-resint-0001:2026-03-27T10:00:00.000Z:provider-service-signing-secret)"
+  },
+  "body": {
+    "requestRef": "req-provider-usage-resint-0001",
+    "input": {
+      "intent": {
+        "intentId": "resint-0001",
+        "intentType": "resource"
+      }
+    }
+  }
+}

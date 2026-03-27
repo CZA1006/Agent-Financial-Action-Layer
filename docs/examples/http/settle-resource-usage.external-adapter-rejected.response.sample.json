@@ -1,0 +1,10 @@
+{
+  "ok": false,
+  "capability": "settleResourceUsage",
+  "requestRef": "req-1001",
+  "statusCode": 409,
+  "error": {
+    "code": "external-adapter-rejected",
+    "message": "provider quota is closed"
+  }
+}

@@ -4,14 +4,21 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 HOST="${AFAL_HTTP_HOST:-127.0.0.1}"
 PORT="${AFAL_HTTP_PORT:-3212}"
+TRUSTED_SURFACE_HOST="${TRUSTED_SURFACE_HOST:-127.0.0.1}"
+TRUSTED_SURFACE_PORT="${TRUSTED_SURFACE_PORT:-3312}"
 TMP_DIR="$(mktemp -d "${TMPDIR:-/tmp}/afal-http-async-demo.XXXXXX")"
 DATA_DIR="$TMP_DIR/data"
 SERVER_PID=""
+TRUSTED_SURFACE_PID=""
 
 cleanup() {
   if [ -n "$SERVER_PID" ] && kill -0 "$SERVER_PID" 2>/dev/null; then
     kill "$SERVER_PID" 2>/dev/null || true
     wait "$SERVER_PID" 2>/dev/null || true
+  fi
+  if [ -n "$TRUSTED_SURFACE_PID" ] && kill -0 "$TRUSTED_SURFACE_PID" 2>/dev/null; then
+    kill "$TRUSTED_SURFACE_PID" 2>/dev/null || true
+    wait "$TRUSTED_SURFACE_PID" 2>/dev/null || true
   fi
   rm -rf "$TMP_DIR"
 }
@@ -19,6 +26,7 @@ cleanup() {
 trap cleanup EXIT INT TERM
 
 SERVER_LOG="$TMP_DIR/server.log"
+TRUSTED_SURFACE_LOG="$TMP_DIR/trusted-surface.log"
 PENDING_RESPONSE="$TMP_DIR/pending-response.json"
 STUB_RESPONSE="$TMP_DIR/trusted-surface-response.json"
 
@@ -28,6 +36,20 @@ SERVER_PID="$!"
 
 for _ in $(seq 1 50); do
   if curl -sS -o /dev/null "http://$HOST:$PORT/does-not-matter" 2>/dev/null; then
+    break
+  fi
+  sleep 0.2
+done
+
+node --import tsx/esm "$ROOT/app/trusted-surface/server.ts" \
+  --afal-base-url "http://$HOST:$PORT" \
+  --host "$TRUSTED_SURFACE_HOST" \
+  --port "$TRUSTED_SURFACE_PORT" \
+  >"$TRUSTED_SURFACE_LOG" 2>&1 &
+TRUSTED_SURFACE_PID="$!"
+
+for _ in $(seq 1 50); do
+  if curl -sS -o /dev/null "http://$TRUSTED_SURFACE_HOST:$TRUSTED_SURFACE_PORT/health" 2>/dev/null; then
     break
   fi
   sleep 0.2
@@ -73,12 +95,10 @@ process.stdout.write(pending.data.approvalSession.approvalSessionId);
 EOF
 )"
 
-node --import tsx/esm "$ROOT/app/trusted-surface/stub.ts" \
-  --base-url "http://$HOST:$PORT" \
-  --approval-session-ref "$APPROVAL_SESSION_REF" \
-  --request-ref-prefix "req-http-async" \
-  --decided-at "2026-03-24T12:07:00Z" \
-  --comment "First-time fraud provider is acceptable" \
+curl -sS \
+  -X POST "http://$TRUSTED_SURFACE_HOST:$TRUSTED_SURFACE_PORT/approval-sessions/review" \
+  -H 'content-type: application/json' \
+  -d "{\"requestRef\":\"req-http-async-service\",\"input\":{\"approvalSessionRef\":\"$APPROVAL_SESSION_REF\",\"requestRefPrefix\":\"req-http-async\",\"decidedAt\":\"2026-03-24T12:07:00Z\",\"comment\":\"First-time fraud provider is acceptable\"}}" \
   >"$STUB_RESPONSE"
 
 node - "$STUB_RESPONSE" "$ROOT/docs/examples/http/resume-approved-action.response.sample.json" <<'EOF'
@@ -86,15 +106,20 @@ const fs = require("node:fs");
 
 const actual = JSON.parse(fs.readFileSync(process.argv[2], "utf8"));
 const expected = JSON.parse(fs.readFileSync(process.argv[3], "utf8"));
-const resumed = actual.resumed;
-
-if (!resumed) {
-  console.error("trusted-surface stub did not return a resumed action payload");
+if (!actual.ok) {
+  console.error("trusted-surface service did not return ok=true");
   process.exit(1);
 }
 
-if (actual.summary.result !== "approved") {
-  console.error("trusted-surface stub did not record an approved result");
+const resumed = actual.data.resumed;
+
+if (!resumed) {
+  console.error("trusted-surface service did not return a resumed action payload");
+  process.exit(1);
+}
+
+if (actual.data.summary.result !== "approved") {
+  console.error("trusted-surface service did not record an approved result");
   process.exit(1);
 }
 

@@ -14,6 +14,10 @@ This document answers:
 - how receiver-side agents can independently confirm final action state after settlement
 - what is stable now versus what is deferred to a later production-grade callback layer
 
+Receiver-facing settlement delivery is documented separately in:
+
+- [docs/specs/receiver-settlement-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/receiver-settlement-callback-contract.md#L1)
+
 This contract is aligned to the currently implemented AFAL HTTP routes and durable runtime behavior.
 
 ---
@@ -32,6 +36,8 @@ It covers five integration operations:
 3. apply the trusted-surface approval result
 4. resume the action after approval
 5. read final action status for receiver/provider-side confirmation
+
+It does not define the outbound receiver settlement callback payloads in detail; those live in the receiver settlement callback contract.
 
 It does **not** currently cover:
 

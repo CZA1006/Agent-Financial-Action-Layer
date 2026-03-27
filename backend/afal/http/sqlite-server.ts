@@ -2,6 +2,12 @@ import { createServer, type IncomingMessage, type RequestListener, type Server }
 import { join } from "node:path";
 import { pathToFileURL } from "node:url";
 
+import type { SettlementNotificationPort } from "../interfaces";
+import type { PaymentRailAdapter, ResourceProviderAdapter } from "../settlement";
+import {
+  SettlementNotificationOutboxWorker,
+  type SettlementNotificationRedeliveryPort,
+} from "../notifications";
 import type { AfalHttpResponseBody } from "./types";
 import { AFAL_HTTP_ROUTES } from "./types";
 import {
@@ -16,6 +22,7 @@ export interface AfalNodeHttpTransportRequest {
   method?: string;
   url?: string;
   bodyText?: string;
+  headers?: Record<string, string | undefined>;
 }
 
 export interface AfalNodeHttpTransportResponse {
@@ -29,6 +36,7 @@ export interface AfalNodeHttpTransportResponse {
 
 export interface SeededSqliteAfalHttpServer extends SeededSqliteAfalHttpRouter {
   server: Server;
+  notificationWorker?: SettlementNotificationOutboxWorker;
 }
 
 export interface RunningSeededSqliteAfalHttpServer extends SeededSqliteAfalHttpServer {
@@ -61,8 +69,17 @@ function inferCapability(
   | "requestResourceApproval"
   | "settleResourceUsage"
   | "getActionStatus"
+  | "getNotificationDelivery"
+  | "listNotificationDeliveries"
+  | "getNotificationWorkerStatus"
+  | "getAdminAuditEntry"
+  | "listAdminAuditEntries"
   | "getApprovalSession"
   | "applyApprovalResult"
+  | "redeliverNotification"
+  | "startNotificationWorker"
+  | "stopNotificationWorker"
+  | "runNotificationWorker"
   | "resumeApprovalSession"
   | "resumeApprovedAction" {
   if (pathname === AFAL_HTTP_ROUTES.requestPaymentApproval) {
@@ -77,11 +94,38 @@ function inferCapability(
   if (pathname === AFAL_HTTP_ROUTES.getActionStatus) {
     return "getActionStatus";
   }
+  if (pathname === AFAL_HTTP_ROUTES.getNotificationDelivery) {
+    return "getNotificationDelivery";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.listNotificationDeliveries) {
+    return "listNotificationDeliveries";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.getNotificationWorkerStatus) {
+    return "getNotificationWorkerStatus";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.getAdminAuditEntry) {
+    return "getAdminAuditEntry";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.listAdminAuditEntries) {
+    return "listAdminAuditEntries";
+  }
   if (pathname === AFAL_HTTP_ROUTES.getApprovalSession) {
     return "getApprovalSession";
   }
   if (pathname === AFAL_HTTP_ROUTES.applyApprovalResult) {
     return "applyApprovalResult";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.redeliverNotification) {
+    return "redeliverNotification";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.startNotificationWorker) {
+    return "startNotificationWorker";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.stopNotificationWorker) {
+    return "stopNotificationWorker";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.runNotificationWorker) {
+    return "runNotificationWorker";
   }
   if (pathname === AFAL_HTTP_ROUTES.resumeApprovalSession) {
     return "resumeApprovalSession";
@@ -90,6 +134,16 @@ function inferCapability(
     return "resumeApprovedAction";
   }
   return "executePayment";
+}
+
+function canRunNotificationOutboxWorker(
+  port: SettlementNotificationPort | undefined
+): port is SettlementNotificationPort & SettlementNotificationRedeliveryPort {
+  return Boolean(
+    port &&
+      "redeliverFailedNotifications" in port &&
+      typeof port.redeliverFailedNotifications === "function"
+  );
 }
 
 function buildNodeBadRequest(pathname: string, message: string): AfalNodeHttpTransportResponse {
@@ -134,6 +188,7 @@ export async function handleAfalNodeHttpRequest(
     method: request.method ?? "GET",
     path: pathname,
     body,
+    headers: request.headers,
   });
 
   return stringifyNodeResponse(response.statusCode, response.body);
@@ -149,6 +204,12 @@ export function createAfalNodeHttpRequestListener(
         method: request.method,
         url: request.url,
         bodyText,
+        headers: Object.fromEntries(
+          Object.entries(request.headers).map(([key, value]) => [
+            key,
+            Array.isArray(value) ? value.join(", ") : value,
+          ])
+        ),
       });
 
       response.writeHead(result.statusCode, result.headers);
@@ -171,12 +232,47 @@ export function createAfalNodeHttpRequestListener(
   };
 }
 
-export function createSeededSqliteAfalHttpServer(dataDir: string): SeededSqliteAfalHttpServer {
-  const sqlite = createSeededSqliteAfalHttpRouter(dataDir);
+export function createSeededSqliteAfalHttpServer(
+  dataDir: string,
+  options?: {
+    notifications?: SettlementNotificationPort;
+    notificationWorker?: {
+      intervalMs?: number;
+      start?: boolean;
+      onError?: (error: unknown) => void | Promise<void>;
+    };
+    paymentAdapter?: PaymentRailAdapter;
+    resourceAdapter?: ResourceProviderAdapter;
+    operatorAuth?: {
+      token: string;
+      headerName?: string;
+    };
+  }
+): SeededSqliteAfalHttpServer {
+  const worker =
+    canRunNotificationOutboxWorker(options?.notifications)
+      ? new SettlementNotificationOutboxWorker(options.notifications, {
+          intervalMs: options?.notificationWorker?.intervalMs,
+          onError: options?.notificationWorker?.onError,
+        })
+      : undefined;
+
+  const sqlite = createSeededSqliteAfalHttpRouter(dataDir, {
+    notifications: options?.notifications,
+    notificationWorker: worker,
+    paymentAdapter: options?.paymentAdapter,
+    resourceAdapter: options?.resourceAdapter,
+    operatorAuth: options?.operatorAuth,
+  });
+
+  if (worker && options?.notificationWorker?.start !== false) {
+    worker.start();
+  }
 
   return {
     ...sqlite,
     server: createServer(createAfalNodeHttpRequestListener(sqlite)),
+    notificationWorker: worker,
   };
 }
 
@@ -184,11 +280,29 @@ export async function startSeededSqliteAfalHttpServer(args?: {
   dataDir?: string;
   host?: string;
   port?: number;
+  notifications?: SettlementNotificationPort;
+  notificationWorker?: {
+    intervalMs?: number;
+    start?: boolean;
+    onError?: (error: unknown) => void | Promise<void>;
+  };
+  paymentAdapter?: PaymentRailAdapter;
+  resourceAdapter?: ResourceProviderAdapter;
+  operatorAuth?: {
+    token: string;
+    headerName?: string;
+  };
 }): Promise<RunningSeededSqliteAfalHttpServer> {
   const dataDir = args?.dataDir ?? join(process.cwd(), ".afal-sqlite-http-data");
   const host = args?.host ?? DEFAULT_HOST;
   const port = args?.port ?? DEFAULT_PORT;
-  const sqlite = createSeededSqliteAfalHttpServer(dataDir);
+  const sqlite = createSeededSqliteAfalHttpServer(dataDir, {
+    notifications: args?.notifications,
+    notificationWorker: args?.notificationWorker,
+    paymentAdapter: args?.paymentAdapter,
+    resourceAdapter: args?.resourceAdapter,
+    operatorAuth: args?.operatorAuth,
+  });
 
   await new Promise<void>((resolve, reject) => {
     sqlite.server.once("error", reject);
@@ -198,13 +312,19 @@ export async function startSeededSqliteAfalHttpServer(args?: {
     });
   });
 
+  const address = sqlite.server.address();
+  if (!address || typeof address === "string") {
+    throw new Error("AFAL SQLite HTTP server did not bind to a TCP port");
+  }
+
   return {
     ...sqlite,
     host,
-    port,
-    url: `http://${host}:${port}`,
-    close: async () =>
-      new Promise<void>((resolve, reject) => {
+    port: address.port,
+    url: `http://${host}:${address.port}`,
+    close: async () => {
+      await sqlite.notificationWorker?.stop();
+      await new Promise<void>((resolve, reject) => {
         sqlite.server.close((error) => {
           if (error) {
             reject(error);
@@ -212,7 +332,8 @@ export async function startSeededSqliteAfalHttpServer(args?: {
           }
           resolve();
         });
-      }),
+      });
+    },
   };
 }
 

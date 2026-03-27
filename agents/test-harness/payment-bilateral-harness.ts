@@ -6,18 +6,32 @@ import { dirname, join } from "node:path";
 
 import { type AgentHarnessClient } from "./http-client";
 import { runApprovalAgent, type ApprovalAgentResult } from "./approval-agent";
-import { runPayeeAgent, type PayeeAgentResult } from "./payee-agent";
+import {
+  startPayeeCallbackAgent,
+  type PayeeCallbackAgentResult,
+} from "./payee-callback-agent";
 import { runPayerPaymentAgent, type PayerAgentResult } from "./payer-agent";
 import {
   startSeededSqliteAfalHttpServer,
   type RunningSeededSqliteAfalHttpServer,
 } from "../../backend/afal/http/sqlite-server";
+import {
+  startTrustedSurfaceStubServer,
+  type RunningTrustedSurfaceStubServer,
+} from "../../app/trusted-surface/server";
+import {
+  HttpSettlementNotificationPort,
+  SqliteSettlementNotificationOutboxStore,
+} from "../../backend/afal/notifications";
+import { paymentFlowFixtures } from "../../sdk/fixtures";
+import { getSeededSqliteAfalPaths } from "../../backend/afal/service";
 
 const THIS_DIR = dirname(fileURLToPath(import.meta.url));
 
 export interface BilateralPaymentHarnessResult {
   summary: {
     baseUrl: string;
+    trustedSurfaceUrl?: string;
     payerAgentId: string;
     approvalAgentId: string;
     payeeAgentId: string;
@@ -29,7 +43,7 @@ export interface BilateralPaymentHarnessResult {
   };
   payer: PayerAgentResult;
   approval: ApprovalAgentResult;
-  payee: PayeeAgentResult;
+  payee: PayeeCallbackAgentResult;
 }
 
 export async function runBilateralPaymentHarness(
@@ -39,33 +53,36 @@ export async function runBilateralPaymentHarness(
     payeeRequestRef?: string;
   }
 ): Promise<BilateralPaymentHarnessResult> {
-  const payer = await runPayerPaymentAgent(client, {
-    requestRef: options?.payerRequestRef,
-  });
-  const approval = await runApprovalAgent(client, {
-    approvalSessionRef: payer.summary.approvalSessionRef,
-  });
-  const payee = await runPayeeAgent(client, {
-    actionRef: payer.summary.actionRef,
-    requestRef: options?.payeeRequestRef,
-  });
+  const payeeAgent = await startPayeeCallbackAgent();
 
-  return {
-    summary: {
-      baseUrl: "in-process",
-      payerAgentId: payer.summary.agentId,
-      approvalAgentId: approval.summary.agentId,
-      payeeAgentId: payee.summary.agentId,
+  try {
+    const payer = await runPayerPaymentAgent(client, {
+      requestRef: options?.payerRequestRef,
+    });
+    const approval = await runApprovalAgent(client, {
       approvalSessionRef: payer.summary.approvalSessionRef,
-      actionRef: payer.summary.actionRef,
-      finalIntentStatus: payee.summary.intentStatus,
-      settlementRef: payee.summary.settlementRef,
-      receiptRef: payee.summary.receiptRef,
-    },
-    payer,
-    approval,
-    payee,
-  };
+    });
+    const payee = await payeeAgent.waitForNotification();
+
+    return {
+      summary: {
+        baseUrl: "in-process",
+        payerAgentId: payer.summary.agentId,
+        approvalAgentId: approval.summary.agentId,
+        payeeAgentId: payee.summary.agentId,
+        approvalSessionRef: payer.summary.approvalSessionRef,
+        actionRef: payer.summary.actionRef,
+        finalIntentStatus: payee.summary.intentStatus,
+        settlementRef: payee.summary.settlementRef,
+        receiptRef: payee.summary.receiptRef,
+      },
+      payer,
+      approval,
+      payee,
+    };
+  } finally {
+    await payeeAgent.close();
+  }
 }
 
 async function runJsonProcess(args: string[]): Promise<unknown> {
@@ -112,14 +129,27 @@ async function runJsonProcess(args: string[]): Promise<unknown> {
 
 export async function runSpawnedBilateralPaymentHarness(args?: {
   baseUrl?: string;
+  trustedSurfaceUrl?: string;
   dataDir?: string;
   host?: string;
   port?: number;
+  trustedSurfaceHost?: string;
+  trustedSurfacePort?: number;
+  payeeFailFirstAttempts?: number;
+  notificationWorkerIntervalMs?: number;
 }): Promise<BilateralPaymentHarnessResult> {
   let server: RunningSeededSqliteAfalHttpServer | undefined;
+  let trustedSurface: RunningTrustedSurfaceStubServer | undefined;
   let tempDataDir: string | undefined;
+  let payeeAgent:
+    | Awaited<ReturnType<typeof startPayeeCallbackAgent>>
+    | undefined;
 
   try {
+    payeeAgent = await startPayeeCallbackAgent({
+      failFirstAttempts: args?.payeeFailFirstAttempts,
+    });
+
     if (!args?.baseUrl) {
       if (!args?.dataDir) {
         tempDataDir = await mkdtemp(join(tmpdir(), "afal-agent-payment-bilateral-"));
@@ -129,6 +159,19 @@ export async function runSpawnedBilateralPaymentHarness(args?: {
         dataDir: args?.dataDir ?? tempDataDir,
         host: args?.host,
         port: args?.port,
+        notifications: new HttpSettlementNotificationPort({
+          paymentCallbackUrls: {
+            [paymentFlowFixtures.paymentIntentCreated.payee.payeeDid]: payeeAgent.callbackUrl,
+          },
+          outboxStore: new SqliteSettlementNotificationOutboxStore({
+            filePath: getSeededSqliteAfalPaths(
+              args?.dataDir ?? tempDataDir ?? process.cwd()
+            ).afalNotificationOutbox,
+          }),
+        }),
+        notificationWorker: {
+          intervalMs: args?.notificationWorkerIntervalMs,
+        },
       });
     }
 
@@ -136,6 +179,16 @@ export async function runSpawnedBilateralPaymentHarness(args?: {
     if (!baseUrl) {
       throw new Error("payment bilateral harness requires either baseUrl or a startable local server");
     }
+
+    trustedSurface =
+      args?.trustedSurfaceUrl
+        ? undefined
+        : await startTrustedSurfaceStubServer({
+            afalBaseUrl: baseUrl,
+            host: args?.trustedSurfaceHost,
+            port: args?.trustedSurfacePort ?? 0,
+          });
+    const trustedSurfaceUrl = args?.trustedSurfaceUrl ?? trustedSurface?.url;
 
     const payer = (await runJsonProcess([
       "--import",
@@ -149,25 +202,19 @@ export async function runSpawnedBilateralPaymentHarness(args?: {
       "--import",
       "tsx/esm",
       join(THIS_DIR, "approval-agent.ts"),
-      "--base-url",
-      baseUrl,
       "--approval-session-ref",
       payer.summary.approvalSessionRef,
+      ...(trustedSurfaceUrl
+        ? ["--trusted-surface-url", trustedSurfaceUrl]
+        : ["--base-url", baseUrl]),
     ])) as ApprovalAgentResult;
 
-    const payee = (await runJsonProcess([
-      "--import",
-      "tsx/esm",
-      join(THIS_DIR, "payee-agent.ts"),
-      "--base-url",
-      baseUrl,
-      "--action-ref",
-      payer.summary.actionRef,
-    ])) as PayeeAgentResult;
+    const payee = await payeeAgent.waitForNotification();
 
     return {
       summary: {
         baseUrl,
+        trustedSurfaceUrl,
         payerAgentId: payer.summary.agentId,
         approvalAgentId: approval.summary.agentId,
         payeeAgentId: payee.summary.agentId,
@@ -182,8 +229,14 @@ export async function runSpawnedBilateralPaymentHarness(args?: {
       payee,
     };
   } finally {
+    if (trustedSurface) {
+      await trustedSurface.close();
+    }
     if (server) {
       await server.close();
+    }
+    if (payeeAgent) {
+      await payeeAgent.close();
     }
     if (tempDataDir) {
       await rm(tempDataDir, { recursive: true, force: true });
@@ -193,15 +246,25 @@ export async function runSpawnedBilateralPaymentHarness(args?: {
 
 function parseArgs(argv: string[]): {
   baseUrl?: string;
+  trustedSurfaceUrl?: string;
   dataDir?: string;
   host?: string;
   port?: number;
+  trustedSurfaceHost?: string;
+  trustedSurfacePort?: number;
+  payeeFailFirstAttempts?: number;
+  notificationWorkerIntervalMs?: number;
 } {
   const result: {
     baseUrl?: string;
+    trustedSurfaceUrl?: string;
     dataDir?: string;
     host?: string;
     port?: number;
+    trustedSurfaceHost?: string;
+    trustedSurfacePort?: number;
+    payeeFailFirstAttempts?: number;
+    notificationWorkerIntervalMs?: number;
   } = {};
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -216,6 +279,11 @@ function parseArgs(argv: string[]): {
       index += 1;
       continue;
     }
+    if (arg === "--trusted-surface-url") {
+      result.trustedSurfaceUrl = argv[index + 1];
+      index += 1;
+      continue;
+    }
     if (arg === "--host") {
       result.host = argv[index + 1];
       index += 1;
@@ -224,6 +292,29 @@ function parseArgs(argv: string[]): {
     if (arg === "--port") {
       const raw = argv[index + 1];
       result.port = raw ? Number(raw) : undefined;
+      index += 1;
+      continue;
+    }
+    if (arg === "--trusted-surface-host") {
+      result.trustedSurfaceHost = argv[index + 1];
+      index += 1;
+      continue;
+    }
+    if (arg === "--trusted-surface-port") {
+      const raw = argv[index + 1];
+      result.trustedSurfacePort = raw ? Number(raw) : undefined;
+      index += 1;
+      continue;
+    }
+    if (arg === "--payee-fail-first-attempts") {
+      const raw = argv[index + 1];
+      result.payeeFailFirstAttempts = raw ? Number(raw) : undefined;
+      index += 1;
+      continue;
+    }
+    if (arg === "--notification-worker-interval-ms") {
+      const raw = argv[index + 1];
+      result.notificationWorkerIntervalMs = raw ? Number(raw) : undefined;
       index += 1;
     }
   }
