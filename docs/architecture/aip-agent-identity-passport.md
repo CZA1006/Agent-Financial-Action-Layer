@@ -169,6 +169,31 @@ A DID in AIP should support:
 - freeze
 - revoke / deactivate
 
+### Phase 1 Execution Profile
+
+AFAL Phase 1 keeps its canonical identity records in the internal `did:afal:*` namespace.
+
+At the same time, it is useful to distinguish between:
+
+- the **system-of-record identity** AFAL persists and governs
+- the **execution identity** an agent can use immediately for peer-to-peer cryptographic authentication
+
+For local demos, bilateral agent flows, and early interoperability work, a lightweight execution profile based on `did:key` is a strong fit:
+
+- key generation is local and deterministic from the public key
+- DID resolution does not require a registry, blockchain, or external resolver
+- the DID Document can be derived directly from the identifier
+- Ed25519 signatures map cleanly onto request signing and VC verification
+
+This means an agent can start with:
+
+1. an Ed25519 keypair
+2. a `did:key` identifier derived from the public key
+3. a minimal DID Document with `authentication` and `assertionMethod`
+4. verifiable credentials issued against that DID
+
+AFAL can later bind that execution identity back to a richer `did:afal:*` record for governance, lifecycle, treasury, and policy state.
+
 ---
 
 ## DID Document Considerations
@@ -196,6 +221,39 @@ At minimum, the document should support:
 - service endpoints
 - allowed verification relationships
 - current status
+
+### Minimal `did:key` document profile
+
+For executable Phase 1 demos, the minimal interoperable document can be much smaller than a full AFAL identity record:
+
+```json
+{
+  "@context": [
+    "https://www.w3.org/ns/did/v1",
+    "https://w3id.org/security/suites/ed25519-2020/v1"
+  ],
+  "id": "did:key:z6MkexampleAgentKey",
+  "verificationMethod": [
+    {
+      "id": "did:key:z6MkexampleAgentKey#z6MkexampleAgentKey",
+      "type": "Ed25519VerificationKey2020",
+      "controller": "did:key:z6MkexampleAgentKey",
+      "publicKeyMultibase": "z6MkexampleAgentKey"
+    }
+  ],
+  "authentication": ["did:key:z6MkexampleAgentKey#z6MkexampleAgentKey"],
+  "assertionMethod": ["did:key:z6MkexampleAgentKey#z6MkexampleAgentKey"]
+}
+```
+
+This document is enough to support:
+
+- peer DID resolution
+- request signing verification
+- credential proof verification
+- bilateral acceptance / receipt signing
+
+AFAL should treat this as an execution-layer profile, not a replacement for richer AIP records.
 
 ---
 
@@ -258,6 +316,18 @@ Possible fields:
 
 #### 3. Authority Credential
 Represents what this agent may do.
+
+### Execution-oriented credential flow
+
+A practical AIP flow for agent-to-agent operation is:
+
+1. the issuer resolves the subject's DID Document
+2. the issuer signs a VC with its Ed25519 key
+3. the verifier resolves the issuer DID
+4. the verifier extracts the issuer verification method from the DID Document
+5. the verifier checks the proof over the VC payload
+
+That execution flow matters because it turns AIP from a static schema layer into a cryptographically usable identity substrate for AFAL payment and resource flows.
 
 Possible fields:
 - credential id

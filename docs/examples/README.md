@@ -12,6 +12,7 @@ These documents are intended to bridge:
 
 Phase 1 priority:
 
+- `did-key-agent-auth-flow.md` — executable `did:key + Ed25519 + VC` identity and bilateral authentication flow for local demos and interop bootstrap
 - `mvp-agent-payment-flow.md` — canonical agent-to-agent API/tool payment flow in USDC on Base
 - `mvp-resource-settlement-flow.md` — canonical resource purchase and provider settlement flow in USDC on Base
 - `callback/payment-settled.notification.sample.json` — canonical payee-side settlement callback payload

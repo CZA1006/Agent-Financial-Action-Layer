@@ -20,6 +20,27 @@ Examples:
 - `did:afal:institution:corp-001`
 - `did:afal:agent:payment-agent-01`
 
+## Interoperability Note
+
+Phase 1 uses `did:afal:*` as the canonical internal namespace for AFAL-owned records.
+
+For local execution and bilateral interoperability, AFAL can also accept an execution-layer DID profile based on `did:key`:
+
+```text
+did:key:z6Mk...
+```
+
+That profile is especially useful when:
+
+- an agent needs immediate self-certifying identity
+- a demo should not depend on an external DID registry
+- the verifier only needs public-key resolution plus signature verification
+
+The two layers serve different purposes:
+
+- `did:afal:*` for AFAL-managed lifecycle state
+- `did:key` for portable cryptographic execution identity
+
 ## Identity Record Schema
 ```json
 {
@@ -91,5 +112,32 @@ Relationship types:
 - `revokeIdentity`
 - `rotateVerificationKey`
 
+## Minimal `did:key` Resolution Profile
+
+When AIP accepts a `did:key` execution identity, resolution can be reduced to:
+
+1. confirm the identifier starts with `did:key:z`
+2. multibase / base58btc decode the identifier suffix
+3. confirm the expected multicodec prefix for the key type
+4. extract the raw public key bytes
+5. reconstruct a DID Document for verification relationships
+
+For an Ed25519 public key, the derived verification method can look like:
+
+```json
+{
+  "id": "did:key:z6MkexampleAgentKey#z6MkexampleAgentKey",
+  "type": "Ed25519VerificationKey2020",
+  "controller": "did:key:z6MkexampleAgentKey",
+  "publicKeyMultibase": "z6MkexampleAgentKey"
+}
+```
+
+This is sufficient for:
+
+- request authentication
+- VC proof verification
+- bilateral signature exchange in payment or resource flows
+
 ## Notes
-Phase 1 may use an internal DID-like namespace while keeping future compatibility with a stricter DID method.
+Phase 1 uses an internal DID-like namespace while keeping compatibility with stricter DID methods and lightweight execution profiles such as `did:key`.
