@@ -14,7 +14,7 @@ Together, these modules form the substrate for agent financial actions across pa
 AFAL is no longer just a whitepaper or schema set.
 
 Current stage:
-- **Late Phase 1 integration-ready runtime with bilateral runtime-agent flows and operator-managed callback recovery**
+- **Late Phase 1 externally integrated runtime, locally accepted**
 - docs/specs/contracts are frozen enough to demo
 - AIP / ATS / AMN / AFAL runtime all run in seeded durable local mode
 - top-level approval requests, trusted-surface callback persistence, and post-approval resume-to-settlement are all wired end to end
@@ -23,6 +23,9 @@ Current stage:
 - bilateral runtime-agent harnesses now drive both payment and resource callback-and-resume flows through independent agent processes
 - receiver-side settlement callbacks now have durable outbox records, automatic background redelivery, and dead-letter metadata in the SQLite-backed HTTP slice
 - operator-only notification delivery, worker, and admin-audit routes now exist for callback recovery and inspection
+- an independent trusted-surface review service now drives approval callback and resume over HTTP
+- AFAL now calls independent payment-rail and provider-service stubs over explicit external adapter boundaries
+- the external payment/provider path now includes shared-token auth plus signed request metadata placeholders
 
 The repo now includes:
 - frozen Phase 1 schemas and canonical examples
@@ -43,6 +46,7 @@ The repo now includes:
 Current validated state:
 - `npm run typecheck` passes
 - targeted harness, notification, API, HTTP, and OpenAPI tests pass
+- `npm run accept:sqlite` passes for the current externally integrated runtime slice
 - both canonical flows run in:
   - seeded in-memory mode
   - seeded local durable mode
@@ -50,6 +54,7 @@ Current validated state:
   - seeded SQLite integration mode
   - SQLite-backed HTTP integration mode
   - runtime-agent harness modes over SQLite HTTP
+  - external-adapter demo modes over the shared SQLite integration database
 
 ## Quickstart
 
@@ -155,6 +160,18 @@ flowchart LR
 Canonical examples:
 - [docs/examples/mvp-agent-payment-flow.md](docs/examples/mvp-agent-payment-flow.md)
 - [docs/examples/mvp-resource-settlement-flow.md](docs/examples/mvp-resource-settlement-flow.md)
+
+## Demo Snapshots
+
+These two prototype snapshots are useful for communicating the intended AFAL interaction model at a glance:
+
+- `demo1` shows the decentralized agent-to-agent DID handshake and identity verification path
+- `demo2` shows the higher-level agent-to-agent payment exchange flow built on signed messages and verified counterparties
+
+<p align="center">
+  <img src="docs/images/demo1.PNG" alt="AFAL prototype demo: decentralized agent DID handshake" width="48%" />
+  <img src="docs/images/demo2.PNG" alt="AFAL prototype demo: agent-to-agent payment exchange" width="48%" />
+</p>
 
 ## What Exists Today
 
