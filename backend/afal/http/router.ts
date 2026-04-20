@@ -3,6 +3,8 @@ import {
   type AfalApiFailure,
   type AfalApiServiceAdapter,
 } from "../api";
+import type { Did } from "../../../sdk/types";
+import type { ExternalAgentClientService } from "../clients";
 import type { PaymentFlowOrchestrator, ResourceFlowOrchestrator } from "../interfaces";
 import type {
   ApplyApprovalResultHttpBody,
@@ -55,7 +57,36 @@ function buildTransportError(args: {
     | "resumeApprovedAction";
   requestRef: string;
   statusCode: 400 | 403 | 404;
-  code: "bad-request" | "not-found" | "operator-auth-required";
+  code:
+    | "bad-request"
+    | "not-found"
+    | "operator-auth-required"
+    | "client-auth-required"
+    | "subject-scope-violation";
+  message: string;
+}): AfalApiFailure {
+  return {
+    ok: false,
+    capability: args.capability,
+    requestRef: args.requestRef,
+    statusCode: args.statusCode,
+    error: {
+      code: args.code,
+      message: args.message,
+    },
+  };
+}
+
+function buildClientAuthError(args: {
+  capability:
+    | "requestPaymentApproval"
+    | "executePayment"
+    | "requestResourceApproval"
+    | "settleResourceUsage"
+    | "getActionStatus";
+  requestRef: string;
+  statusCode: 403 | 409;
+  code: "client-auth-required" | "subject-scope-violation" | "request-replay-detected";
   message: string;
 }): AfalApiFailure {
   return {
@@ -274,6 +305,12 @@ export function createAfalHttpRouter(args?: {
     token: string;
     headerName?: string;
   };
+  externalClientAuth?: {
+    service: ExternalAgentClientService;
+    clientIdHeaderName?: string;
+    requestTimestampHeaderName?: string;
+    signatureHeaderName?: string;
+  };
 }) {
   const apiHandlers =
     args?.handlers ??
@@ -284,6 +321,63 @@ export function createAfalHttpRouter(args?: {
   const operatorToken = args?.operatorAuth?.token;
   const operatorHeaderName = args?.operatorAuth?.headerName ?? "x-afal-operator-token";
   const operatorAuthEnabled = typeof operatorToken === "string" && operatorToken.length > 0;
+  const externalClientAuthService = args?.externalClientAuth?.service;
+  const externalClientIdHeaderName =
+    args?.externalClientAuth?.clientIdHeaderName ?? "x-afal-client-id";
+  const externalClientTimestampHeaderName =
+    args?.externalClientAuth?.requestTimestampHeaderName ?? "x-afal-request-timestamp";
+  const externalClientSignatureHeaderName =
+    args?.externalClientAuth?.signatureHeaderName ?? "x-afal-request-signature";
+
+  async function ensureExternalClientAuthorization(args: {
+    request: AfalHttpRequest;
+    capability:
+      | "requestPaymentApproval"
+      | "executePayment"
+      | "requestResourceApproval"
+      | "settleResourceUsage"
+      | "getActionStatus";
+    requestRef: string;
+    subjectDid?: Did;
+  }): Promise<AfalApiFailure | null> {
+    if (!externalClientAuthService) {
+      return null;
+    }
+
+    try {
+      await externalClientAuthService.authenticateRequest({
+        clientId: getHeaderValue(args.request.headers, externalClientIdHeaderName),
+        requestRef: args.requestRef,
+        timestamp: getHeaderValue(args.request.headers, externalClientTimestampHeaderName),
+        signature: getHeaderValue(args.request.headers, externalClientSignatureHeaderName),
+        subjectDid: args.subjectDid,
+      });
+      return null;
+    } catch (error) {
+      if (
+        error &&
+        typeof error === "object" &&
+        "code" in error &&
+        "statusCode" in error &&
+        "message" in error
+      ) {
+        return buildClientAuthError({
+          capability: args.capability,
+          requestRef: args.requestRef,
+          statusCode: (error as { statusCode: 403 | 409 }).statusCode,
+          code: (error as {
+            code:
+              | "client-auth-required"
+              | "subject-scope-violation"
+              | "request-replay-detected";
+          }).code,
+          message: (error as { message: string }).message,
+        });
+      }
+
+      throw error;
+    }
+  }
 
   return {
     async handle(request: AfalHttpRequest): Promise<AfalHttpResponse<AfalHttpResponseBody>> {
@@ -321,6 +415,16 @@ export function createAfalHttpRouter(args?: {
         );
         if (mismatch) {
           return buildJsonResponse(mismatch.statusCode, mismatch);
+        }
+
+        const clientAuthFailure = await ensureExternalClientAuthorization({
+          request,
+          capability: "executePayment",
+          requestRef: request.body.requestRef,
+          subjectDid: request.body.input.intent.payer.agentDid,
+        });
+        if (clientAuthFailure) {
+          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
         }
 
         const response = await apiHandlers.handleExecutePayment({
@@ -367,6 +471,16 @@ export function createAfalHttpRouter(args?: {
           return buildJsonResponse(mismatch.statusCode, mismatch);
         }
 
+        const clientAuthFailure = await ensureExternalClientAuthorization({
+          request,
+          capability: "requestPaymentApproval",
+          requestRef: request.body.requestRef,
+          subjectDid: request.body.input.intent.payer.agentDid,
+        });
+        if (clientAuthFailure) {
+          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
+        }
+
         const response = await apiHandlers.handleRequestPaymentApproval({
           capability: "requestPaymentApproval",
           requestRef: request.body.requestRef,
@@ -409,6 +523,16 @@ export function createAfalHttpRouter(args?: {
         );
         if (mismatch) {
           return buildJsonResponse(mismatch.statusCode, mismatch);
+        }
+
+        const clientAuthFailure = await ensureExternalClientAuthorization({
+          request,
+          capability: "settleResourceUsage",
+          requestRef: request.body.requestRef,
+          subjectDid: request.body.input.intent.requester.agentDid,
+        });
+        if (clientAuthFailure) {
+          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
         }
 
         const response = await apiHandlers.handleSettleResourceUsage({
@@ -455,6 +579,16 @@ export function createAfalHttpRouter(args?: {
           return buildJsonResponse(mismatch.statusCode, mismatch);
         }
 
+        const clientAuthFailure = await ensureExternalClientAuthorization({
+          request,
+          capability: "requestResourceApproval",
+          requestRef: request.body.requestRef,
+          subjectDid: request.body.input.intent.requester.agentDid,
+        });
+        if (clientAuthFailure) {
+          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
+        }
+
         const response = await apiHandlers.handleRequestResourceApproval({
           capability: "requestResourceApproval",
           requestRef: request.body.requestRef,
@@ -487,6 +621,14 @@ export function createAfalHttpRouter(args?: {
               message: "getActionStatus request body must include requestRef and input.actionRef",
             })
           );
+        }
+        const clientAuthFailure = await ensureExternalClientAuthorization({
+          request,
+          capability: "getActionStatus",
+          requestRef: request.body.requestRef,
+        });
+        if (clientAuthFailure) {
+          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
         }
         const response = await apiHandlers.handleGetActionStatus({
           capability: "getActionStatus",

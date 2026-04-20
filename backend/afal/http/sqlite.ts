@@ -2,7 +2,7 @@ import { createAfalApiServiceAdapter } from "../api";
 import type { SettlementNotificationPort } from "../interfaces";
 import type { PaymentRailAdapter, ResourceProviderAdapter } from "../settlement";
 import {
-  createSeededSqliteAfalRuntimeService,
+  createSeededSqliteAfalBundle,
   getSeededSqliteAfalPaths,
   type SeededSqliteAfalPaths,
 } from "../service";
@@ -26,14 +26,34 @@ export function createSeededSqliteAfalHttpRouter(
       token: string;
       headerName?: string;
     };
+    externalClientAuth?: {
+      enabled?: boolean;
+      maxRequestAgeMs?: number;
+      clientIdHeaderName?: string;
+      requestTimestampHeaderName?: string;
+      signatureHeaderName?: string;
+    };
   }
 ): SeededSqliteAfalHttpRouter {
-  const runtime = createSeededSqliteAfalRuntimeService(dataDir, options);
-  const handlers = createAfalApiServiceAdapter(runtime);
+  const bundle = createSeededSqliteAfalBundle(dataDir, options);
+  const handlers = createAfalApiServiceAdapter(bundle.runtime);
 
   return {
     dataDir,
     paths: getSeededSqliteAfalPaths(dataDir),
-    router: createAfalHttpRouter({ handlers, operatorAuth: options?.operatorAuth }),
+    router: createAfalHttpRouter({
+      handlers,
+      operatorAuth: options?.operatorAuth,
+      externalClientAuth:
+        options?.externalClientAuth && bundle.externalClientService
+          ? {
+              service: bundle.externalClientService,
+              clientIdHeaderName: options.externalClientAuth.clientIdHeaderName,
+              requestTimestampHeaderName:
+                options.externalClientAuth.requestTimestampHeaderName,
+              signatureHeaderName: options.externalClientAuth.signatureHeaderName,
+            }
+          : undefined,
+    }),
   };
 }

@@ -24,8 +24,13 @@ import type {
   TrustedSurfacePort,
 } from "../interfaces";
 import { SqliteAfalAdminAuditStore } from "../admin-audit";
+import { ExternalAgentClientService, SqliteExternalAgentClientStore } from "../clients";
 import { createMockPaymentFlowOrchestrator, createMockResourceFlowOrchestrator } from "../mock";
-import { NoopSettlementNotificationPort } from "../notifications";
+import {
+  HttpSettlementNotificationPort,
+  NoopSettlementNotificationPort,
+  SqliteSettlementNotificationOutboxStore,
+} from "../notifications";
 import { AfalIntentStateService, SqliteAfalIntentStore, createSeededAfalIntentTemplateResolver } from "../state";
 import {
   AfalSettlementService,
@@ -67,6 +72,7 @@ export interface SeededSqliteAfalPaths {
   afalSettlement: string;
   afalOutputs: string;
   afalAdminAudit: string;
+  afalExternalClients: string;
 }
 
 export function getSeededSqliteAfalPaths(dataDir: string): SeededSqliteAfalPaths {
@@ -81,6 +87,7 @@ export function getSeededSqliteAfalPaths(dataDir: string): SeededSqliteAfalPaths
     afalSettlement: join(dataDir, "afal-settlement.json"),
     afalOutputs: join(dataDir, "afal-outputs.json"),
     afalAdminAudit: integrationDb,
+    afalExternalClients: integrationDb,
   };
 }
 
@@ -90,6 +97,7 @@ export interface SeededSqliteAfalBundle {
   runtime: AfalRuntimeService;
   paymentOrchestrator: PaymentFlowOrchestrator;
   resourceOrchestrator: ResourceFlowOrchestrator;
+  externalClientService?: ExternalAgentClientService;
 }
 
 export function createSeededSqliteAfalBundle(
@@ -99,6 +107,10 @@ export function createSeededSqliteAfalBundle(
     notificationWorker?: AfalRuntimeServiceOptions["notificationWorker"];
     paymentAdapter?: PaymentRailAdapter;
     resourceAdapter?: ResourceProviderAdapter;
+    externalClientAuth?: {
+      enabled?: boolean;
+      maxRequestAgeMs?: number;
+    };
   }
 ): SeededSqliteAfalBundle {
   const paths = getSeededSqliteAfalPaths(dataDir);
@@ -169,6 +181,32 @@ export function createSeededSqliteAfalBundle(
     }),
     templateResolver: createSeededAfalOutputTemplateResolver(),
   });
+  const externalClientService =
+    options?.externalClientAuth && options.externalClientAuth.enabled !== false
+      ? new ExternalAgentClientService({
+          store: new SqliteExternalAgentClientStore({
+            filePath: paths.afalExternalClients,
+            seed: {
+              clients: [],
+              replayRecords: [],
+            },
+          }),
+          maxRequestAgeMs: options.externalClientAuth.maxRequestAgeMs,
+        })
+      : undefined;
+  const notifications =
+    options?.notifications ??
+    (externalClientService
+      ? new HttpSettlementNotificationPort({
+          callbackResolver: externalClientService,
+          outboxStore: new SqliteSettlementNotificationOutboxStore({
+            filePath: paths.afalNotificationOutbox,
+            seed: {
+              entries: [],
+            },
+          }),
+        })
+      : new NoopSettlementNotificationPort());
 
   const ports: AfalOrchestrationPorts = {
     aip,
@@ -180,7 +218,7 @@ export function createSeededSqliteAfalBundle(
     resourceSettlement: settlement,
     receipts: outputs,
     capabilityResponses: outputs,
-    notifications: options?.notifications ?? new NoopSettlementNotificationPort(),
+    notifications,
   };
 
   const paymentOrchestrator = createMockPaymentFlowOrchestrator(ports);
@@ -204,6 +242,7 @@ export function createSeededSqliteAfalBundle(
     runtime,
     paymentOrchestrator,
     resourceOrchestrator,
+    externalClientService,
   };
 }
 
@@ -214,6 +253,10 @@ export function createSeededSqliteAfalRuntimeService(
     notificationWorker?: AfalRuntimeServiceOptions["notificationWorker"];
     paymentAdapter?: PaymentRailAdapter;
     resourceAdapter?: ResourceProviderAdapter;
+    externalClientAuth?: {
+      enabled?: boolean;
+      maxRequestAgeMs?: number;
+    };
   }
 ): AfalRuntimeService {
   return createSeededSqliteAfalBundle(dataDir, options).runtime;

@@ -3,6 +3,10 @@ import { describe, test } from "node:test";
 
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
 import { InMemoryAfalAdminAuditStore } from "../admin-audit";
+import {
+  ExternalAgentClientService,
+  InMemoryExternalAgentClientStore,
+} from "../clients";
 import { createAfalRuntimeService } from "../service";
 import {
   createMockAfalPorts,
@@ -705,5 +709,74 @@ describe("AFAL HTTP transport contract", () => {
     } else {
       assert.fail("expected stopNotificationWorker success response");
     }
+  });
+
+  test("enforces external client auth on public action routes when configured", async () => {
+    const externalClientAuth = new ExternalAgentClientService({
+      store: new InMemoryExternalAgentClientStore({
+        clients: [
+          {
+            clientId: "client-http-auth",
+            tenantId: "tenant-http-auth",
+            agentId: "agent-http-auth",
+            subjectDid: paymentFlowFixtures.paymentIntentCreated.payer.agentDid,
+            mandateRefs: [paymentFlowFixtures.paymentIntentCreated.mandateRef],
+            auth: {
+              signingKey: "secret-http-auth",
+              active: true,
+              createdAt: "2026-03-30T00:00:00Z",
+            },
+            createdAt: "2026-03-30T00:00:00Z",
+            updatedAt: "2026-03-30T00:00:00Z",
+          },
+        ],
+      }),
+      now: () => new Date("2026-03-30T00:00:10Z"),
+    });
+    const router = createAfalHttpRouter({
+      externalClientAuth: {
+        service: externalClientAuth,
+      },
+    });
+    const authorizedRequestRef = "req-http-client-auth-002";
+    const headers = await externalClientAuth.createSignedHeaders({
+      clientId: "client-http-auth",
+      requestRef: authorizedRequestRef,
+      timestamp: "2026-03-30T00:00:00Z",
+    });
+
+    const unauthorized = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.requestPaymentApproval,
+      body: {
+        requestRef: "req-http-client-auth-001",
+        input: {
+          requestRef: "req-http-client-auth-001",
+          intent: paymentFlowFixtures.paymentIntentCreated,
+          monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+        },
+      },
+    });
+    const authorized = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.requestPaymentApproval,
+      headers,
+      body: {
+        requestRef: authorizedRequestRef,
+        input: {
+          requestRef: authorizedRequestRef,
+          intent: paymentFlowFixtures.paymentIntentCreated,
+          monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+        },
+      },
+    });
+
+    assert.equal(unauthorized.statusCode, 403);
+    assert.equal(unauthorized.body.ok, false);
+    if (!unauthorized.body.ok) {
+      assert.equal(unauthorized.body.error.code, "client-auth-required");
+    }
+    assert.equal(authorized.statusCode, 200);
+    assert.equal(authorized.body.ok, true);
   });
 });

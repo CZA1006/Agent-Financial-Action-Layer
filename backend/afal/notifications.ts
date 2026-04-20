@@ -217,6 +217,10 @@ export class NoopSettlementNotificationPort implements SettlementNotificationPor
 export interface HttpSettlementNotificationPortOptions {
   paymentCallbackUrls?: Record<string, string>;
   resourceCallbackUrls?: Record<string, string>;
+  callbackResolver?: {
+    getPaymentCallbackUrls(): Promise<Record<string, string>>;
+    getResourceCallbackUrls(): Promise<Record<string, string>>;
+  };
   maxAttempts?: number;
   retryDelayMs?: number;
   redeliveryBaseDelayMs?: number;
@@ -321,6 +325,10 @@ export class SettlementNotificationOutboxWorker {
 export class HttpSettlementNotificationPort implements SettlementNotificationPort {
   private readonly paymentCallbackUrls: Record<string, string>;
   private readonly resourceCallbackUrls: Record<string, string>;
+  private readonly callbackResolver?: {
+    getPaymentCallbackUrls(): Promise<Record<string, string>>;
+    getResourceCallbackUrls(): Promise<Record<string, string>>;
+  };
   private readonly maxAttempts: number;
   private readonly retryDelayMs: number;
   private readonly redeliveryBaseDelayMs: number;
@@ -333,6 +341,7 @@ export class HttpSettlementNotificationPort implements SettlementNotificationPor
   constructor(options: HttpSettlementNotificationPortOptions = {}) {
     this.paymentCallbackUrls = options.paymentCallbackUrls ?? {};
     this.resourceCallbackUrls = options.resourceCallbackUrls ?? {};
+    this.callbackResolver = options.callbackResolver;
     this.maxAttempts = Math.max(1, options.maxAttempts ?? 1);
     this.retryDelayMs = Math.max(0, options.retryDelayMs ?? 0);
     this.redeliveryBaseDelayMs = Math.max(0, options.redeliveryBaseDelayMs ?? 1_000);
@@ -345,7 +354,7 @@ export class HttpSettlementNotificationPort implements SettlementNotificationPor
   }
 
   async notifyPaymentSettlement(notification: PaymentSettlementNotification): Promise<void> {
-    const callbackUrl = this.paymentCallbackUrls[notification.payeeDid];
+    const callbackUrl = await this.resolvePaymentCallbackUrl(notification.payeeDid);
     if (!callbackUrl) {
       await this.outboxStore.putOutboxEntry({
         notificationId: notification.notificationId,
@@ -367,7 +376,7 @@ export class HttpSettlementNotificationPort implements SettlementNotificationPor
   }
 
   async notifyResourceSettlement(notification: ResourceSettlementNotification): Promise<void> {
-    const callbackUrl = this.resourceCallbackUrls[notification.providerDid];
+    const callbackUrl = await this.resolveResourceCallbackUrl(notification.providerDid);
     if (!callbackUrl) {
       await this.outboxStore.putOutboxEntry({
         notificationId: notification.notificationId,
@@ -386,6 +395,26 @@ export class HttpSettlementNotificationPort implements SettlementNotificationPor
     }
 
     await this.postNotification(callbackUrl, notification);
+  }
+
+  private async resolvePaymentCallbackUrl(payeeDid: string): Promise<string | undefined> {
+    const staticUrl = this.paymentCallbackUrls[payeeDid];
+    if (staticUrl) {
+      return staticUrl;
+    }
+
+    const resolved = await this.callbackResolver?.getPaymentCallbackUrls();
+    return resolved?.[payeeDid];
+  }
+
+  private async resolveResourceCallbackUrl(providerDid: string): Promise<string | undefined> {
+    const staticUrl = this.resourceCallbackUrls[providerDid];
+    if (staticUrl) {
+      return staticUrl;
+    }
+
+    const resolved = await this.callbackResolver?.getResourceCallbackUrls();
+    return resolved?.[providerDid];
   }
 
   async listDeliveryRecords(): Promise<SettlementNotificationDeliveryRecord[]> {

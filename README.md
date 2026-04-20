@@ -40,6 +40,8 @@ The repo now includes:
 - SQLite-backed AFAL HTTP runtime, server shell, demo, and acceptance path
 - bilateral runtime-agent harnesses over the SQLite-backed AFAL HTTP contract
 - active payee/provider-side callback delivery plus operator-managed notification recovery paths
+- sandbox-facing external agent client registry, per-client auth, and provisioning bootstrap
+- an OpenRouter-backed real-agent payment pilot over the sandbox-facing AFAL public API
 - OpenAPI draft, stable publish artifacts, snapshot releases, and preview UI
 - automated verification across runtime, API, HTTP, OpenAPI export, and durable persistence
 
@@ -88,6 +90,27 @@ npm run demo:agent-resource
 npm run demo:agent-resource-bilateral
 npm run export:openapi
 ```
+
+If you want to prepare one real external agent sandbox client against the SQLite-backed integration runtime:
+
+```bash
+npm run provision:external-agent-sandbox -- \
+  --data-dir ./.afal-sqlite-http-data \
+  --client-id client-demo-001 \
+  --tenant-id tenant-demo-001 \
+  --agent-id agent-demo-001 \
+  --subject-did did:afal:agent:payment-agent-01 \
+  --mandate-ref mnd-0001
+```
+
+If you want to run one real LLM-backed sandbox payment pilot with OpenRouter:
+
+```bash
+echo 'OPENROUTER_API_KEY=...' >> .env
+npm run demo:openrouter-payment-pilot -- --data-dir ./.afal-openrouter-pilot-data
+```
+
+This pilot still uses canonical payment fixtures, trusted-surface approval, and mock settlement. It does not use real funds.
 
 If you want to show the local HTTP capability surface:
 

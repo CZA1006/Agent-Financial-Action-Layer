@@ -6,6 +6,7 @@ import { test } from "node:test";
 
 import { paymentFlowFixtures } from "../../../sdk/fixtures";
 import { SqliteAtsStore } from "../../ats";
+import { ExternalAgentClientService, SqliteExternalAgentClientStore } from "../clients";
 import { JsonFileAfalOutputStore } from "../outputs/file-store";
 import { HttpSettlementNotificationPort } from "../notifications";
 import { createSeededSqliteAfalHttpServer, handleAfalNodeHttpRequest } from "./sqlite-server";
@@ -126,6 +127,81 @@ test("SQLite AFAL HTTP server adapter enforces operator auth on notification adm
     assert.equal(unauthorized.statusCode, 403);
     assert.equal(unauthorizedBody.ok, false);
     assert.equal(unauthorizedBody.error?.code, "operator-auth-required");
+    assert.equal(authorized.statusCode, 200);
+    assert.equal(authorizedBody.ok, true);
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});
+
+test("SQLite AFAL HTTP server adapter enforces external client auth on public routes", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "afal-sqlite-http-server-client-auth-"));
+
+  try {
+    const sqlite = createSeededSqliteAfalHttpServer(dir, {
+      externalClientAuth: {
+        enabled: true,
+      },
+    });
+    const clientService = new ExternalAgentClientService({
+      store: new SqliteExternalAgentClientStore({
+        filePath: sqlite.paths.afalExternalClients,
+        seed: {
+          clients: [],
+          replayRecords: [],
+        },
+      }),
+      now: () => new Date("2026-03-30T00:00:10Z"),
+    });
+    await clientService.provisionClient({
+      clientId: "client-sqlite-http-001",
+      tenantId: "tenant-sqlite-http-001",
+      agentId: "agent-sqlite-http-001",
+      subjectDid: paymentFlowFixtures.paymentIntentCreated.payer.agentDid,
+      mandateRefs: [paymentFlowFixtures.paymentIntentCreated.mandateRef],
+    });
+    const authorizedRequestRef = "req-http-client-sqlite-001";
+    const headers = await clientService.createSignedHeaders({
+      clientId: "client-sqlite-http-001",
+      requestRef: authorizedRequestRef,
+      timestamp: new Date().toISOString(),
+    });
+
+    const unauthorized = await handleAfalNodeHttpRequest(sqlite, {
+      method: "POST",
+      url: AFAL_HTTP_ROUTES.requestPaymentApproval,
+      bodyText: JSON.stringify({
+        requestRef: "req-http-client-sqlite-unauthorized",
+        input: {
+          requestRef: "req-http-client-sqlite-unauthorized",
+          intent: paymentFlowFixtures.paymentIntentCreated,
+          monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+        },
+      }),
+    });
+    const authorized = await handleAfalNodeHttpRequest(sqlite, {
+      method: "POST",
+      url: AFAL_HTTP_ROUTES.requestPaymentApproval,
+      headers,
+      bodyText: JSON.stringify({
+        requestRef: authorizedRequestRef,
+        input: {
+          requestRef: authorizedRequestRef,
+          intent: paymentFlowFixtures.paymentIntentCreated,
+          monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+        },
+      }),
+    });
+
+    const unauthorizedBody = JSON.parse(unauthorized.bodyText) as {
+      ok: boolean;
+      error?: { code?: string };
+    };
+    const authorizedBody = JSON.parse(authorized.bodyText) as { ok: boolean };
+
+    assert.equal(unauthorized.statusCode, 403);
+    assert.equal(unauthorizedBody.ok, false);
+    assert.equal(unauthorizedBody.error?.code, "client-auth-required");
     assert.equal(authorized.statusCode, 200);
     assert.equal(authorizedBody.ok, true);
   } finally {

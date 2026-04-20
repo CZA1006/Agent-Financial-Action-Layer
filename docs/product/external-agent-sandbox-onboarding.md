@@ -1,0 +1,128 @@
+# External Agent Sandbox Onboarding
+
+## Purpose
+
+This document defines the current minimum onboarding path for one real external agent system to connect to AFAL's sandbox-facing SQLite HTTP runtime.
+
+This is the first practical bridge between:
+
+- AFAL's locally accepted externally integrated runtime
+
+and:
+
+- a real external agent integration pilot
+
+---
+
+## Preconditions
+
+Start AFAL's SQLite-backed HTTP server:
+
+```bash
+npm run serve:sqlite-http
+```
+
+If you want external client auth enabled for a custom launcher, the server wiring must enable the external client auth option in the SQLite HTTP runtime.
+
+---
+
+## Provision A Sandbox Client
+
+The minimum provisioning path is:
+
+```bash
+node --import tsx/esm scripts/provision-external-agent-sandbox.ts \
+  --data-dir ./.afal-sqlite-http-data \
+  --client-id client-demo-001 \
+  --tenant-id tenant-demo-001 \
+  --agent-id agent-demo-001 \
+  --subject-did did:afal:agent:payment-agent-01 \
+  --mandate-ref mnd-0001 \
+  --monetary-budget-refs budg-money-001
+```
+
+The script writes the client record into the shared SQLite integration database and prints a sandbox bundle containing:
+
+- AFAL base URL
+- `clientId`
+- `subjectDid`
+- mandate references
+- budget / quota references
+- signing key
+- required auth headers
+
+---
+
+## Current Request Auth
+
+Public AFAL requests from the external agent must currently include:
+
+- `x-afal-client-id`
+- `x-afal-request-timestamp`
+- `x-afal-request-signature`
+
+Current signature formula:
+
+```text
+sha256(`${clientId}:${requestRef}:${timestamp}:${signingKey}`)
+```
+
+This is a sandbox placeholder, not a production auth model.
+
+---
+
+## Minimum Pilot Path
+
+### 1. Payment
+
+The first external-agent pilot should use:
+
+- `POST /capabilities/request-payment-approval`
+- trusted-surface approval completion
+- `POST /actions/get`
+
+If you want to use a real LLM-backed agent loop against the sandbox-facing payment path, set `OPENROUTER_API_KEY` in `.env` and run:
+
+```bash
+npm run demo:openrouter-payment-pilot -- --data-dir ./.afal-openrouter-pilot-data
+```
+
+The OpenRouter pilot still uses canonical AFAL payment fixtures and mock settlement. It does not require real funds.
+
+### 2. Resource
+
+After payment is stable, extend to:
+
+- `POST /capabilities/request-resource-approval`
+- trusted-surface approval completion
+- `POST /actions/get`
+
+---
+
+## Callback Registration
+
+The current sandbox onboarding model supports callback registration inside the provisioned client record.
+
+Current callback fields can include:
+
+- payment settlement callback URL
+- resource settlement callback URL
+- receiver-side identity mapping for:
+  - `paymentPayeeDid`
+  - `resourceProviderDid`
+
+This is currently registry-backed, not API-driven.
+
+---
+
+## Current Limitations
+
+The sandbox onboarding path does not yet provide:
+
+- self-service registration APIs
+- callback verification handshake
+- production auth
+- production-grade replay resistance
+- multi-client tenant management
+
+It is only the first controlled boundary for onboarding one external agent integration pilot.

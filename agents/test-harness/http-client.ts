@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import type {
   ActionStatusOutput,
   PaymentApprovalRequestOutput,
@@ -69,6 +71,14 @@ export interface AgentHarnessClient {
 export interface AgentHarnessClientOptions {
   operatorToken?: string;
   operatorHeaderName?: string;
+  externalClientAuth?: {
+    clientId: string;
+    signingKey: string;
+    clientIdHeaderName?: string;
+    requestTimestampHeaderName?: string;
+    signatureHeaderName?: string;
+    now?: () => Date;
+  };
 }
 
 export interface NodeTransportRequest {
@@ -86,6 +96,10 @@ export interface NodeTransportResponse {
 export type NodeTransportHandler = (
   request: NodeTransportRequest
 ) => Promise<NodeTransportResponse>;
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
 
 function assertSuccess<T>(body: T | AfalApiFailure): T {
   if (
@@ -154,6 +168,13 @@ export function createAfalHttpClient(
 ): AgentHarnessClient {
   const normalizedBaseUrl = baseUrl.replace(/\/+$/, "");
   const operatorHeaderName = options?.operatorHeaderName ?? "x-afal-operator-token";
+  const externalClientAuth = options?.externalClientAuth;
+  const externalClientIdHeaderName =
+    externalClientAuth?.clientIdHeaderName ?? "x-afal-client-id";
+  const externalClientTimestampHeaderName =
+    externalClientAuth?.requestTimestampHeaderName ?? "x-afal-request-timestamp";
+  const externalClientSignatureHeaderName =
+    externalClientAuth?.signatureHeaderName ?? "x-afal-request-signature";
 
   function withOperatorHeaders(headers: Record<string, string>): Record<string, string> {
     if (!options?.operatorToken) {
@@ -166,16 +187,41 @@ export function createAfalHttpClient(
     };
   }
 
+  function withExternalClientHeaders(
+    headers: Record<string, string>,
+    requestRef: string
+  ): Record<string, string> {
+    if (!externalClientAuth) {
+      return headers;
+    }
+
+    const timestamp = (externalClientAuth.now ?? (() => new Date()))().toISOString();
+    return {
+      ...headers,
+      [externalClientIdHeaderName]: externalClientAuth.clientId,
+      [externalClientTimestampHeaderName]: timestamp,
+      [externalClientSignatureHeaderName]: sha256(
+        `${externalClientAuth.clientId}:${requestRef}:${timestamp}:${externalClientAuth.signingKey}`
+      ),
+    };
+  }
+
   return {
     async requestPaymentApproval(args) {
+      const request = buildCanonicalPaymentApprovalRequest(args);
       const response = await fetch(
         `${normalizedBaseUrl}${AFAL_HTTP_ROUTES.requestPaymentApproval}`,
         {
           method: "POST",
-          headers: withOperatorHeaders({
-            "content-type": "application/json",
-          }),
-          body: JSON.stringify(buildCanonicalPaymentApprovalRequest(args)),
+          headers: withOperatorHeaders(
+            withExternalClientHeaders(
+              {
+                "content-type": "application/json",
+              },
+              request.requestRef
+            )
+          ),
+          body: JSON.stringify(request),
         }
       );
 
@@ -184,14 +230,20 @@ export function createAfalHttpClient(
     },
 
     async requestResourceApproval(args) {
+      const request = buildCanonicalResourceApprovalRequest(args);
       const response = await fetch(
         `${normalizedBaseUrl}${AFAL_HTTP_ROUTES.requestResourceApproval}`,
         {
           method: "POST",
-          headers: withOperatorHeaders({
-            "content-type": "application/json",
-          }),
-          body: JSON.stringify(buildCanonicalResourceApprovalRequest(args)),
+          headers: withOperatorHeaders(
+            withExternalClientHeaders(
+              {
+                "content-type": "application/json",
+              },
+              request.requestRef
+            )
+          ),
+          body: JSON.stringify(request),
         }
       );
 
@@ -202,9 +254,14 @@ export function createAfalHttpClient(
     async getActionStatus(args) {
       const response = await fetch(`${normalizedBaseUrl}${AFAL_HTTP_ROUTES.getActionStatus}`, {
         method: "POST",
-        headers: withOperatorHeaders({
-          "content-type": "application/json",
-        }),
+        headers: withOperatorHeaders(
+          withExternalClientHeaders(
+            {
+              "content-type": "application/json",
+            },
+            args.requestRef
+          )
+        ),
         body: JSON.stringify({
           requestRef: args.requestRef,
           input: {

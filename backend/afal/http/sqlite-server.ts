@@ -247,6 +247,13 @@ export function createSeededSqliteAfalHttpServer(
       token: string;
       headerName?: string;
     };
+    externalClientAuth?: {
+      enabled?: boolean;
+      maxRequestAgeMs?: number;
+      clientIdHeaderName?: string;
+      requestTimestampHeaderName?: string;
+      signatureHeaderName?: string;
+    };
   }
 ): SeededSqliteAfalHttpServer {
   const worker =
@@ -263,6 +270,7 @@ export function createSeededSqliteAfalHttpServer(
     paymentAdapter: options?.paymentAdapter,
     resourceAdapter: options?.resourceAdapter,
     operatorAuth: options?.operatorAuth,
+    externalClientAuth: options?.externalClientAuth,
   });
 
   if (worker && options?.notificationWorker?.start !== false) {
@@ -292,6 +300,13 @@ export async function startSeededSqliteAfalHttpServer(args?: {
     token: string;
     headerName?: string;
   };
+  externalClientAuth?: {
+    enabled?: boolean;
+    maxRequestAgeMs?: number;
+    clientIdHeaderName?: string;
+    requestTimestampHeaderName?: string;
+    signatureHeaderName?: string;
+  };
 }): Promise<RunningSeededSqliteAfalHttpServer> {
   const dataDir = args?.dataDir ?? join(process.cwd(), ".afal-sqlite-http-data");
   const host = args?.host ?? DEFAULT_HOST;
@@ -302,6 +317,7 @@ export async function startSeededSqliteAfalHttpServer(args?: {
     paymentAdapter: args?.paymentAdapter,
     resourceAdapter: args?.resourceAdapter,
     operatorAuth: args?.operatorAuth,
+    externalClientAuth: args?.externalClientAuth,
   });
 
   await new Promise<void>((resolve, reject) => {
