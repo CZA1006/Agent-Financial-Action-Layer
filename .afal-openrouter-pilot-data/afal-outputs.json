@@ -1,0 +1,67 @@
+{
+  "receipts": [
+    {
+      "receiptId": "rcpt-approval-0001",
+      "schemaVersion": "0.1",
+      "receiptType": "approval",
+      "actionRef": "payint-0001",
+      "decisionRef": "dec-0002",
+      "status": "final",
+      "issuedAt": "2026-03-24T12:07:00Z",
+      "evidence": {
+        "challengeRef": "chall-0001",
+        "approvedBy": "did:afal:owner:alice-01",
+        "approvalChannel": "trusted-surface:web",
+        "comment": "Approved via runtime-agent harness"
+      }
+    },
+    {
+      "receiptId": "rcpt-pay-0001",
+      "schemaVersion": "0.1",
+      "receiptType": "payment",
+      "actionRef": "payint-0001",
+      "decisionRef": "dec-0002",
+      "settlementRef": "stl-0001",
+      "status": "final",
+      "issuedAt": "2026-03-24T12:08:12Z",
+      "evidence": {
+        "payerAccountRef": "acct-agent-001",
+        "payeeDid": "did:afal:agent:fraud-service-01",
+        "asset": "USDC",
+        "amount": "45.00",
+        "chain": "base",
+        "txHash": "0xabc123paymenthash"
+      }
+    }
+  ],
+  "capabilityResponses": [
+    {
+      "responseId": "resp-generated-0001",
+      "schemaVersion": "0.1",
+      "capability": "requestPaymentApproval",
+      "requestRef": "req-openrouter-1776675622376",
+      "result": "pending-approval",
+      "respondedAt": "2026-04-20T09:00:25.340Z",
+      "actionRef": "payint-0001",
+      "decisionRef": "dec-0001",
+      "challengeRef": "chall-0001",
+      "settlementRef": null,
+      "receiptRef": null,
+      "message": "Payment request is pending trusted-surface approval"
+    },
+    {
+      "responseId": "resp-generated-0002",
+      "schemaVersion": "0.1",
+      "capability": "resumeApprovedAction",
+      "requestRef": "req-openrouter-1776675622376",
+      "result": "approved",
+      "respondedAt": "2026-04-20T09:00:25.398Z",
+      "actionRef": "payint-0001",
+      "decisionRef": "dec-0002",
+      "challengeRef": "chall-0001",
+      "settlementRef": "stl-0001",
+      "receiptRef": "rcpt-pay-0001",
+      "message": "Payment intent approved, settled, and receipted"
+    }
+  ]
+}

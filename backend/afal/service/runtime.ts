@@ -514,7 +514,59 @@ export class AfalRuntimeService
   }
 
   async applyApprovalResult(command: ApplyApprovalResultCommand) {
-    return this.ports.amn.applyApprovalResult(command.input);
+    const applied = await this.ports.amn.applyApprovalResult(command.input);
+
+    if (applied.approvalResult.result === "approved") {
+      return applied;
+    }
+
+    const pendingExecution = await this.ports.intents.getPendingExecution(
+      command.input.approvalSessionRef
+    );
+    const resumed = await this.ports.amn.resumeAuthorizationSession(command.input.approvalSessionRef);
+
+    if (pendingExecution.actionType === "payment") {
+      const intent = await this.ports.intents.getPaymentIntent(pendingExecution.actionRef);
+      if (pendingExecution.reservationRef && canReleaseMonetaryReservation(this.ports.ats)) {
+        await this.ports.ats.releaseMonetaryReservation({
+          reservationRef: pendingExecution.reservationRef,
+          releasedAt: resumed.approvalResult.decidedAt,
+          reasonCode: resumed.approvalResult.result,
+        });
+      }
+      await this.ports.intents.markPaymentChallenge({
+        intentId: intent.intentId,
+        decisionRef: resumed.finalDecision.decisionId,
+        challengeRef: resumed.challenge.challengeId,
+        challengeState: resumed.finalDecision.challengeState,
+        status: resumed.finalDecision.result === "expired" ? "expired" : "rejected",
+      });
+    } else {
+      const intent = await this.ports.intents.getResourceIntent(pendingExecution.actionRef);
+      if (pendingExecution.reservationRef && canReleaseResourceReservation(this.ports.ats)) {
+        await this.ports.ats.releaseResourceReservation({
+          reservationRef: pendingExecution.reservationRef,
+          releasedAt: resumed.approvalResult.decidedAt,
+          reasonCode: resumed.approvalResult.result,
+        });
+      }
+      await this.ports.intents.markResourceChallenge({
+        intentId: intent.intentId,
+        decisionRef: resumed.finalDecision.decisionId,
+        challengeRef: resumed.challenge.challengeId,
+        challengeState: resumed.finalDecision.challengeState,
+        status: resumed.finalDecision.result === "expired" ? "expired" : "rejected",
+      });
+    }
+
+    await this.ports.intents.markPendingExecution({
+      approvalSessionRef: command.input.approvalSessionRef,
+      status: "released",
+      updatedAt: resumed.approvalResult.decidedAt,
+      finalDecisionRef: resumed.finalDecision.decisionId,
+    });
+
+    return applied;
   }
 
   async resumeApprovalSession(command: ResumeApprovalSessionCommand) {

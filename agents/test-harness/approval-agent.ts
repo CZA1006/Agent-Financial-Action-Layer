@@ -25,13 +25,18 @@ export async function runApprovalAgent(
   options: {
     approvalSessionRef: string;
     requestRefPrefix?: string;
+    result?: "approved" | "rejected" | "expired" | "cancelled";
+    comment?: string;
+    resumeAction?: boolean;
   }
 ): Promise<ApprovalAgentResult> {
   const response = await runTrustedSurfaceStub(client, {
     approvalSessionRef: options.approvalSessionRef,
     requestRefPrefix: options.requestRefPrefix ?? "req-agent-approval",
     decidedAt: "2026-03-24T12:07:00Z",
-    comment: "Approved via runtime-agent harness",
+    result: options.result,
+    comment: options.comment ?? "Approved via runtime-agent harness",
+    resumeAction: options.resumeAction,
   });
 
   return {
@@ -53,6 +58,9 @@ export async function runApprovalAgentViaTrustedSurfaceService(
   options: {
     approvalSessionRef: string;
     requestRefPrefix?: string;
+    result?: "approved" | "rejected" | "expired" | "cancelled";
+    comment?: string;
+    resumeAction?: boolean;
   }
 ): Promise<ApprovalAgentResult> {
   const response = await createTrustedSurfaceServiceHttpClient(trustedSurfaceUrl).reviewApprovalSession({
@@ -60,8 +68,10 @@ export async function runApprovalAgentViaTrustedSurfaceService(
     input: {
       approvalSessionRef: options.approvalSessionRef,
       requestRefPrefix: options.requestRefPrefix ?? "req-agent-approval",
+      result: options.result,
       decidedAt: "2026-03-24T12:07:00Z",
-      comment: "Approved via runtime-agent harness",
+      comment: options.comment ?? "Approved via runtime-agent harness",
+      resumeAction: options.resumeAction,
     },
   });
 

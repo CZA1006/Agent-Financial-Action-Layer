@@ -1,0 +1,19 @@
+{
+  "receipts": [],
+  "capabilityResponses": [
+    {
+      "responseId": "resp-generated-0001",
+      "schemaVersion": "0.1",
+      "capability": "requestPaymentApproval",
+      "requestRef": "req-openrouter-1776676744955",
+      "result": "pending-approval",
+      "respondedAt": "2026-04-20T09:19:06.997Z",
+      "actionRef": "payint-0001",
+      "decisionRef": "dec-0001",
+      "challengeRef": "chall-0001",
+      "settlementRef": null,
+      "receiptRef": null,
+      "message": "Payment request is pending trusted-surface approval"
+    }
+  ]
+}

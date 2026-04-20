@@ -1,10 +1,15 @@
 import { readFile } from "node:fs/promises";
 import { resolve } from "node:path";
 
-import { paymentFlowFixtures } from "../../sdk/fixtures";
+import { paymentFlowFixtures, resourceFlowFixtures } from "../../sdk/fixtures";
 
 export interface OpenRouterPaymentDecision {
   decision: "request_payment_approval" | "abort";
+  rationale: string;
+}
+
+export interface OpenRouterResourceDecision {
+  decision: "request_resource_approval" | "abort";
   rationale: string;
 }
 
@@ -106,6 +111,60 @@ function buildCanonicalPaymentPrompt(): string {
   ].join("\n");
 }
 
+function buildCanonicalResourcePrompt(): string {
+  const intent = resourceFlowFixtures.resourceIntentCreated;
+  const policy = resourceFlowFixtures.policyCredential.credentialSubject;
+  const mandateScope = resourceFlowFixtures.resourceMandate.scope as {
+    maxSpendAmount?: string;
+    allowedProviders?: string[];
+    allowedAssets?: string[];
+    allowedChains?: string[];
+    resourceClass?: string;
+    resourceUnit?: string;
+    quantityLimit?: number;
+  };
+
+  return [
+    "You are an external resource-purchasing agent operating in an AFAL sandbox.",
+    "Your job is to decide whether to request resource approval for the canonical resource intent.",
+    "Return JSON only with this exact schema:",
+    '{"decision":"request_resource_approval"|"abort","rationale":"short explanation"}',
+    "Do not include markdown fences or any extra text.",
+    "",
+    "Canonical resource intent:",
+    `- requesterAgentDid: ${intent.requester.agentDid}`,
+    `- providerDid: ${intent.provider.providerDid}`,
+    `- providerId: ${intent.provider.providerId}`,
+    `- resourceClass: ${intent.resource.resourceClass}`,
+    `- resourceUnit: ${intent.resource.resourceUnit}`,
+    `- quantity: ${intent.resource.quantity}`,
+    `- maxSpend: ${intent.pricing.maxSpend}`,
+    `- asset: ${intent.pricing.asset}`,
+    `- budgetRef: ${intent.budgetSource.reference}`,
+    `- mandateRef: ${intent.mandateRef}`,
+    `- policyRef: ${intent.policyRef}`,
+    "",
+    "Current policy limits:",
+    `- allowedProviders: ${(policy.allowedProviders ?? []).join(", ")}`,
+    `- allowedAssets: ${(policy.allowedAssets ?? []).join(", ")}`,
+    `- allowedChains: ${(policy.allowedChains ?? []).join(", ")}`,
+    `- challengeThreshold: ${policy.challengeThreshold ?? "unknown"}`,
+    "",
+    "Mandate scope:",
+    `- maxSpendAmount: ${mandateScope.maxSpendAmount ?? "unknown"}`,
+    `- quantityLimit: ${String(mandateScope.quantityLimit ?? "unknown")}`,
+    `- resourceClass: ${mandateScope.resourceClass ?? "unknown"}`,
+    `- resourceUnit: ${mandateScope.resourceUnit ?? "unknown"}`,
+    `- allowedProviders: ${(mandateScope.allowedProviders ?? []).join(", ")}`,
+    `- allowedAssets: ${(mandateScope.allowedAssets ?? []).join(", ")}`,
+    `- allowedChains: ${(mandateScope.allowedChains ?? []).join(", ")}`,
+    "",
+    "The resource spend is intentionally above the challenge threshold, so approval is expected.",
+    'If the request should proceed, return {"decision":"request_resource_approval","rationale":"..."}',
+    'If it should not proceed, return {"decision":"abort","rationale":"..."}',
+  ].join("\n");
+}
+
 export function extractJsonObject(raw: string): string {
   const trimmed = raw.trim();
   if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
@@ -133,6 +192,23 @@ export function parseOpenRouterPaymentDecision(raw: string): OpenRouterPaymentDe
     parsed.decision !== "abort"
   ) {
     throw new Error('OpenRouter decision must be "request_payment_approval" or "abort"');
+  }
+  if (typeof parsed.rationale !== "string" || parsed.rationale.trim().length === 0) {
+    throw new Error("OpenRouter decision must include a non-empty rationale");
+  }
+  return {
+    decision: parsed.decision,
+    rationale: parsed.rationale.trim(),
+  };
+}
+
+export function parseOpenRouterResourceDecision(raw: string): OpenRouterResourceDecision {
+  const parsed = JSON.parse(extractJsonObject(raw)) as Partial<OpenRouterResourceDecision>;
+  if (
+    parsed.decision !== "request_resource_approval" &&
+    parsed.decision !== "abort"
+  ) {
+    throw new Error('OpenRouter decision must be "request_resource_approval" or "abort"');
   }
   if (typeof parsed.rationale !== "string" || parsed.rationale.trim().length === 0) {
     throw new Error("OpenRouter decision must include a non-empty rationale");
@@ -196,5 +272,61 @@ export async function requestOpenRouterPaymentDecision(
   return {
     rawContent,
     decision: parseOpenRouterPaymentDecision(rawContent),
+  };
+}
+
+export async function requestOpenRouterResourceDecision(
+  options: Omit<OpenRouterChatCompletionOptions, "prompt"> & {
+    prompt?: string;
+  }
+): Promise<{
+  rawContent: string;
+  decision: OpenRouterResourceDecision;
+}> {
+  const response = await fetch(
+    `${options.baseUrl ?? "https://openrouter.ai/api/v1"}/chat/completions`,
+    {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${options.apiKey}`,
+        "content-type": "application/json",
+        ...(options.referer ? { "http-referer": options.referer } : {}),
+        ...(options.title ? { "x-title": options.title } : {}),
+      },
+      body: JSON.stringify({
+        model: options.model,
+        messages: [
+          {
+            role: "user",
+            content: options.prompt ?? buildCanonicalResourcePrompt(),
+          },
+        ],
+        temperature: 0,
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const bodyText = await response.text();
+    throw new Error(
+      `OpenRouter request failed [${response.status}] ${bodyText || "empty response body"}`
+    );
+  }
+
+  const body = (await response.json()) as {
+    choices?: Array<{
+      message?: {
+        content?: string;
+      };
+    }>;
+  };
+  const rawContent = body.choices?.[0]?.message?.content?.trim();
+  if (!rawContent) {
+    throw new Error("OpenRouter response did not contain assistant content");
+  }
+
+  return {
+    rawContent,
+    decision: parseOpenRouterResourceDecision(rawContent),
   };
 }

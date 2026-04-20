@@ -1,0 +1,24 @@
+{
+  "settlements": [
+    {
+      "settlementId": "stl-0001",
+      "schemaVersion": "0.1",
+      "settlementType": "onchain-transfer",
+      "actionRef": "payint-0001",
+      "decisionRef": "dec-0002",
+      "sourceAccountRef": "acct-agent-001",
+      "destination": {
+        "payeeDid": "did:afal:agent:fraud-service-01",
+        "settlementAddress": "0xFRAUDSERVICEPAYEE"
+      },
+      "asset": "USDC",
+      "amount": "45.00",
+      "chain": "base",
+      "txHash": "0xabc123paymenthash",
+      "status": "settled",
+      "executedAt": "2026-03-24T12:08:00Z",
+      "settledAt": "2026-03-24T12:08:10Z"
+    }
+  ],
+  "usageConfirmations": []
+}

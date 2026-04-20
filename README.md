@@ -42,6 +42,7 @@ The repo now includes:
 - active payee/provider-side callback delivery plus operator-managed notification recovery paths
 - sandbox-facing external agent client registry, per-client auth, and provisioning bootstrap
 - an OpenRouter-backed real-agent payment pilot over the sandbox-facing AFAL public API
+- an OpenRouter-backed real-agent resource pilot over the sandbox-facing AFAL public API
 - OpenAPI draft, stable publish artifacts, snapshot releases, and preview UI
 - automated verification across runtime, API, HTTP, OpenAPI export, and durable persistence
 
@@ -108,9 +109,53 @@ If you want to run one real LLM-backed sandbox payment pilot with OpenRouter:
 ```bash
 echo 'OPENROUTER_API_KEY=...' >> .env
 npm run demo:openrouter-payment-pilot -- --data-dir ./.afal-openrouter-pilot-data
+npm run demo:openrouter-resource-pilot -- --data-dir ./.afal-openrouter-resource-pilot-data
+npm run demo:openrouter-payment-callback-recovery-pilot -- --data-dir ./.afal-openrouter-payment-callback-recovery-data
+npm run demo:openrouter-resource-callback-recovery-pilot -- --data-dir ./.afal-openrouter-resource-callback-recovery-data
 ```
 
-This pilot still uses canonical payment fixtures, trusted-surface approval, and mock settlement. It does not use real funds.
+These pilots still use canonical payment/resource fixtures, trusted-surface approval, and mock settlement. They do not use real funds.
+
+Useful failure-matrix variants:
+
+```bash
+# payment approval rejected
+npm run demo:openrouter-payment-pilot -- \
+  --data-dir ./.afal-openrouter-payment-rejected-data \
+  --approval-result rejected
+
+# resource upstream transient failures that recover through retry
+npm run demo:openrouter-resource-pilot -- \
+  --data-dir ./.afal-openrouter-resource-retry-data \
+  --confirm-usage-failures-before-success 1 \
+  --settle-resource-usage-failures-before-success 1
+
+# payment receiver callback fails first, then operator worker redelivers successfully
+npm run demo:openrouter-payment-callback-recovery-pilot -- \
+  --data-dir ./.afal-openrouter-payment-callback-recovery-data
+
+# resource provider callback fails first, then operator worker redelivers successfully
+npm run demo:openrouter-resource-callback-recovery-pilot -- \
+  --data-dir ./.afal-openrouter-resource-callback-recovery-data \
+  --provider-fail-first-attempts 1
+```
+
+Use a fresh `--data-dir` per pilot run if you want fully isolated budget/quota state.
+
+If you want to run the full real external-agent sandbox acceptance matrix:
+
+```bash
+npm run accept:external-agent
+```
+
+This acceptance currently covers:
+
+- payment happy path
+- resource happy path
+- payment approval rejected
+- resource transient retry recovery
+- payment callback recovery
+- resource callback recovery
 
 If you want to show the local HTTP capability surface:
 

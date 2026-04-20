@@ -1,0 +1,284 @@
+{
+  "identities": [
+    {
+      "id": "did:afal:owner:alice-01",
+      "subjectType": "owner",
+      "status": "active",
+      "controller": [
+        "did:afal:owner:alice-01"
+      ],
+      "createdAt": "2026-03-24T12:00:00Z",
+      "updatedAt": "2026-03-24T12:00:00Z",
+      "verificationMethods": [
+        {
+          "id": "key-1",
+          "type": "ed25519",
+          "publicKeyMultibase": "z6MkOwnerAlice01"
+        }
+      ]
+    },
+    {
+      "id": "did:afal:institution:merchant-co",
+      "subjectType": "institution",
+      "status": "active",
+      "controller": [
+        "did:afal:owner:alice-01"
+      ],
+      "createdAt": "2026-03-24T12:00:00Z",
+      "updatedAt": "2026-03-24T12:00:00Z",
+      "verificationMethods": [
+        {
+          "id": "key-1",
+          "type": "ed25519",
+          "publicKeyMultibase": "z6MkMerchantCo01"
+        }
+      ]
+    },
+    {
+      "id": "did:afal:agent:payment-agent-01",
+      "subjectType": "agent",
+      "status": "active",
+      "controller": [
+        "did:afal:owner:alice-01"
+      ],
+      "createdAt": "2026-03-24T12:00:00Z",
+      "updatedAt": "2026-03-24T12:00:00Z",
+      "verificationMethods": [
+        {
+          "id": "key-1",
+          "type": "ed25519",
+          "publicKeyMultibase": "z6MkPaymentAgent01"
+        }
+      ],
+      "serviceEndpoints": [
+        {
+          "id": "primary-api",
+          "type": "agent-api",
+          "serviceEndpoint": "https://merchant.example/agents/payment-agent-01"
+        }
+      ]
+    },
+    {
+      "id": "did:afal:agent:research-agent-01",
+      "subjectType": "agent",
+      "status": "active",
+      "controller": [
+        "did:afal:owner:alice-01"
+      ],
+      "createdAt": "2026-03-24T12:00:00Z",
+      "updatedAt": "2026-03-24T12:00:00Z",
+      "verificationMethods": [
+        {
+          "id": "key-1",
+          "type": "ed25519",
+          "publicKeyMultibase": "z6MkResearchAgent01"
+        }
+      ],
+      "serviceEndpoints": [
+        {
+          "id": "primary-api",
+          "type": "agent-api",
+          "serviceEndpoint": "https://merchant.example/agents/research-agent-01"
+        }
+      ]
+    }
+  ],
+  "credentials": [
+    {
+      "credential": {
+        "id": "cred-own-0001",
+        "schemaVersion": "0.1",
+        "type": [
+          "VerifiableCredential",
+          "OwnershipCredential"
+        ],
+        "issuer": "did:afal:institution:merchant-co",
+        "issuanceDate": "2026-03-24T12:00:00Z",
+        "credentialSubject": {
+          "id": "did:afal:agent:payment-agent-01",
+          "ownerDid": "did:afal:owner:alice-01",
+          "institutionDid": "did:afal:institution:merchant-co",
+          "relationshipType": "owns_and_controls",
+          "agentType": "payment-agent",
+          "environment": "production"
+        }
+      },
+      "status": "active",
+      "updatedAt": "2026-03-24T12:00:00Z"
+    },
+    {
+      "credential": {
+        "id": "cred-kyc-0001",
+        "schemaVersion": "0.1",
+        "type": [
+          "VerifiableCredential",
+          "KycCredential"
+        ],
+        "issuer": "did:afal:institution:kyc-provider-01",
+        "issuanceDate": "2026-03-24T12:00:00Z",
+        "credentialSubject": {
+          "id": "did:afal:owner:alice-01",
+          "kycStatus": "passed",
+          "jurisdiction": "HK",
+          "riskTier": "low",
+          "providerRef": "prov-kyc-001"
+        }
+      },
+      "status": "active",
+      "updatedAt": "2026-03-24T12:00:00Z"
+    },
+    {
+      "credential": {
+        "id": "cred-kyb-0001",
+        "schemaVersion": "0.1",
+        "type": [
+          "VerifiableCredential",
+          "KybCredential"
+        ],
+        "issuer": "did:afal:institution:kyb-provider-01",
+        "issuanceDate": "2026-03-24T12:00:00Z",
+        "credentialSubject": {
+          "id": "did:afal:institution:merchant-co",
+          "kybStatus": "passed",
+          "jurisdiction": "UAE",
+          "riskTier": "medium",
+          "providerRef": "prov-kyb-101"
+        }
+      },
+      "status": "active",
+      "updatedAt": "2026-03-24T12:00:00Z"
+    },
+    {
+      "credential": {
+        "id": "cred-auth-0001",
+        "schemaVersion": "0.1",
+        "type": [
+          "VerifiableCredential",
+          "AuthorityCredential"
+        ],
+        "issuer": "did:afal:institution:merchant-co",
+        "issuanceDate": "2026-03-24T12:00:00Z",
+        "credentialSubject": {
+          "id": "did:afal:agent:payment-agent-01",
+          "authorityClass": "payment-and-resource",
+          "allowedActions": [
+            "createPaymentIntent",
+            "executePayment"
+          ],
+          "scope": {
+            "payments": true,
+            "resourceSettlement": false,
+            "trading": false
+          }
+        }
+      },
+      "status": "active",
+      "updatedAt": "2026-03-24T12:00:00Z"
+    },
+    {
+      "credential": {
+        "id": "cred-policy-0001",
+        "schemaVersion": "0.1",
+        "type": [
+          "VerifiableCredential",
+          "PolicyCredential"
+        ],
+        "issuer": "did:afal:institution:merchant-co",
+        "issuanceDate": "2026-03-24T12:00:00Z",
+        "credentialSubject": {
+          "id": "did:afal:agent:payment-agent-01",
+          "singlePaymentLimit": "100.00",
+          "dailyPaymentLimit": "1000.00",
+          "allowedAssets": [
+            "USDC"
+          ],
+          "allowedCounterparties": [
+            "did:afal:agent:fraud-service-01"
+          ],
+          "allowedChains": [
+            "base"
+          ],
+          "challengeThreshold": "40.00"
+        }
+      },
+      "status": "active",
+      "updatedAt": "2026-03-24T12:00:00Z"
+    },
+    {
+      "credential": {
+        "id": "cred-own-0002",
+        "schemaVersion": "0.1",
+        "type": [
+          "VerifiableCredential",
+          "OwnershipCredential"
+        ],
+        "issuer": "did:afal:institution:merchant-co",
+        "issuanceDate": "2026-03-24T12:00:00Z",
+        "credentialSubject": {
+          "id": "did:afal:agent:research-agent-01",
+          "ownerDid": "did:afal:owner:alice-01",
+          "institutionDid": "did:afal:institution:merchant-co",
+          "relationshipType": "owns_and_controls",
+          "agentType": "research-agent",
+          "environment": "production"
+        }
+      },
+      "status": "active",
+      "updatedAt": "2026-03-24T12:00:00Z"
+    },
+    {
+      "credential": {
+        "id": "cred-auth-0002",
+        "schemaVersion": "0.1",
+        "type": [
+          "VerifiableCredential",
+          "AuthorityCredential"
+        ],
+        "issuer": "did:afal:institution:merchant-co",
+        "issuanceDate": "2026-03-24T12:00:00Z",
+        "credentialSubject": {
+          "id": "did:afal:agent:research-agent-01",
+          "authorityClass": "resource-only",
+          "allowedActions": [
+            "createResourceIntent",
+            "settleResourceUsage"
+          ],
+          "scope": {
+            "payments": false,
+            "resourceSettlement": true,
+            "trading": false
+          }
+        }
+      },
+      "status": "active",
+      "updatedAt": "2026-03-24T12:00:00Z"
+    },
+    {
+      "credential": {
+        "id": "cred-policy-0002",
+        "schemaVersion": "0.1",
+        "type": [
+          "VerifiableCredential",
+          "PolicyCredential"
+        ],
+        "issuer": "did:afal:institution:merchant-co",
+        "issuanceDate": "2026-03-24T12:00:00Z",
+        "credentialSubject": {
+          "id": "did:afal:agent:research-agent-01",
+          "allowedAssets": [
+            "USDC"
+          ],
+          "allowedProviders": [
+            "did:afal:institution:provider-openai"
+          ],
+          "allowedChains": [
+            "base"
+          ],
+          "challengeThreshold": "15.00"
+        }
+      },
+      "status": "active",
+      "updatedAt": "2026-03-24T12:00:00Z"
+    }
+  ]
+}

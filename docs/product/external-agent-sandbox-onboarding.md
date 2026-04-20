@@ -85,9 +85,42 @@ If you want to use a real LLM-backed agent loop against the sandbox-facing payme
 
 ```bash
 npm run demo:openrouter-payment-pilot -- --data-dir ./.afal-openrouter-pilot-data
+npm run demo:openrouter-resource-pilot -- --data-dir ./.afal-openrouter-resource-pilot-data
 ```
 
-The OpenRouter pilot still uses canonical AFAL payment fixtures and mock settlement. It does not require real funds.
+The OpenRouter pilots still use canonical AFAL payment/resource fixtures and mock settlement. They do not require real funds.
+
+Current failure-matrix examples:
+
+```bash
+npm run demo:openrouter-payment-pilot -- \
+  --data-dir ./.afal-openrouter-payment-rejected-data \
+  --approval-result rejected
+
+npm run demo:openrouter-resource-pilot -- \
+  --data-dir ./.afal-openrouter-resource-retry-data \
+  --confirm-usage-failures-before-success 1 \
+  --settle-resource-usage-failures-before-success 1
+
+npm run demo:openrouter-payment-callback-recovery-pilot -- \
+  --data-dir ./.afal-openrouter-payment-callback-recovery-data
+
+npm run demo:openrouter-resource-callback-recovery-pilot -- \
+  --data-dir ./.afal-openrouter-resource-callback-recovery-data \
+  --provider-fail-first-attempts 1
+```
+
+Use a fresh `--data-dir` per run if you want isolated ATS and AFAL state.
+
+If you want one command that runs the current real external-agent sandbox acceptance matrix:
+
+```bash
+npm run accept:external-agent
+```
+
+Reference checklist:
+
+- [External Agent Sandbox Acceptance Checklist](./external-agent-sandbox-acceptance-checklist.md)
 
 ### 2. Resource
 

@@ -1,0 +1,36 @@
+{
+  "settlements": [
+    {
+      "settlementId": "stl-1001",
+      "schemaVersion": "0.1",
+      "settlementType": "provider-settlement",
+      "actionRef": "resint-0001",
+      "decisionRef": "dec-1002",
+      "sourceAccountRef": "acct-agent-002",
+      "destination": {
+        "providerId": "provider-openai",
+        "providerDid": "did:afal:institution:provider-openai"
+      },
+      "asset": "USDC",
+      "amount": "18.50",
+      "chain": "base",
+      "txHash": "0xabc123resourcehash",
+      "status": "settled",
+      "executedAt": "2026-03-24T12:23:05Z",
+      "settledAt": "2026-03-24T12:23:10Z"
+    }
+  ],
+  "usageConfirmations": [
+    {
+      "usageReceiptRef": "usage-1001",
+      "providerId": "provider-openai",
+      "providerDid": "did:afal:institution:provider-openai",
+      "resourceClass": "inference",
+      "resourceUnit": "tokens",
+      "quantity": 500000,
+      "workflowId": "wf-123",
+      "taskClass": "research",
+      "confirmedAt": "2026-03-24T12:23:00Z"
+    }
+  ]
+}

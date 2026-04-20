@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import {
   extractJsonObject,
   parseOpenRouterPaymentDecision,
+  parseOpenRouterResourceDecision,
 } from "./openrouter";
 
 test("extractJsonObject accepts fenced JSON", () => {
@@ -32,5 +33,17 @@ test("parseOpenRouterPaymentDecision rejects invalid decision values", () => {
         '{"decision":"execute_now","rationale":"incorrect action"}'
       ),
     /OpenRouter decision must be/
+  );
+});
+
+test("parseOpenRouterResourceDecision validates canonical JSON payload", () => {
+  assert.deepEqual(
+    parseOpenRouterResourceDecision(
+      '{"decision":"request_resource_approval","rationale":"provider and spend are allowed and approval is expected"}'
+    ),
+    {
+      decision: "request_resource_approval",
+      rationale: "provider and spend are allowed and approval is expected",
+    }
   );
 });

@@ -1,0 +1,67 @@
+{
+  "receipts": [
+    {
+      "receiptId": "rcpt-approval-1001",
+      "schemaVersion": "0.1",
+      "receiptType": "approval",
+      "actionRef": "resint-0001",
+      "decisionRef": "dec-1002",
+      "status": "final",
+      "issuedAt": "2026-03-24T12:07:00Z",
+      "evidence": {
+        "challengeRef": "chall-1001",
+        "approvedBy": "did:afal:owner:alice-01",
+        "approvalChannel": "trusted-surface:web",
+        "comment": "Approved via OpenRouter resource callback recovery pilot"
+      }
+    },
+    {
+      "receiptId": "rcpt-res-1001",
+      "schemaVersion": "0.1",
+      "receiptType": "resource",
+      "actionRef": "resint-0001",
+      "decisionRef": "dec-1002",
+      "settlementRef": "stl-1001",
+      "status": "final",
+      "issuedAt": "2026-03-24T12:23:12Z",
+      "evidence": {
+        "providerId": "provider-openai",
+        "resourceClass": "inference",
+        "resourceUnit": "tokens",
+        "quantity": 500000,
+        "asset": "USDC",
+        "amount": "18.50"
+      }
+    }
+  ],
+  "capabilityResponses": [
+    {
+      "responseId": "resp-generated-0001",
+      "schemaVersion": "0.1",
+      "capability": "requestResourceApproval",
+      "requestRef": "req-openrouter-resource-callback-recovery-1776677783734",
+      "result": "pending-approval",
+      "respondedAt": "2026-04-20T09:36:26.990Z",
+      "actionRef": "resint-0001",
+      "decisionRef": "dec-1001",
+      "challengeRef": "chall-1001",
+      "settlementRef": null,
+      "receiptRef": null,
+      "message": "Resource request is pending trusted-surface approval"
+    },
+    {
+      "responseId": "resp-generated-0002",
+      "schemaVersion": "0.1",
+      "capability": "resumeApprovedAction",
+      "requestRef": "req-openrouter-resource-callback-recovery-1776677783734",
+      "result": "approved",
+      "respondedAt": "2026-04-20T09:36:27.081Z",
+      "actionRef": "resint-0001",
+      "decisionRef": "dec-1002",
+      "challengeRef": "chall-1001",
+      "settlementRef": "stl-1001",
+      "receiptRef": "rcpt-res-1001",
+      "message": "Resource intent approved, settled, and receipted"
+    }
+  ]
+}

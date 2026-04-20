@@ -7,29 +7,29 @@ import {
   ExternalAgentClientService,
   SqliteExternalAgentClientStore,
 } from "../../backend/afal/clients";
-import { startPaymentRailStubServer, type RunningPaymentRailStubServer } from "../../app/payment-rail/server";
+import { startProviderServiceStubServer, type RunningProviderServiceStubServer } from "../../app/provider-service/server";
 import {
   startSeededSqliteAfalHttpServer,
   type RunningSeededSqliteAfalHttpServer,
 } from "../../backend/afal/http/sqlite-server";
 import { getSeededSqliteAfalPaths } from "../../backend/afal/service/sqlite";
-import { HttpPaymentRailAdapter } from "../../backend/afal/settlement/http-adapters";
+import { HttpResourceProviderAdapter } from "../../backend/afal/settlement/http-adapters";
 import {
   startTrustedSurfaceStubServer,
   type RunningTrustedSurfaceStubServer,
 } from "../../app/trusted-surface/server";
-import { paymentFlowFixtures } from "../../sdk/fixtures";
+import { resourceFlowFixtures } from "../../sdk/fixtures";
 import { runApprovalAgentViaTrustedSurfaceService } from "./approval-agent";
 import { createAfalHttpClient } from "./http-client";
-import { loadEnvFileIntoProcess, requestOpenRouterPaymentDecision } from "./openrouter";
+import { loadEnvFileIntoProcess, requestOpenRouterResourceDecision } from "./openrouter";
 
-const PAYMENT_RAIL_SERVICE_TOKEN = "payment-rail-secret";
+const PROVIDER_SERVICE_TOKEN = "provider-service-secret";
 const AFAL_EXTERNAL_SERVICE_ID = "afal-runtime";
-const PAYMENT_RAIL_SIGNING_KEY = "payment-rail-signing-secret";
+const PROVIDER_SERVICE_SIGNING_KEY = "provider-service-signing-secret";
 
-export interface OpenRouterPaymentPilotResult {
+export interface OpenRouterResourcePilotResult {
   summary: {
-    stage: "external-agent-openrouter-payment-pilot";
+    stage: "external-agent-openrouter-resource-pilot";
     dataDir: string;
     baseUrl: string;
     trustedSurfaceUrl: string;
@@ -38,12 +38,14 @@ export interface OpenRouterPaymentPilotResult {
     clientId: string;
     subjectDid: string;
     requestRef: string;
-    llmDecision: "request_payment_approval" | "abort";
+    llmDecision: "request_resource_approval" | "abort";
     approvalResult?: "approved" | "rejected" | "expired" | "cancelled";
     finalIntentStatus?: string;
+    usageReceiptRef?: string;
     settlementRef?: string;
     receiptRef?: string;
-    paymentRailAttempts?: number;
+    providerUsageAttempts?: number;
+    providerSettlementAttempts?: number;
   };
   auth: {
     clientId: string;
@@ -53,7 +55,7 @@ export interface OpenRouterPaymentPilotResult {
     rawContent: string;
     rationale: string;
   };
-  payment?: Awaited<ReturnType<ReturnType<typeof createAfalHttpClient>["requestPaymentApproval"]>>;
+  resource?: Awaited<ReturnType<ReturnType<typeof createAfalHttpClient>["requestResourceApproval"]>>;
   approval?: Awaited<
     ReturnType<typeof runApprovalAgentViaTrustedSurfaceService>
   >;
@@ -69,10 +71,10 @@ function readOption(args: string[], flag: string): string | undefined {
 }
 
 function createRequestRef(): string {
-  return `req-openrouter-${Date.now()}`;
+  return `req-openrouter-resource-${Date.now()}`;
 }
 
-export async function runOpenRouterPaymentPilot(args?: {
+export async function runOpenRouterResourcePilot(args?: {
   dataDir?: string;
   host?: string;
   port?: number;
@@ -81,8 +83,9 @@ export async function runOpenRouterPaymentPilot(args?: {
   envFile?: string;
   model?: string;
   approvalResult?: "approved" | "rejected" | "expired" | "cancelled";
-  paymentRailFailuresBeforeSuccess?: number;
-}): Promise<OpenRouterPaymentPilotResult> {
+  confirmUsageFailuresBeforeSuccess?: number;
+  settleResourceUsageFailuresBeforeSuccess?: number;
+}): Promise<OpenRouterResourcePilotResult> {
   await loadEnvFileIntoProcess(args?.envFile);
 
   const apiKey = process.env.OPENROUTER_API_KEY;
@@ -94,25 +97,29 @@ export async function runOpenRouterPaymentPilot(args?: {
   let tempDataDir: string | undefined;
   let server: RunningSeededSqliteAfalHttpServer | undefined;
   let trustedSurface: RunningTrustedSurfaceStubServer | undefined;
-  let paymentRail: RunningPaymentRailStubServer | undefined;
+  let providerService: RunningProviderServiceStubServer | undefined;
 
   try {
     const dataDir = args?.dataDir
       ? resolve(args.dataDir)
-      : await mkdtemp(join(tmpdir(), "afal-openrouter-payment-pilot-"));
+      : await mkdtemp(join(tmpdir(), "afal-openrouter-resource-pilot-"));
     if (!args?.dataDir) {
       tempDataDir = dataDir;
     }
 
-    if ((args?.paymentRailFailuresBeforeSuccess ?? 0) > 0) {
-      paymentRail = await startPaymentRailStubServer({
+    if (
+      (args?.confirmUsageFailuresBeforeSuccess ?? 0) > 0 ||
+      (args?.settleResourceUsageFailuresBeforeSuccess ?? 0) > 0
+    ) {
+      providerService = await startProviderServiceStubServer({
         port: 0,
         failurePlan: {
-          executePaymentFailuresBeforeSuccess: args?.paymentRailFailuresBeforeSuccess,
+          confirmUsageFailuresBeforeSuccess: args?.confirmUsageFailuresBeforeSuccess,
+          settleResourceUsageFailuresBeforeSuccess: args?.settleResourceUsageFailuresBeforeSuccess,
         },
         auth: {
-          token: PAYMENT_RAIL_SERVICE_TOKEN,
-          signingKey: PAYMENT_RAIL_SIGNING_KEY,
+          token: PROVIDER_SERVICE_TOKEN,
+          signingKey: PROVIDER_SERVICE_SIGNING_KEY,
         },
       });
     }
@@ -124,17 +131,17 @@ export async function runOpenRouterPaymentPilot(args?: {
       externalClientAuth: {
         enabled: true,
       },
-      paymentAdapter: paymentRail
-        ? new HttpPaymentRailAdapter({
-            baseUrl: paymentRail.url,
+      resourceAdapter: providerService
+        ? new HttpResourceProviderAdapter({
+            baseUrl: providerService.url,
             retry: {
               maxAttempts: 3,
               backoffMs: 0,
             },
             auth: {
-              token: PAYMENT_RAIL_SERVICE_TOKEN,
+              token: PROVIDER_SERVICE_TOKEN,
               serviceId: AFAL_EXTERNAL_SERVICE_ID,
-              signingKey: PAYMENT_RAIL_SIGNING_KEY,
+              signingKey: PROVIDER_SERVICE_SIGNING_KEY,
             },
           })
         : undefined,
@@ -156,27 +163,28 @@ export async function runOpenRouterPaymentPilot(args?: {
     });
 
     const provisionedClient = await externalClientService.provisionClient({
-      clientId: "ext-agent-openrouter-payment-01",
+      clientId: "ext-agent-openrouter-resource-01",
       tenantId: "tenant-sandbox-openrouter-01",
-      agentId: "openrouter-payment-agent-01",
-      subjectDid: paymentFlowFixtures.paymentIntentCreated.payer.agentDid,
-      mandateRefs: [paymentFlowFixtures.paymentMandate.mandateId],
-      monetaryBudgetRefs: [paymentFlowFixtures.monetaryBudgetInitial.budgetId],
-      paymentPayeeDid: paymentFlowFixtures.paymentIntentCreated.payee.payeeDid,
+      agentId: "openrouter-resource-agent-01",
+      subjectDid: resourceFlowFixtures.resourceIntentCreated.requester.agentDid,
+      mandateRefs: [resourceFlowFixtures.resourceMandate.mandateId],
+      resourceBudgetRefs: [resourceFlowFixtures.resourceBudgetInitial.budgetId],
+      resourceQuotaRefs: [resourceFlowFixtures.resourceQuotaInitial.quotaId],
+      resourceProviderDid: resourceFlowFixtures.resourceIntentCreated.provider.providerDid,
     });
 
     const requestRef = createRequestRef();
-    const llm = await requestOpenRouterPaymentDecision({
+    const llm = await requestOpenRouterResourceDecision({
       apiKey,
       model,
-      title: "AFAL OpenRouter Payment Pilot",
+      title: "AFAL OpenRouter Resource Pilot",
       referer: "https://github.com/CZA1006/Agent-Financial-Action-Layer",
     });
 
     if (llm.decision.decision === "abort") {
       return {
         summary: {
-          stage: "external-agent-openrouter-payment-pilot",
+          stage: "external-agent-openrouter-resource-pilot",
           dataDir,
           baseUrl: server.url,
           trustedSurfaceUrl: trustedSurface.url,
@@ -210,30 +218,31 @@ export async function runOpenRouterPaymentPilot(args?: {
       },
     });
 
-    const payment = await client.requestPaymentApproval({
+    const resource = await client.requestResourceApproval({
       requestRef,
-      monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+      resourceBudgetRef: resourceFlowFixtures.resourceBudgetInitial.budgetId,
+      resourceQuotaRef: resourceFlowFixtures.resourceQuotaInitial.quotaId,
     });
 
     const approval = await runApprovalAgentViaTrustedSurfaceService(trustedSurface.url, {
-      approvalSessionRef: payment.approvalSession.approvalSessionId,
-      requestRefPrefix: "req-openrouter-approval",
+      approvalSessionRef: resource.approvalSession.approvalSessionId,
+      requestRefPrefix: "req-openrouter-resource-approval",
       result: args?.approvalResult ?? "approved",
       comment:
         args?.approvalResult && args.approvalResult !== "approved"
-          ? `Rejected via OpenRouter payment pilot`
-          : "Approved via OpenRouter payment pilot",
+          ? "Rejected via OpenRouter resource pilot"
+          : "Approved via OpenRouter resource pilot",
       resumeAction: (args?.approvalResult ?? "approved") === "approved",
     });
 
     const actionStatus = await client.getActionStatus({
       requestRef: `${requestRef}-status`,
-      actionRef: payment.intent.intentId,
+      actionRef: resource.intent.intentId,
     });
 
     return {
       summary: {
-        stage: "external-agent-openrouter-payment-pilot",
+        stage: "external-agent-openrouter-resource-pilot",
         dataDir,
         baseUrl: server.url,
         trustedSurfaceUrl: trustedSurface.url,
@@ -245,12 +254,17 @@ export async function runOpenRouterPaymentPilot(args?: {
         llmDecision: llm.decision.decision,
         approvalResult: args?.approvalResult ?? "approved",
         finalIntentStatus: actionStatus.intent.status,
+        usageReceiptRef:
+          actionStatus.actionType === "resource"
+            ? actionStatus.usageConfirmation?.usageReceiptRef
+            : undefined,
         settlementRef: actionStatus.intent.settlementRef,
         receiptRef:
-          actionStatus.actionType === "payment"
-            ? actionStatus.paymentReceipt?.receiptId
+          actionStatus.actionType === "resource"
+            ? actionStatus.resourceReceipt?.receiptId
             : undefined,
-        paymentRailAttempts: paymentRail?.state.executePaymentAttempts,
+        providerUsageAttempts: providerService?.state.confirmUsageAttempts,
+        providerSettlementAttempts: providerService?.state.settleResourceUsageAttempts,
       },
       auth: {
         clientId: provisionedClient.clientId,
@@ -264,13 +278,13 @@ export async function runOpenRouterPaymentPilot(args?: {
         rawContent: llm.rawContent,
         rationale: llm.decision.rationale,
       },
-      payment,
+      resource,
       approval,
       actionStatus,
     };
   } finally {
-    if (paymentRail) {
-      await paymentRail.close();
+    if (providerService) {
+      await providerService.close();
     }
     if (trustedSurface) {
       await trustedSurface.close();
@@ -286,7 +300,7 @@ export async function runOpenRouterPaymentPilot(args?: {
 
 async function main(): Promise<void> {
   const argv = process.argv.slice(2);
-  const result = await runOpenRouterPaymentPilot({
+  const result = await runOpenRouterResourcePilot({
     dataDir: readOption(argv, "--data-dir"),
     host: readOption(argv, "--host"),
     port: readOption(argv, "--port") ? Number(readOption(argv, "--port")) : undefined,
@@ -302,8 +316,14 @@ async function main(): Promise<void> {
       | "expired"
       | "cancelled"
       | undefined) ?? undefined,
-    paymentRailFailuresBeforeSuccess: readOption(argv, "--payment-rail-failures-before-success")
-      ? Number(readOption(argv, "--payment-rail-failures-before-success"))
+    confirmUsageFailuresBeforeSuccess: readOption(argv, "--confirm-usage-failures-before-success")
+      ? Number(readOption(argv, "--confirm-usage-failures-before-success"))
+      : undefined,
+    settleResourceUsageFailuresBeforeSuccess: readOption(
+      argv,
+      "--settle-resource-usage-failures-before-success"
+    )
+      ? Number(readOption(argv, "--settle-resource-usage-failures-before-success"))
       : undefined,
   });
   console.log(JSON.stringify(result, null, 2));

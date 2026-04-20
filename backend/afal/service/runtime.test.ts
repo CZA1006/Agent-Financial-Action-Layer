@@ -165,6 +165,55 @@ test("AFAL runtime service exposes module-service command entrypoints", async ()
   assert.equal(pendingExecution.status, "resumed");
 });
 
+test("AFAL runtime service propagates rejected approval results into action status and releases reservations", async () => {
+  const service = createAfalRuntimeService();
+  const paymentPending = await service.requestPaymentApproval({
+    capability: "requestPaymentApproval",
+    requestRef: "req-runtime-payment-rejected-001",
+    input: {
+      requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+      intent: paymentFlowFixtures.paymentIntentCreated,
+      monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+    },
+  });
+
+  const applied = await service.applyApprovalResult({
+    capability: "applyApprovalResult",
+    requestRef: "req-runtime-payment-rejected-apply-001",
+    input: {
+      approvalSessionRef: paymentPending.approvalSession.approvalSessionId,
+      result: {
+        ...paymentFlowFixtures.approvalResult,
+        result: "rejected",
+        comment: "Rejected in runtime test",
+      },
+    },
+  });
+
+  const status = await service.getActionStatus({
+    capability: "getActionStatus",
+    requestRef: "req-runtime-payment-rejected-status-001",
+    input: {
+      actionRef: paymentPending.intent.intentId,
+    },
+  });
+  const pendingExecution = await service.ports.intents.getPendingExecution(
+    paymentPending.approvalSession.approvalSessionId
+  );
+  const budget = await service.ports.ats.getMonetaryBudgetState(
+    paymentFlowFixtures.monetaryBudgetInitial.budgetId
+  );
+
+  assert.equal(applied.approvalSession.status, "rejected");
+  assert.equal(status.actionType, "payment");
+  assert.equal(status.intent.status, "rejected");
+  assert.equal(status.intent.challengeState, "rejected");
+  assert.equal(status.finalDecision?.result, "rejected");
+  assert.equal(pendingExecution.status, "released");
+  assert.equal(budget.availableAmount, "1000.00");
+  assert.equal(budget.reservedAmount, "0.00");
+});
+
 test("AFAL runtime service exposes notification delivery admin entrypoints when configured", async () => {
   let deliveries = 0;
   const adminAuditStore = new InMemoryAfalAdminAuditStore();
