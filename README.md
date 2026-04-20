@@ -137,6 +137,8 @@ Phase 1 focuses on:
 - challenge and trusted-surface hooks
 - approval session persistence and recovery
 
+Phase 1 primary records still use the internal `did:afal:*` namespace, while the docs now also describe a lightweight `did:key + Ed25519 + VC` execution profile for local bootstrap, bilateral authentication, and interop-oriented demos.
+
 ## Architecture At A Glance
 
 ```mermaid

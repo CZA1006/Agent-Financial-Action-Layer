@@ -12,6 +12,7 @@ Defines the credential schemas used by AIP (Agent Identity Passport).
 - `credentialSubject.id` is the identity subject DID.
 - `policyRef` used elsewhere in Phase 1 points to a `PolicyCredential` `id`.
 - Compute/resource budgets remain ATS budget objects in Phase 1 and are not mandatory VC types.
+- AFAL canonical examples use `did:afal:*` identifiers, but verification logic should remain compatible with DID-based execution identities such as `did:key`.
 
 ## Common Credential Envelope
 ```json
@@ -39,6 +40,30 @@ Defines the credential schemas used by AIP (Agent Identity Passport).
   }
 }
 ```
+
+## Proof Interoperability
+
+The canonical envelope below shows a `jws` field because Phase 1 schema work should stay neutral about exact proof serialization.
+
+In local demos and bilateral execution profiles, the same credential can also be represented with an Ed25519 detached proof value:
+
+```json
+{
+  "proof": {
+    "type": "Ed25519Signature2020",
+    "created": "2026-03-24T12:00:00Z",
+    "verificationMethod": "did:key:z6MkissuerKey#z6MkissuerKey",
+    "proofPurpose": "assertionMethod",
+    "proofValue": "4f8c..."
+  }
+}
+```
+
+That profile is useful when:
+
+- both parties already resolve the issuer DID directly
+- the verifier wants a simple signed-payload check
+- the goal is fast off-chain credential verification in a demo or test harness
 
 ## Credential Types
 
@@ -171,3 +196,18 @@ In Phase 1:
 - `getCredentialStatus`
 - `suspendCredential`
 - `revokeCredential`
+
+## Minimal Verification Steps
+
+At minimum, AIP verification logic should:
+
+1. resolve the issuer DID or AFAL identity record
+2. obtain the issuer verification method
+3. reconstruct the credential payload without `proof`
+4. verify the signature over the canonicalized payload
+5. check credential lifecycle status and expiration
+
+That same sequence works for both:
+
+- AFAL-native records under `did:afal:*`
+- lightweight execution credentials under `did:key`
