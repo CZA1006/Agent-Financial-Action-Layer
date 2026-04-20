@@ -22,6 +22,7 @@ import {
 } from "../../app/trusted-surface/server";
 import { resourceFlowFixtures } from "../../sdk/fixtures";
 import { runApprovalAgentViaTrustedSurfaceService } from "./approval-agent";
+import { writePilotArtifacts } from "./artifacts";
 import { createAfalHttpClient } from "./http-client";
 import { loadEnvFileIntoProcess, requestOpenRouterResourceDecision } from "./openrouter";
 import {
@@ -100,6 +101,7 @@ export async function runOpenRouterResourceCallbackRecoveryPilot(args?: {
   model?: string;
   operatorToken?: string;
   providerFailFirstAttempts?: number;
+  artifactsDir?: string;
 }): Promise<OpenRouterResourceCallbackRecoveryPilotResult> {
   await loadEnvFileIntoProcess(args?.envFile);
 
@@ -186,7 +188,7 @@ export async function runOpenRouterResourceCallbackRecoveryPilot(args?: {
     });
 
     if (llm.decision.decision === "abort") {
-      return {
+      const result: OpenRouterResourceCallbackRecoveryPilotResult = {
         summary: {
           stage: "external-agent-openrouter-resource-callback-recovery-pilot",
           dataDir,
@@ -213,6 +215,13 @@ export async function runOpenRouterResourceCallbackRecoveryPilot(args?: {
           rationale: llm.decision.rationale,
         },
       };
+      await writePilotArtifacts(args?.artifactsDir, {
+        result,
+        summary: result.summary,
+        auth: result.auth,
+        llm: result.llm,
+      });
+      return result;
     }
 
     const client = createAfalHttpClient(server.url, {
@@ -253,7 +262,7 @@ export async function runOpenRouterResourceCallbackRecoveryPilot(args?: {
       notificationId,
     });
 
-    return {
+    const result: OpenRouterResourceCallbackRecoveryPilotResult = {
       summary: {
         stage: "external-agent-openrouter-resource-callback-recovery-pilot",
         dataDir,
@@ -294,6 +303,20 @@ export async function runOpenRouterResourceCallbackRecoveryPilot(args?: {
       deliveryAfterWorker,
       provider,
     };
+    await writePilotArtifacts(args?.artifactsDir, {
+      result,
+      summary: result.summary,
+      auth: result.auth,
+      llm: result.llm,
+      resource,
+      approval,
+      deliveryBeforeWorker,
+      workerStatusBefore,
+      workerRun,
+      deliveryAfterWorker,
+      provider,
+    });
+    return result;
   } finally {
     if (providerAgent) {
       await providerAgent.close();
@@ -326,6 +349,7 @@ async function main(): Promise<void> {
     providerFailFirstAttempts: readOption(argv, "--provider-fail-first-attempts")
       ? Number(readOption(argv, "--provider-fail-first-attempts"))
       : undefined,
+    artifactsDir: readOption(argv, "--artifacts-dir"),
   });
   console.log(JSON.stringify(result, null, 2));
 }

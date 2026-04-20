@@ -18,6 +18,8 @@ build/
 .afal-durable-http-data/
 .afal-sqlite-data/
 .afal-sqlite-http-data/
+.afal-*-artifacts/
+.afal-callback-sample/
 
 # IDE
 .vscode/*

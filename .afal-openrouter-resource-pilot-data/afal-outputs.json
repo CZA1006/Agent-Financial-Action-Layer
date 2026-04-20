@@ -12,7 +12,7 @@
         "challengeRef": "chall-1001",
         "approvedBy": "did:afal:owner:alice-01",
         "approvalChannel": "trusted-surface:web",
-        "comment": "Approved via runtime-agent harness"
+        "comment": "Approved via OpenRouter resource pilot"
       }
     },
     {
@@ -39,9 +39,9 @@
       "responseId": "resp-generated-0001",
       "schemaVersion": "0.1",
       "capability": "requestResourceApproval",
-      "requestRef": "req-openrouter-resource-1776675989861",
+      "requestRef": "req-openrouter-resource-1776678813951",
       "result": "pending-approval",
-      "respondedAt": "2026-04-20T09:06:32.318Z",
+      "respondedAt": "2026-04-20T09:53:37.873Z",
       "actionRef": "resint-0001",
       "decisionRef": "dec-1001",
       "challengeRef": "chall-1001",
@@ -53,9 +53,9 @@
       "responseId": "resp-generated-0002",
       "schemaVersion": "0.1",
       "capability": "resumeApprovedAction",
-      "requestRef": "req-openrouter-resource-1776675989861",
+      "requestRef": "req-openrouter-resource-1776678813951",
       "result": "approved",
-      "respondedAt": "2026-04-20T09:06:32.474Z",
+      "respondedAt": "2026-04-20T09:53:37.968Z",
       "actionRef": "resint-0001",
       "decisionRef": "dec-1002",
       "challengeRef": "chall-1001",

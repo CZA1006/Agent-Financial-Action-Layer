@@ -22,6 +22,7 @@ import {
 } from "../../app/trusted-surface/server";
 import { paymentFlowFixtures } from "../../sdk/fixtures";
 import { runApprovalAgentViaTrustedSurfaceService } from "./approval-agent";
+import { writePilotArtifacts } from "./artifacts";
 import { createAfalHttpClient } from "./http-client";
 import { loadEnvFileIntoProcess, requestOpenRouterPaymentDecision } from "./openrouter";
 import {
@@ -99,6 +100,7 @@ export async function runOpenRouterPaymentCallbackRecoveryPilot(args?: {
   model?: string;
   operatorToken?: string;
   payeeFailFirstAttempts?: number;
+  artifactsDir?: string;
 }): Promise<OpenRouterPaymentCallbackRecoveryPilotResult> {
   await loadEnvFileIntoProcess(args?.envFile);
 
@@ -184,7 +186,7 @@ export async function runOpenRouterPaymentCallbackRecoveryPilot(args?: {
     });
 
     if (llm.decision.decision === "abort") {
-      return {
+      const result: OpenRouterPaymentCallbackRecoveryPilotResult = {
         summary: {
           stage: "external-agent-openrouter-payment-callback-recovery-pilot",
           dataDir,
@@ -211,6 +213,13 @@ export async function runOpenRouterPaymentCallbackRecoveryPilot(args?: {
           rationale: llm.decision.rationale,
         },
       };
+      await writePilotArtifacts(args?.artifactsDir, {
+        result,
+        summary: result.summary,
+        auth: result.auth,
+        llm: result.llm,
+      });
+      return result;
     }
 
     const client = createAfalHttpClient(server.url, {
@@ -250,7 +259,7 @@ export async function runOpenRouterPaymentCallbackRecoveryPilot(args?: {
       notificationId,
     });
 
-    return {
+    const result: OpenRouterPaymentCallbackRecoveryPilotResult = {
       summary: {
         stage: "external-agent-openrouter-payment-callback-recovery-pilot",
         dataDir,
@@ -290,6 +299,20 @@ export async function runOpenRouterPaymentCallbackRecoveryPilot(args?: {
       deliveryAfterWorker,
       payee,
     };
+    await writePilotArtifacts(args?.artifactsDir, {
+      result,
+      summary: result.summary,
+      auth: result.auth,
+      llm: result.llm,
+      payment,
+      approval,
+      deliveryBeforeWorker,
+      workerStatusBefore,
+      workerRun,
+      deliveryAfterWorker,
+      payee,
+    });
+    return result;
   } finally {
     if (payeeAgent) {
       await payeeAgent.close();
@@ -322,6 +345,7 @@ async function main(): Promise<void> {
     payeeFailFirstAttempts: readOption(argv, "--payee-fail-first-attempts")
       ? Number(readOption(argv, "--payee-fail-first-attempts"))
       : undefined,
+    artifactsDir: readOption(argv, "--artifacts-dir"),
   });
   console.log(JSON.stringify(result, null, 2));
 }

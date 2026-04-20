@@ -22,6 +22,12 @@ Run the full sandbox acceptance with:
 npm run accept:external-agent
 ```
 
+If you want structured evidence files for each scenario:
+
+```bash
+npm run accept:external-agent -- --artifacts-root ./.afal-openrouter-acceptance-artifacts
+```
+
 This command requires:
 
 - `OPENROUTER_API_KEY` in the environment or project-root `.env`
@@ -29,6 +35,15 @@ This command requires:
 - local loopback listener support for callback recovery pilots
 
 The acceptance script uses isolated temporary data directories for every scenario.
+
+When `--artifacts-root` is provided, each scenario also writes JSON artifacts such as:
+
+- `summary.json`
+- `llm.json`
+- `payment.json` or `resource.json`
+- `approval.json`
+- `actionStatus.json`, `deliveryBeforeWorker.json`, `deliveryAfterWorker.json`, or similar
+- `result.json`
 
 ---
 

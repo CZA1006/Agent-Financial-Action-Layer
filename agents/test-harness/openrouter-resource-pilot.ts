@@ -20,6 +20,7 @@ import {
 } from "../../app/trusted-surface/server";
 import { resourceFlowFixtures } from "../../sdk/fixtures";
 import { runApprovalAgentViaTrustedSurfaceService } from "./approval-agent";
+import { writePilotArtifacts } from "./artifacts";
 import { createAfalHttpClient } from "./http-client";
 import { loadEnvFileIntoProcess, requestOpenRouterResourceDecision } from "./openrouter";
 
@@ -85,6 +86,7 @@ export async function runOpenRouterResourcePilot(args?: {
   approvalResult?: "approved" | "rejected" | "expired" | "cancelled";
   confirmUsageFailuresBeforeSuccess?: number;
   settleResourceUsageFailuresBeforeSuccess?: number;
+  artifactsDir?: string;
 }): Promise<OpenRouterResourcePilotResult> {
   await loadEnvFileIntoProcess(args?.envFile);
 
@@ -182,7 +184,7 @@ export async function runOpenRouterResourcePilot(args?: {
     });
 
     if (llm.decision.decision === "abort") {
-      return {
+      const result: OpenRouterResourcePilotResult = {
         summary: {
           stage: "external-agent-openrouter-resource-pilot",
           dataDir,
@@ -209,6 +211,13 @@ export async function runOpenRouterResourcePilot(args?: {
           rationale: llm.decision.rationale,
         },
       };
+      await writePilotArtifacts(args?.artifactsDir, {
+        result,
+        summary: result.summary,
+        auth: result.auth,
+        llm: result.llm,
+      });
+      return result;
     }
 
     const client = createAfalHttpClient(server.url, {
@@ -240,7 +249,7 @@ export async function runOpenRouterResourcePilot(args?: {
       actionRef: resource.intent.intentId,
     });
 
-    return {
+    const result: OpenRouterResourcePilotResult = {
       summary: {
         stage: "external-agent-openrouter-resource-pilot",
         dataDir,
@@ -282,6 +291,16 @@ export async function runOpenRouterResourcePilot(args?: {
       approval,
       actionStatus,
     };
+    await writePilotArtifacts(args?.artifactsDir, {
+      result,
+      summary: result.summary,
+      auth: result.auth,
+      llm: result.llm,
+      resource,
+      approval,
+      actionStatus,
+    });
+    return result;
   } finally {
     if (providerService) {
       await providerService.close();
@@ -325,6 +344,7 @@ async function main(): Promise<void> {
     )
       ? Number(readOption(argv, "--settle-resource-usage-failures-before-success"))
       : undefined,
+    artifactsDir: readOption(argv, "--artifacts-dir"),
   });
   console.log(JSON.stringify(result, null, 2));
 }

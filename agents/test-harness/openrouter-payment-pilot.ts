@@ -20,6 +20,7 @@ import {
 } from "../../app/trusted-surface/server";
 import { paymentFlowFixtures } from "../../sdk/fixtures";
 import { runApprovalAgentViaTrustedSurfaceService } from "./approval-agent";
+import { writePilotArtifacts } from "./artifacts";
 import { createAfalHttpClient } from "./http-client";
 import { loadEnvFileIntoProcess, requestOpenRouterPaymentDecision } from "./openrouter";
 
@@ -82,6 +83,7 @@ export async function runOpenRouterPaymentPilot(args?: {
   model?: string;
   approvalResult?: "approved" | "rejected" | "expired" | "cancelled";
   paymentRailFailuresBeforeSuccess?: number;
+  artifactsDir?: string;
 }): Promise<OpenRouterPaymentPilotResult> {
   await loadEnvFileIntoProcess(args?.envFile);
 
@@ -174,7 +176,7 @@ export async function runOpenRouterPaymentPilot(args?: {
     });
 
     if (llm.decision.decision === "abort") {
-      return {
+      const result: OpenRouterPaymentPilotResult = {
         summary: {
           stage: "external-agent-openrouter-payment-pilot",
           dataDir,
@@ -201,6 +203,13 @@ export async function runOpenRouterPaymentPilot(args?: {
           rationale: llm.decision.rationale,
         },
       };
+      await writePilotArtifacts(args?.artifactsDir, {
+        result,
+        summary: result.summary,
+        auth: result.auth,
+        llm: result.llm,
+      });
+      return result;
     }
 
     const client = createAfalHttpClient(server.url, {
@@ -231,7 +240,7 @@ export async function runOpenRouterPaymentPilot(args?: {
       actionRef: payment.intent.intentId,
     });
 
-    return {
+    const result: OpenRouterPaymentPilotResult = {
       summary: {
         stage: "external-agent-openrouter-payment-pilot",
         dataDir,
@@ -268,6 +277,16 @@ export async function runOpenRouterPaymentPilot(args?: {
       approval,
       actionStatus,
     };
+    await writePilotArtifacts(args?.artifactsDir, {
+      result,
+      summary: result.summary,
+      auth: result.auth,
+      llm: result.llm,
+      payment,
+      approval,
+      actionStatus,
+    });
+    return result;
   } finally {
     if (paymentRail) {
       await paymentRail.close();
@@ -305,6 +324,7 @@ async function main(): Promise<void> {
     paymentRailFailuresBeforeSuccess: readOption(argv, "--payment-rail-failures-before-success")
       ? Number(readOption(argv, "--payment-rail-failures-before-success"))
       : undefined,
+    artifactsDir: readOption(argv, "--artifacts-dir"),
   });
   console.log(JSON.stringify(result, null, 2));
 }

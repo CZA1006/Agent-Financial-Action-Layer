@@ -148,6 +148,12 @@ If you want to run the full real external-agent sandbox acceptance matrix:
 npm run accept:external-agent
 ```
 
+If you want structured JSON evidence for every acceptance scenario:
+
+```bash
+npm run accept:external-agent -- --artifacts-root ./.afal-openrouter-acceptance-artifacts
+```
+
 This acceptance currently covers:
 
 - payment happy path
@@ -156,6 +162,10 @@ This acceptance currently covers:
 - resource transient retry recovery
 - payment callback recovery
 - resource callback recovery
+
+The repo also now includes a first external pilot kit under:
+
+- [samples/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/README.md)
 
 If you want to show the local HTTP capability surface:
 

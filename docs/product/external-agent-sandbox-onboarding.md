@@ -118,9 +118,16 @@ If you want one command that runs the current real external-agent sandbox accept
 npm run accept:external-agent
 ```
 
+If you want persistent JSON evidence for every scenario:
+
+```bash
+npm run accept:external-agent -- --artifacts-root ./.afal-openrouter-acceptance-artifacts
+```
+
 Reference checklist:
 
 - [External Agent Sandbox Acceptance Checklist](./external-agent-sandbox-acceptance-checklist.md)
+- [Sample External Agent Pilot Kit](../../samples/README.md)
 
 ### 2. Resource
 
