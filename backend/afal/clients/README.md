@@ -17,6 +17,7 @@ to:
 - persist external agent client records
 - persist replay-detection records
 - authenticate signed client requests into AFAL public routes
+- expose callback registration state through authenticated public integration routes
 - map registered callback URLs back to receiver-facing payment and resource notifications
 
 ## Notes
@@ -24,4 +25,7 @@ to:
 - this is a sandbox integration boundary, not a production IAM system
 - request signing is currently symmetric and deterministic
 - replay protection is currently keyed by `requestRef + timestamp`
-- callback registration is currently stored inside the client record rather than exposed through a separate public API
+- callback registration is still stored inside the client record, but it is now manageable through:
+  - `POST /integrations/callbacks/register`
+  - `POST /integrations/callbacks/get`
+  - `POST /integrations/callbacks/list`

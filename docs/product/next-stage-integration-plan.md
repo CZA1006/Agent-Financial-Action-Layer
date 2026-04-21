@@ -28,7 +28,7 @@ It assumes the current repo already has:
 
 AFAL's current stage is:
 
-- **Externally integrated runtime, first external slice**
+- **Late Phase 1 externally integrated runtime, locally accepted**
 
 What that means in practical terms:
 
@@ -48,6 +48,8 @@ What that means in practical terms:
 - AFAL can run against a shared SQLite integration database instead of isolated SQLite files per slice
 - AFAL settlement execution can call independent mock payment-rail and provider-service stubs over HTTP through explicit external adapter contracts
 - the external payment/provider path now carries shared-token auth plus signed request metadata placeholders
+- sandbox-facing external client provisioning, per-client auth, callback registration APIs, and standalone consumer samples now exist
+- internal real-agent sandbox acceptance and standalone extractable pilot kit now both exist
 
 What this stage still is **not**:
 
@@ -55,44 +57,47 @@ What this stage still is **not**:
 - a real trusted-surface integration
 - a real database-backed runtime
 - a real settlement or provider integration
-- a real multi-agent acceptance environment
+- an externally validated consumer sandbox
 
 ---
 
 ## Stage Definition
 
-The current target stage is:
+The current target stage has been reached internally.
 
-- **Phase 1 integration-ready runtime**
+The next target stage is:
 
-This stage has been substantially reached and is now crossing into the first externally integrated slice. AFAL is no longer just a local durable demo system, but a runtime that can be cleanly integrated with:
+- **external-agent validated sandbox**
+
+AFAL is no longer just a local durable demo system, but a runtime that can be cleanly integrated with:
 
 - an external trusted-surface service
 - a shared database adapter
 - real test agents running as independent processes
 - payment/provider services over explicit external adapter boundaries
 - a minimal service-to-service auth boundary for those external payment/provider services
+- a standalone external-agent pilot kit that can be copied into a separate repo
 
 In short:
 
-- previous stage = runnable local skeleton
-- current stage = integration-ready execution and callback-recovery layer with the first independent external services
+- previous stage = internally accepted externally integrated runtime
+- next stage = repo-external engineer can consume AFAL as a sandbox product surface
 
 ---
 
 ## Stage Goal
 
-The original goal of this stage was to make AFAL ready for **runtime-agent testing**.
+The next goal is no longer to prove another internal execution path.
 
-That goal has now been met for the current local integration slice, and the repo has started to add the first operator-facing recovery surfaces on top of it.
+The next goal is to prove that AFAL can be consumed by a second engineer from outside the implementation loop.
 
 That means the system should support:
 
-1. independent AFAL runtime process
-2. independent trusted-surface callback source
-3. durable state that is not limited to JSON file stores
-4. an agent harness that calls AFAL through the real HTTP contract
-5. end-to-end approval recovery and settlement flow across process boundaries
+1. separate AFAL sandbox process
+2. separate consumer repo or separate workspace
+3. separate callback receiver process
+4. provisioning output that is enough to configure the consumer
+5. public-route usage without importing internal AFAL modules
 
 This stage should deliberately stop **before**:
 
@@ -100,7 +105,7 @@ This stage should deliberately stop **before**:
 - true custody/wallet infra
 - production authentication systems
 - multi-tenant control plane work
-- autonomous LLM-driven agents
+- full package marketplace distribution
 
 ---
 
@@ -108,7 +113,17 @@ This stage should deliberately stop **before**:
 
 At the end of this stage, AFAL should have these outcomes:
 
-### 1. Trusted-Surface Integration Boundary
+### 1. Repo-External Consumer Validation
+
+AFAL should be usable by an engineer who is not working inside the implementation repo.
+
+Target outcome:
+
+- a second engineer can use the standalone pilot kit from a separate repo
+- the engineer can register callbacks and submit payment/resource requests
+- the engineer can document friction without relying on internal implementation context
+
+### 2. Trusted-Surface Integration Boundary
 
 AFAL should support a real callback flow rather than only same-process approval injection.
 
@@ -119,7 +134,7 @@ Target outcome:
   - submit an approval or rejection callback
   - trigger AFAL resume
 
-### 2. Database-Backed Integration Mode
+### 3. Database-Backed Integration Mode
 
 AFAL should support at least one real database-backed mode.
 
@@ -128,7 +143,7 @@ Target outcome:
 - a SQLite-backed mode exists for at least the most execution-critical state
 - JSON file stores remain available as demo mode
 
-### 3. Runtime-Agent Harness
+### 4. Runtime-Agent Harness
 
 AFAL should be callable by independent test agents rather than only internal scripts and fixtures.
 
@@ -136,7 +151,7 @@ Target outcome:
 
 - at least two test agents can run as separate processes and complete one canonical payment flow through AFAL
 
-### 4. Updated Contract and Acceptance Layer
+### 5. Updated Contract and Acceptance Layer
 
 The contract surface and acceptance flow must reflect integration use cases.
 
@@ -148,25 +163,19 @@ Target outcome:
 
 ## Recommended Workstreams
 
-This stage is being executed in three workstreams, in this order:
+The next stage should be executed in this order:
 
-1. trusted-surface callback integration
-2. database-backed integration mode
-3. runtime-agent harness
+1. repo-external consumer validation
+2. friction fixes in onboarding / auth / callback registration
+3. only then: stronger distribution surface such as SDK or package output
 
 This order matters.
 
 Why:
 
-- callback integration is the highest-value differentiator in AFAL's current architecture
-- database-backed state is needed before agent harness work becomes credible
-- runtime-agent harness only becomes worth building once the callback and persistence layers are stable
-
-Current progress:
-
-- Workstream 1 is in place for Phase 1 callback-and-resume behavior and includes a minimal trusted-surface stub.
-- Workstream 2 is in place for the first integration-critical SQLite slice.
-- Workstream 3 has started with payment and resource runtime-agent harnesses, including bilateral payee/provider-side callback delivery.
+- the remaining uncertainty is no longer inside AFAL core runtime behavior
+- the remaining uncertainty is whether the current boundary is actually consumable by another engineer
+- a package surface built before that validation would formalize the wrong abstractions
 
 ---
 

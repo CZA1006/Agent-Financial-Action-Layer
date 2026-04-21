@@ -145,7 +145,12 @@ Passing `accept:external-agent` currently proves:
 - transient upstream failures can recover through retry
 - receiver callback failures can recover through outbox + operator worker flow
 
-It does **not** prove:
+It does **not yet** prove:
+
+- that a second engineer can consume AFAL from a separate repo without monorepo context
+- that the current docs and standalone kit are friction-free for external onboarding
+
+It also does **not** prove:
 
 - production secrets management
 - production key rotation
@@ -165,3 +170,10 @@ Use this acceptance command:
 - before claiming new external-agent readiness
 
 Use the individual pilot commands when debugging one path in isolation.
+
+Use the standalone repo-external pilot after this acceptance passes, not before it.
+
+Why:
+
+- `accept:external-agent` proves the sandbox boundary works under controlled internal conditions
+- the standalone pilot proves the same boundary is usable by a different engineer without internal repo assumptions

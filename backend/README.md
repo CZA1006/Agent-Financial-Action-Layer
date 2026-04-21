@@ -44,6 +44,7 @@ Current backend reality includes:
 - trusted-surface approval session persistence and resume behavior
 - receiver callback delivery, outbox persistence, worker redelivery, and admin audit logging
 - framework-free HTTP routes for capabilities, approval sessions, notification administration, and worker control
+- a standalone external-agent pilot kit that can now be extracted out of the repo for consumer-side validation
 
 ---
 
@@ -102,6 +103,6 @@ The backend has now moved from an integration-ready execution layer into the fir
 
 Immediate next backend work should focus on:
 - keeping JSON + shared-SQLite runtime slices coherent with the HTTP contract
-- hardening the independent trusted-surface, payment-rail, and provider-service integration stubs
-- preparing the transition from local HTTP stubs to stronger external adapters and auth boundaries
+- supporting repo-external validation through the standalone external-agent pilot kit
+- using that external-engineer pilot to find onboarding, auth, callback, and error-surface friction
 - preserving the current contract surface while replacing more seeded behavior underneath it

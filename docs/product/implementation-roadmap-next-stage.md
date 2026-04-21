@@ -76,6 +76,9 @@ AFAL has already completed the following foundation work:
 - explicit payment-rail and resource-provider adapter contracts now exist above AFAL-owned settlement recording
 - network-shaped mock payment-rail and provider-service stubs now exist and can be called over HTTP
 - the external service path now includes shared-token auth and signed request metadata placeholders
+- sandbox-facing external client provisioning, per-client auth, callback registration APIs, and standalone consumer samples now exist
+- internal real-agent sandbox acceptance now exists across payment, resource, rejection, retry, and callback-recovery scenarios
+- a standalone external-agent pilot kit now exists for repo-external validation
 
 What does **not** exist yet:
 
@@ -88,7 +91,7 @@ What does **not** exist yet:
 - real on-chain interfaces beyond documentation
 
 So the next stage is no longer another schema pass, and it is no longer only about proving one execution path.
-The repo is now in the first externally integrated Phase 1 slice where the main remaining work is replacing local HTTP stubs and seeded implementations with stronger adapters and control-plane boundaries while keeping the current contract surface stable.
+The next stage is validating whether the current AFAL boundary is consumable from outside the implementation repo and then using that feedback to shape the eventual SDK/package surface.
 
 ---
 
@@ -96,26 +99,51 @@ The repo is now in the first externally integrated Phase 1 slice where the main 
 
 Recommended module order:
 
-1. `AIP`
-2. `ATS`
-3. `AMN`
-4. `AFAL integration layer`
+1. repo-external consumer validation
+2. onboarding and auth friction fixes
+3. consumer-facing SDK / package boundary
+4. stronger external adapters underneath the existing contract
 
 Why this order:
 
-- `AIP` must exist first because all later actions depend on subject identity, issuer trust, and credential verification
-- `ATS` should come before `AMN` because real authorization needs real account, budget, and quota state to evaluate against
-- `AMN` should come after both because mandate and challenge decisions depend on verified identities, credentials, and treasury references
-- `AFAL` orchestration should stay thin and should only be made real after the underlying module services can answer real requests
+- the main remaining uncertainty is no longer whether AFAL can run internally
+- the main remaining uncertainty is whether another engineer can consume the current surface without hidden repo context
+- the SDK or package boundary should be shaped by that consumer validation, not by internal assumptions
+- stronger adapters should continue underneath a contract that has already been externally exercised
 
 This order is intentionally not:
 
-- contract first again
+- another internal harness pass
+- package publishing first
 - trusted-surface UI first
 - on-chain contracts first
 - trade intent first
 
-Those would add surface area without making the MVP flow more real.
+Those would add surface area before the consumer boundary has been validated.
+
+---
+
+## Immediate Next Deliverable
+
+The immediate next deliverable is:
+
+- one successful repo-external pilot run by a second engineer using the standalone external-agent pilot kit
+
+That pilot should use:
+
+- public AFAL routes only
+- provisioning output only
+- published onboarding docs only
+
+It should not rely on:
+
+- internal `agents/test-harness/`
+- internal AFAL runtime modules
+- internal fixtures
+
+If that pilot succeeds, the next implementation unit should be:
+
+- a consumer-facing TypeScript SDK / package boundary for AFAL public routes
 
 ---
 

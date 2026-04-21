@@ -50,6 +50,7 @@ Current validated state:
 - `npm run typecheck` passes
 - targeted harness, notification, API, HTTP, and OpenAPI tests pass
 - `npm run accept:sqlite` passes for the current externally integrated runtime slice
+- `npm run accept:external-agent` passes for the current internal real-agent sandbox matrix
 - both canonical flows run in:
   - seeded in-memory mode
   - seeded local durable mode
@@ -183,6 +184,21 @@ The repo also now includes a first external pilot kit under:
 
 - [samples/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/README.md)
 - [standalone-external-agent-pilot/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/standalone-external-agent-pilot/README.md)
+- [external-engineer-pilot-handoff.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-pilot-handoff.md)
+
+Recommended next validation step:
+
+- hand the standalone pilot kit to a second engineer
+- require that they work from a separate repo or separate workspace
+- require that they use only AFAL public routes, provisioning output, and published docs
+
+That is the current gate between:
+
+- **internally accepted external-agent sandbox**
+
+and:
+
+- **externally validated external-agent sandbox**
 
 If you want to show the local HTTP capability surface:
 
@@ -233,6 +249,30 @@ Phase 1 focuses on:
 - approval session persistence and recovery
 
 Phase 1 primary records still use the internal `did:afal:*` namespace, while the docs now also describe a lightweight `did:key + Ed25519 + VC` execution profile for local bootstrap, bilateral authentication, and interop-oriented demos.
+
+## Distribution Outlook
+
+AFAL is now strong enough to justify thinking about a future package or hosted-consumer surface, but not yet strong enough to claim that surface is complete.
+
+The current correct position is:
+
+- the runtime and sandbox boundary are ready for external-engineer pilot validation
+- the project is **not yet** at a polished package-distribution or one-command hosted-product stage
+
+What still needs to happen before package-style distribution becomes credible:
+
+- one successful repo-external engineer pilot
+- friction fixes in onboarding, env setup, auth, and callback registration
+- a stable consumer-facing SDK or package surface
+- a clearer separation between implementation repo and consumer kit
+
+The likely future product shapes are:
+
+1. a TypeScript client SDK / package for AFAL public routes
+2. a callback receiver starter package
+3. a hosted sandbox or managed onboarding flow for agent builders
+
+That direction makes sense for AFAL as AI infrastructure. It is just one stage too early to present the current repo itself as the finished package surface.
 
 ## Architecture At A Glance
 

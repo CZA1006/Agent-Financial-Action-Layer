@@ -10,6 +10,10 @@ It is intentionally standalone:
 
 The goal is to simulate what an outside team would do when consuming AFAL as a sandbox service.
 
+For the broader handoff context, see:
+
+- [External Engineer Pilot Handoff](../../docs/product/external-engineer-pilot-handoff.md)
+
 ## What It Covers
 
 - signed external-client requests
@@ -89,3 +93,5 @@ To turn this into a true external repo:
 3. point `AFAL_BASE_URL` to a running AFAL sandbox instance
 
 If that copied repo still works, AFAL is behaving like an actual external integration surface rather than an internal monorepo convenience.
+
+This is the intended bridge toward a future consumer-facing SDK or package surface.

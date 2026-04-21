@@ -5,6 +5,7 @@ This directory contains the first external-agent pilot kit samples.
 For a repo-external / extractable consumer kit, use:
 
 - [standalone-external-agent-pilot/README.md](./standalone-external-agent-pilot/README.md)
+- [external-engineer-pilot-handoff.md](../docs/product/external-engineer-pilot-handoff.md)
 
 ## External Agent Client
 

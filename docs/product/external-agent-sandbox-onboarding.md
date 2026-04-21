@@ -12,6 +12,8 @@ and:
 
 - a real external agent integration pilot
 
+This onboarding doc is now also the base document for a **second-engineer external validation pass** using the standalone pilot kit.
+
 ---
 
 ## Preconditions
@@ -129,6 +131,7 @@ Reference checklist:
 - [External Agent Sandbox Acceptance Checklist](./external-agent-sandbox-acceptance-checklist.md)
 - [Sample External Agent Pilot Kit](../../samples/README.md)
 - [Standalone External Agent Pilot](../../samples/standalone-external-agent-pilot/README.md)
+- [External Engineer Pilot Handoff](./external-engineer-pilot-handoff.md)
 
 ### 2. Resource
 
@@ -169,3 +172,27 @@ The sandbox onboarding path does not yet provide:
 - multi-client tenant management
 
 It is only the first controlled boundary for onboarding one external agent integration pilot.
+
+---
+
+## Recommended Next Validation Step
+
+The next step is no longer to add another internal harness.
+
+The next step is:
+
+- give the standalone pilot kit to a second engineer
+- require them to run it from a separate repo or separate workspace
+- require them to use only:
+  - AFAL public routes
+  - provisioning output
+  - this onboarding document
+  - the standalone pilot README
+
+If that second engineer can complete the flow without needing internal runtime context, AFAL moves from:
+
+- **internally accepted external-agent sandbox**
+
+to:
+
+- **externally validated external-agent sandbox**
