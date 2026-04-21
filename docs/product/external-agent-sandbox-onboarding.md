@@ -26,6 +26,14 @@ npm run serve:sqlite-http
 
 If you want external client auth enabled for a custom launcher, the server wiring must enable the external client auth option in the SQLite HTTP runtime.
 
+For an external engineer pilot, the better setup is:
+
+- AFAL team runs the sandbox server
+- AFAL team provisions the client
+- external engineer receives only the consumer bundle and credentials
+
+That avoids conflating infrastructure setup problems with onboarding-surface problems.
+
 ---
 
 ## Provision A Sandbox Client
@@ -53,6 +61,8 @@ The script writes the client record into the shared SQLite integration database 
 - signing key
 - required auth headers
 
+When handing off to another engineer, send the output as a single bundle rather than scattered values.
+
 ---
 
 ## Current Request Auth
@@ -71,9 +81,17 @@ sha256(`${clientId}:${requestRef}:${timestamp}:${signingKey}`)
 
 This is a sandbox placeholder, not a production auth model.
 
+The external engineer should not need to derive this formula manually if they are using the standalone kit.
+If they still need to reason about the formula to get unstuck, that is feedback worth capturing.
+
 ---
 
 ## Minimum Pilot Path
+
+This section describes the minimal onboarding path.
+For the engineer-facing execution handoff, use:
+
+- [External Engineer Pilot Handoff](./external-engineer-pilot-handoff.md)
 
 ### 1. Payment
 
@@ -82,6 +100,9 @@ The first external-agent pilot should use:
 - `POST /capabilities/request-payment-approval`
 - trusted-surface approval completion
 - `POST /actions/get`
+
+For the second-engineer pilot, the first pass should stay command-line based.
+They do not need to write a fresh agent loop or a custom LLM integration.
 
 If you want to use a real LLM-backed agent loop against the sandbox-facing payment path, set `OPENROUTER_API_KEY` in `.env` and run:
 
@@ -160,6 +181,16 @@ Current callback fields can include:
   - `paymentPayeeDid`
   - `resourceProviderDid`
 
+Minimal expected flow:
+
+1. start the standalone callback receiver
+2. register the callback URLs
+3. read them back with `get` or `list`
+4. submit payment and resource requests
+5. observe callback payload arrival
+
+If any of those steps requires reading internal runtime code, the external onboarding surface is still incomplete.
+
 ---
 
 ## Current Limitations
@@ -172,6 +203,9 @@ The sandbox onboarding path does not yet provide:
 - multi-client tenant management
 
 It is only the first controlled boundary for onboarding one external agent integration pilot.
+
+It is also not yet the final package or SDK surface.
+It is the pre-package validation layer that should inform the eventual SDK or package design.
 
 ---
 
