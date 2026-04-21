@@ -13,6 +13,7 @@ The goal is to simulate what an outside team would do when consuming AFAL as a s
 For the broader handoff context, see:
 
 - [External Engineer Pilot Handoff](../../docs/product/external-engineer-pilot-handoff.md)
+- [External Engineer Message Template](../../docs/product/external-engineer-message-template.md)
 
 ## What It Covers
 

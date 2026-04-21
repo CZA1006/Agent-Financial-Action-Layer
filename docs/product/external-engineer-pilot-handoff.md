@@ -47,6 +47,7 @@ The external engineer should receive only these inputs:
    - `README.md`
    - `docs/product/external-agent-sandbox-onboarding.md`
    - `docs/product/external-agent-sandbox-acceptance-checklist.md`
+   - `docs/product/external-engineer-message-template.md`
    - `docs/specs/external-agent-auth-contract.md`
    - `docs/specs/receiver-settlement-callback-contract.md`
 
