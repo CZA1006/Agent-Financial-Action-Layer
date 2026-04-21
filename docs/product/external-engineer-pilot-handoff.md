@@ -48,6 +48,8 @@ The external engineer should receive only these inputs:
    - `docs/product/external-agent-sandbox-onboarding.md`
    - `docs/product/external-agent-sandbox-acceptance-checklist.md`
    - `docs/product/external-engineer-message-template.md`
+   - `docs/product/external-pilot-findings-template.md`
+   - `docs/product/sdk-boundary-draft.md`
    - `docs/specs/external-agent-auth-contract.md`
    - `docs/specs/receiver-settlement-callback-contract.md`
 
@@ -452,3 +454,8 @@ At that point, AFAL should start to add:
 - optional package / hosted-platform distribution paths
 
 That is the point where package-style distribution becomes credible.
+
+Use these follow-on docs when the pilot feedback comes back:
+
+- [External Pilot Findings Template](./external-pilot-findings-template.md)
+- [SDK Boundary Draft](./sdk-boundary-draft.md)

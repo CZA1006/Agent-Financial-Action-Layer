@@ -177,6 +177,12 @@ Why:
 - the remaining uncertainty is whether the current boundary is actually consumable by another engineer
 - a package surface built before that validation would formalize the wrong abstractions
 
+Operational docs for that stage:
+
+- `docs/product/external-engineer-pilot-handoff.md`
+- `docs/product/external-pilot-findings-template.md`
+- `docs/product/sdk-boundary-draft.md`
+
 ---
 
 ## Workstream 1: Trusted-Surface Callback Integration

@@ -186,6 +186,8 @@ The repo also now includes a first external pilot kit under:
 - [standalone-external-agent-pilot/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/standalone-external-agent-pilot/README.md)
 - [external-engineer-pilot-handoff.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-pilot-handoff.md)
 - [external-engineer-message-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-message-template.md)
+- [external-pilot-findings-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-pilot-findings-template.md)
+- [sdk-boundary-draft.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/sdk-boundary-draft.md)
 
 Recommended next validation step:
 
@@ -274,6 +276,11 @@ The likely future product shapes are:
 3. a hosted sandbox or managed onboarding flow for agent builders
 
 That direction makes sense for AFAL as AI infrastructure. It is just one stage too early to present the current repo itself as the finished package surface.
+
+While waiting for the first repo-external engineer feedback, use:
+
+- [External Pilot Findings Template](docs/product/external-pilot-findings-template.md)
+- [SDK Boundary Draft](docs/product/sdk-boundary-draft.md)
 
 ## Architecture At A Glance
 
