@@ -1,5 +1,6 @@
 import type { ApprovalResult } from "../../../sdk/types";
 import type { AfalAdminAuditEntry } from "../admin-audit";
+import type { ExternalAgentCallbackRegistrationOutput } from "../clients";
 import type {
   SettlementNotificationDeliveryRecord,
   SettlementNotificationOutboxWorkerStatus,
@@ -34,7 +35,10 @@ export type AfalCapability =
   | "stopNotificationWorker"
   | "runNotificationWorker"
   | "getAdminAuditEntry"
-  | "listAdminAuditEntries";
+  | "listAdminAuditEntries"
+  | "registerExternalCallback"
+  | "getExternalCallbackRegistration"
+  | "listExternalCallbackRegistrations";
 
 export interface RequestPaymentApprovalRequest {
   capability: "requestPaymentApproval";
@@ -161,6 +165,28 @@ export interface ListAdminAuditEntriesRequest {
   input?: Record<string, never>;
 }
 
+export interface RegisterExternalCallbackRequest {
+  capability: "registerExternalCallback";
+  requestRef: string;
+  input: {
+    eventTypes?: Array<"payment.settled" | "resource.settled">;
+    paymentSettlementUrl?: string;
+    resourceSettlementUrl?: string;
+  };
+}
+
+export interface GetExternalCallbackRegistrationRequest {
+  capability: "getExternalCallbackRegistration";
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
+export interface ListExternalCallbackRegistrationsRequest {
+  capability: "listExternalCallbackRegistrations";
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
 export type AfalCapabilityRequest =
   | RequestPaymentApprovalRequest
   | PaymentCapabilityRequest
@@ -262,6 +288,15 @@ export type GetAdminAuditEntryResponse = AfalApiSuccess<AfalAdminAuditEntry> | A
 export type ListAdminAuditEntriesResponse =
   | AfalApiSuccess<AfalAdminAuditEntry[]>
   | AfalApiFailure;
+export type RegisterExternalCallbackResponse =
+  | AfalApiSuccess<ExternalAgentCallbackRegistrationOutput>
+  | AfalApiFailure;
+export type GetExternalCallbackRegistrationResponse =
+  | AfalApiSuccess<ExternalAgentCallbackRegistrationOutput>
+  | AfalApiFailure;
+export type ListExternalCallbackRegistrationsResponse =
+  | AfalApiSuccess<ExternalAgentCallbackRegistrationOutput[]>
+  | AfalApiFailure;
 export type AfalCapabilityResponse =
   | AfalApiSuccess<
       | PaymentFlowOutput
@@ -280,5 +315,7 @@ export type AfalCapabilityResponse =
       | Awaited<ReturnType<AfalModuleService["runNotificationWorker"]>>
       | AfalAdminAuditEntry
       | AfalAdminAuditEntry[]
+      | ExternalAgentCallbackRegistrationOutput
+      | ExternalAgentCallbackRegistrationOutput[]
     >
   | AfalApiFailure;

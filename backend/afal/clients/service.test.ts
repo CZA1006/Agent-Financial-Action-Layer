@@ -88,3 +88,43 @@ test("external agent client service authenticates signed requests and rejects re
       error.code === "request-replay-detected"
   );
 });
+
+test("external agent client service registers callback URLs with validation", async () => {
+  const service = new ExternalAgentClientService({
+    now: () => new Date("2026-03-30T00:00:00Z"),
+  });
+
+  await service.provisionClient({
+    clientId: "client-callback",
+    tenantId: "tenant-callback",
+    agentId: "agent-callback",
+    subjectDid: "did:afal:agent:callback",
+    mandateRefs: ["mnd-0001"],
+    paymentPayeeDid: "did:afal:agent:payee-callback",
+    resourceProviderDid: "did:afal:institution:provider-callback",
+  });
+
+  const registered = await service.registerCallback("client-callback", {
+    paymentSettlementUrl: "https://receiver.example/payment",
+    resourceSettlementUrl: "https://receiver.example/resource",
+  });
+  const listed = await service.listCallbackRegistrations("client-callback");
+
+  assert.equal(registered.callbackRegistration?.paymentSettlementUrl, "https://receiver.example/payment");
+  assert.equal(
+    registered.callbackRegistration?.resourceSettlementUrl,
+    "https://receiver.example/resource"
+  );
+  assert.deepEqual(registered.callbackRegistration?.eventTypes, [
+    "payment.settled",
+    "resource.settled",
+  ]);
+  assert.equal(listed.length, 1);
+
+  await assert.rejects(
+    service.registerCallback("client-callback", {}),
+    (error: unknown) =>
+      error instanceof Error &&
+      error.name === "ExternalAgentClientValidationError"
+  );
+});

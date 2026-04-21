@@ -128,6 +128,7 @@ Reference checklist:
 
 - [External Agent Sandbox Acceptance Checklist](./external-agent-sandbox-acceptance-checklist.md)
 - [Sample External Agent Pilot Kit](../../samples/README.md)
+- [Standalone External Agent Pilot](../../samples/standalone-external-agent-pilot/README.md)
 
 ### 2. Resource
 
@@ -141,7 +142,12 @@ After payment is stable, extend to:
 
 ## Callback Registration
 
-The current sandbox onboarding model supports callback registration inside the provisioned client record.
+The sandbox onboarding model now supports callback registration through authenticated
+integration routes:
+
+- `POST /integrations/callbacks/register`
+- `POST /integrations/callbacks/get`
+- `POST /integrations/callbacks/list`
 
 Current callback fields can include:
 
@@ -151,15 +157,12 @@ Current callback fields can include:
   - `paymentPayeeDid`
   - `resourceProviderDid`
 
-This is currently registry-backed, not API-driven.
-
 ---
 
 ## Current Limitations
 
 The sandbox onboarding path does not yet provide:
 
-- self-service registration APIs
 - callback verification handshake
 - production auth
 - production-grade replay resistance

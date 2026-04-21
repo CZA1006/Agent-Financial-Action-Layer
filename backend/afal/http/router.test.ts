@@ -779,4 +779,122 @@ describe("AFAL HTTP transport contract", () => {
     assert.equal(authorized.statusCode, 200);
     assert.equal(authorized.body.ok, true);
   });
+
+  test("registers and reads external callback registrations for an authenticated client", async () => {
+    const externalClientAuth = new ExternalAgentClientService({
+      now: () => new Date("2026-03-30T00:00:10Z"),
+    });
+    await externalClientAuth.provisionClient({
+      clientId: "client-http-callback",
+      tenantId: "tenant-http-callback",
+      agentId: "agent-http-callback",
+      subjectDid: paymentFlowFixtures.paymentIntentCreated.payer.agentDid,
+      mandateRefs: [paymentFlowFixtures.paymentIntentCreated.mandateRef],
+      paymentPayeeDid: "did:afal:agent:payee-http-callback",
+      resourceProviderDid: "did:afal:institution:provider-http-callback",
+    });
+    const router = createAfalHttpRouter({
+      externalClientAuth: {
+        service: externalClientAuth,
+      },
+    });
+
+    const registerRequestRef = "req-http-client-callback-register-001";
+    const registerHeaders = await externalClientAuth.createSignedHeaders({
+      clientId: "client-http-callback",
+      requestRef: registerRequestRef,
+      timestamp: "2026-03-30T00:00:00Z",
+    });
+    const registerResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.registerExternalCallback,
+      headers: registerHeaders,
+      body: {
+        requestRef: registerRequestRef,
+        input: {
+          paymentSettlementUrl: "https://receiver.example/payment",
+          resourceSettlementUrl: "https://receiver.example/resource",
+        },
+      },
+    });
+
+    const getRequestRef = "req-http-client-callback-get-001";
+    const getHeaders = await externalClientAuth.createSignedHeaders({
+      clientId: "client-http-callback",
+      requestRef: getRequestRef,
+      timestamp: "2026-03-30T00:00:01Z",
+    });
+    const getResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.getExternalCallbackRegistration,
+      headers: getHeaders,
+      body: {
+        requestRef: getRequestRef,
+        input: {},
+      },
+    });
+
+    const listRequestRef = "req-http-client-callback-list-001";
+    const listHeaders = await externalClientAuth.createSignedHeaders({
+      clientId: "client-http-callback",
+      requestRef: listRequestRef,
+      timestamp: "2026-03-30T00:00:02Z",
+    });
+    const listResponse = await router.handle({
+      method: "POST",
+      path: AFAL_HTTP_ROUTES.listExternalCallbackRegistrations,
+      headers: listHeaders,
+      body: {
+        requestRef: listRequestRef,
+        input: {},
+      },
+    });
+
+    assert.equal(registerResponse.statusCode, 200);
+    assert.equal(getResponse.statusCode, 200);
+    assert.equal(listResponse.statusCode, 200);
+    assert.equal(registerResponse.body.ok, true);
+    assert.equal(getResponse.body.ok, true);
+    assert.equal(listResponse.body.ok, true);
+
+    if (
+      registerResponse.body.ok &&
+      registerResponse.body.capability === "registerExternalCallback" &&
+      "callbackRegistration" in registerResponse.body.data
+    ) {
+      assert.equal(
+        registerResponse.body.data.callbackRegistration?.paymentSettlementUrl,
+        "https://receiver.example/payment"
+      );
+      assert.equal(
+        registerResponse.body.data.callbackRegistration?.resourceSettlementUrl,
+        "https://receiver.example/resource"
+      );
+    } else {
+      assert.fail("expected registerExternalCallback success response");
+    }
+
+    if (
+      getResponse.body.ok &&
+      getResponse.body.capability === "getExternalCallbackRegistration" &&
+      "callbackRegistration" in getResponse.body.data
+    ) {
+      assert.deepEqual(getResponse.body.data.callbackRegistration?.eventTypes, [
+        "payment.settled",
+        "resource.settled",
+      ]);
+    } else {
+      assert.fail("expected getExternalCallbackRegistration success response");
+    }
+
+    if (
+      listResponse.body.ok &&
+      listResponse.body.capability === "listExternalCallbackRegistrations" &&
+      Array.isArray(listResponse.body.data)
+    ) {
+      assert.equal(listResponse.body.data.length, 1);
+    } else {
+      assert.fail("expected listExternalCallbackRegistrations success response");
+    }
+  });
 });

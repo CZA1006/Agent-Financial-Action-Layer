@@ -20,6 +20,8 @@ build/
 .afal-sqlite-http-data/
 .afal-*-artifacts/
 .afal-callback-sample/
+samples/standalone-external-agent-pilot/.env
+samples/standalone-external-agent-pilot/artifacts/
 
 # IDE
 .vscode/*

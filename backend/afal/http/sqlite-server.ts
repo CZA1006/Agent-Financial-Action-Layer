@@ -69,6 +69,9 @@ function inferCapability(
   | "requestResourceApproval"
   | "settleResourceUsage"
   | "getActionStatus"
+  | "registerExternalCallback"
+  | "getExternalCallbackRegistration"
+  | "listExternalCallbackRegistrations"
   | "getNotificationDelivery"
   | "listNotificationDeliveries"
   | "getNotificationWorkerStatus"
@@ -93,6 +96,15 @@ function inferCapability(
   }
   if (pathname === AFAL_HTTP_ROUTES.getActionStatus) {
     return "getActionStatus";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.registerExternalCallback) {
+    return "registerExternalCallback";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.getExternalCallbackRegistration) {
+    return "getExternalCallbackRegistration";
+  }
+  if (pathname === AFAL_HTTP_ROUTES.listExternalCallbackRegistrations) {
+    return "listExternalCallbackRegistrations";
   }
   if (pathname === AFAL_HTTP_ROUTES.getNotificationDelivery) {
     return "getNotificationDelivery";

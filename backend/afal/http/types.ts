@@ -6,10 +6,13 @@ import type {
   GetAdminAuditEntryResponse,
   GetActionStatusResponse,
   GetApprovalSessionResponse,
+  GetExternalCallbackRegistrationResponse,
   GetNotificationDeliveryResponse,
   GetNotificationWorkerStatusResponse,
   RequestPaymentApprovalResponse,
+  RegisterExternalCallbackResponse,
   ListAdminAuditEntriesResponse,
+  ListExternalCallbackRegistrationsResponse,
   ListNotificationDeliveriesResponse,
   PaymentCapabilityResponse,
   RequestResourceApprovalResponse,
@@ -28,6 +31,9 @@ export const AFAL_HTTP_ROUTES = {
   requestResourceApproval: "/capabilities/request-resource-approval",
   settleResourceUsage: "/capabilities/settle-resource-usage",
   getActionStatus: "/actions/get",
+  registerExternalCallback: "/integrations/callbacks/register",
+  getExternalCallbackRegistration: "/integrations/callbacks/get",
+  listExternalCallbackRegistrations: "/integrations/callbacks/list",
   getNotificationDelivery: "/notification-deliveries/get",
   listNotificationDeliveries: "/notification-deliveries/list",
   redeliverNotification: "/notification-deliveries/redeliver",
@@ -77,6 +83,25 @@ export interface GetActionStatusHttpBody {
   input: {
     actionRef: string;
   };
+}
+
+export interface RegisterExternalCallbackHttpBody {
+  requestRef: string;
+  input: {
+    eventTypes?: Array<"payment.settled" | "resource.settled">;
+    paymentSettlementUrl?: string;
+    resourceSettlementUrl?: string;
+  };
+}
+
+export interface GetExternalCallbackRegistrationHttpBody {
+  requestRef: string;
+  input?: Record<string, never>;
+}
+
+export interface ListExternalCallbackRegistrationsHttpBody {
+  requestRef: string;
+  input?: Record<string, never>;
 }
 
 export interface GetNotificationDeliveryHttpBody {
@@ -143,6 +168,9 @@ export type AfalHttpBody =
   | RequestResourceApprovalHttpBody
   | SettleResourceUsageHttpBody
   | GetActionStatusHttpBody
+  | RegisterExternalCallbackHttpBody
+  | GetExternalCallbackRegistrationHttpBody
+  | ListExternalCallbackRegistrationsHttpBody
   | GetNotificationDeliveryHttpBody
   | ListNotificationDeliveriesHttpBody
   | NotificationWorkerCommandHttpBody
@@ -179,6 +207,9 @@ export type AfalHttpSuccessBody =
   | RequestResourceApprovalResponse
   | ResourceCapabilityResponse
   | GetActionStatusResponse
+  | RegisterExternalCallbackResponse
+  | GetExternalCallbackRegistrationResponse
+  | ListExternalCallbackRegistrationsResponse
   | GetNotificationDeliveryResponse
   | ListNotificationDeliveriesResponse
   | GetNotificationWorkerStatusResponse

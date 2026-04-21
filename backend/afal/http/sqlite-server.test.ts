@@ -208,3 +208,103 @@ test("SQLite AFAL HTTP server adapter enforces external client auth on public ro
     await rm(dir, { recursive: true, force: true });
   }
 });
+
+test("SQLite AFAL HTTP server adapter registers and lists external callback registrations", async () => {
+  const dir = await mkdtemp(join(tmpdir(), "afal-sqlite-http-server-callbacks-"));
+
+  try {
+    const sqlite = createSeededSqliteAfalHttpServer(dir, {
+      externalClientAuth: {
+        enabled: true,
+      },
+    });
+    const clientService = new ExternalAgentClientService({
+      store: new SqliteExternalAgentClientStore({
+        filePath: sqlite.paths.afalExternalClients,
+        seed: {
+          clients: [],
+          replayRecords: [],
+        },
+      }),
+      now: () => new Date("2026-03-30T00:00:10Z"),
+    });
+    await clientService.provisionClient({
+      clientId: "client-sqlite-callback-001",
+      tenantId: "tenant-sqlite-callback-001",
+      agentId: "agent-sqlite-callback-001",
+      subjectDid: paymentFlowFixtures.paymentIntentCreated.payer.agentDid,
+      mandateRefs: [paymentFlowFixtures.paymentIntentCreated.mandateRef],
+      paymentPayeeDid: "did:afal:agent:payee-sqlite-callback",
+      resourceProviderDid: "did:afal:institution:provider-sqlite-callback",
+    });
+
+    const registerRequestRef = "req-http-client-sqlite-callback-register-001";
+    const registerTimestamp = new Date().toISOString();
+    const registerHeaders = await clientService.createSignedHeaders({
+      clientId: "client-sqlite-callback-001",
+      requestRef: registerRequestRef,
+      timestamp: registerTimestamp,
+    });
+    const registerResponse = await handleAfalNodeHttpRequest(sqlite, {
+      method: "POST",
+      url: AFAL_HTTP_ROUTES.registerExternalCallback,
+      headers: registerHeaders,
+      bodyText: JSON.stringify({
+        requestRef: registerRequestRef,
+        input: {
+          paymentSettlementUrl: "https://receiver.example/payment",
+          resourceSettlementUrl: "https://receiver.example/resource",
+        },
+      }),
+    });
+
+    const listRequestRef = "req-http-client-sqlite-callback-list-001";
+    const listTimestamp = new Date().toISOString();
+    const listHeaders = await clientService.createSignedHeaders({
+      clientId: "client-sqlite-callback-001",
+      requestRef: listRequestRef,
+      timestamp: listTimestamp,
+    });
+    const listResponse = await handleAfalNodeHttpRequest(sqlite, {
+      method: "POST",
+      url: AFAL_HTTP_ROUTES.listExternalCallbackRegistrations,
+      headers: listHeaders,
+      bodyText: JSON.stringify({
+        requestRef: listRequestRef,
+        input: {},
+      }),
+    });
+
+    const registerBody = JSON.parse(registerResponse.bodyText) as {
+      ok: boolean;
+      data?: {
+        callbackRegistration?: {
+          paymentSettlementUrl?: string;
+          resourceSettlementUrl?: string;
+        };
+      };
+    };
+    const listBody = JSON.parse(listResponse.bodyText) as {
+      ok: boolean;
+      data?: Array<{ clientId: string }>;
+    };
+
+    assert.equal(registerResponse.statusCode, 200);
+    assert.equal(registerBody.ok, true);
+    assert.equal(
+      registerBody.data?.callbackRegistration?.paymentSettlementUrl,
+      "https://receiver.example/payment"
+    );
+    assert.equal(
+      registerBody.data?.callbackRegistration?.resourceSettlementUrl,
+      "https://receiver.example/resource"
+    );
+
+    assert.equal(listResponse.statusCode, 200);
+    assert.equal(listBody.ok, true);
+    assert.equal(listBody.data?.length, 1);
+    assert.equal(listBody.data?.[0]?.clientId, "client-sqlite-callback-001");
+  } finally {
+    await rm(dir, { recursive: true, force: true });
+  }
+});

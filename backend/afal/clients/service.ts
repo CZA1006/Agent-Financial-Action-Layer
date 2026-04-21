@@ -2,6 +2,7 @@ import { createHash, randomBytes } from "node:crypto";
 
 import type { Did, IdRef } from "../../../sdk/types";
 import type {
+  ExternalAgentCallbackRegistration,
   ExternalAgentClientRecord,
   ExternalAgentClientStore,
   ExternalAgentEventType,
@@ -41,6 +42,16 @@ export class ExternalAgentAuthError extends Error {
   }
 }
 
+export class ExternalAgentClientValidationError extends Error {
+  readonly code = "callback-registration-invalid";
+  readonly statusCode = 400;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "ExternalAgentClientValidationError";
+  }
+}
+
 export interface ExternalAgentAuthenticationRequest {
   clientId?: IdRef;
   requestRef: IdRef;
@@ -69,6 +80,23 @@ export interface ExternalAgentProvisioningInput {
   paymentSettlementUrl?: string;
   resourceSettlementUrl?: string;
   eventTypes?: ExternalAgentEventType[];
+}
+
+export interface ExternalAgentCallbackRegistrationOutput {
+  clientId: IdRef;
+  tenantId: IdRef;
+  agentId: IdRef;
+  subjectDid: Did;
+  paymentPayeeDid?: Did;
+  resourceProviderDid?: Did;
+  callbackRegistration?: ExternalAgentCallbackRegistration;
+}
+
+export interface ExternalAgentCallbackRegistrationInput {
+  eventTypes?: ExternalAgentEventType[];
+  paymentSettlementUrl?: string;
+  resourceSettlementUrl?: string;
+  verifiedAt?: string;
 }
 
 export class ExternalAgentClientService {
@@ -137,6 +165,40 @@ export class ExternalAgentClientService {
 
     await this.store.putClient(client);
     return clone(client);
+  }
+
+  async getCallbackRegistration(
+    clientId: IdRef
+  ): Promise<ExternalAgentCallbackRegistrationOutput> {
+    const client = await this.getClient(clientId);
+    return this.toCallbackRegistrationOutput(client);
+  }
+
+  async listCallbackRegistrations(
+    clientId: IdRef
+  ): Promise<ExternalAgentCallbackRegistrationOutput[]> {
+    const registration = await this.getCallbackRegistration(clientId);
+    return registration.callbackRegistration ? [registration] : [];
+  }
+
+  async registerCallback(
+    clientId: IdRef,
+    input: ExternalAgentCallbackRegistrationInput
+  ): Promise<ExternalAgentCallbackRegistrationOutput> {
+    const client = await this.getClient(clientId);
+    const now = this.now().toISOString();
+    const callbackRegistration = this.normalizeCallbackRegistration(client, input);
+    const updatedClient: ExternalAgentClientRecord = {
+      ...client,
+      callbackRegistration: {
+        ...callbackRegistration,
+        verifiedAt: input.verifiedAt ?? callbackRegistration.verifiedAt,
+      },
+      updatedAt: now,
+    };
+
+    await this.store.putClient(updatedClient);
+    return this.toCallbackRegistrationOutput(updatedClient);
   }
 
   async authenticateRequest(
@@ -259,6 +321,76 @@ export class ExternalAgentClientService {
       "x-afal-request-signature": sha256(
         `${client.clientId}:${args.requestRef}:${timestamp}:${client.auth.signingKey}`
       ),
+    };
+  }
+
+  private normalizeCallbackRegistration(
+    client: ExternalAgentClientRecord,
+    input: ExternalAgentCallbackRegistrationInput
+  ): ExternalAgentCallbackRegistration {
+    if (!input.paymentSettlementUrl && !input.resourceSettlementUrl) {
+      throw new ExternalAgentClientValidationError(
+        "At least one callback URL must be provided for payment or resource settlement"
+      );
+    }
+
+    if (input.paymentSettlementUrl && !client.paymentPayeeDid) {
+      throw new ExternalAgentClientValidationError(
+        `Client "${client.clientId}" is not provisioned for payment receiver callbacks`
+      );
+    }
+
+    if (input.resourceSettlementUrl && !client.resourceProviderDid) {
+      throw new ExternalAgentClientValidationError(
+        `Client "${client.clientId}" is not provisioned for resource receiver callbacks`
+      );
+    }
+
+    const inferredEventTypes = [
+      input.paymentSettlementUrl ? "payment.settled" : undefined,
+      input.resourceSettlementUrl ? "resource.settled" : undefined,
+    ].filter(Boolean) as ExternalAgentEventType[];
+    const eventTypes = input.eventTypes ?? inferredEventTypes;
+
+    if (eventTypes.length === 0) {
+      throw new ExternalAgentClientValidationError(
+        "callback registration eventTypes cannot be empty"
+      );
+    }
+
+    if (input.paymentSettlementUrl === undefined && eventTypes.includes("payment.settled")) {
+      throw new ExternalAgentClientValidationError(
+        'payment.settled requires "paymentSettlementUrl"'
+      );
+    }
+
+    if (input.resourceSettlementUrl === undefined && eventTypes.includes("resource.settled")) {
+      throw new ExternalAgentClientValidationError(
+        'resource.settled requires "resourceSettlementUrl"'
+      );
+    }
+
+    return {
+      eventTypes: [...eventTypes],
+      paymentSettlementUrl: input.paymentSettlementUrl,
+      resourceSettlementUrl: input.resourceSettlementUrl,
+      verifiedAt: input.verifiedAt,
+    };
+  }
+
+  private toCallbackRegistrationOutput(
+    client: ExternalAgentClientRecord
+  ): ExternalAgentCallbackRegistrationOutput {
+    return {
+      clientId: client.clientId,
+      tenantId: client.tenantId,
+      agentId: client.agentId,
+      subjectDid: client.subjectDid,
+      paymentPayeeDid: client.paymentPayeeDid,
+      resourceProviderDid: client.resourceProviderDid,
+      callbackRegistration: client.callbackRegistration
+        ? clone(client.callbackRegistration)
+        : undefined,
     };
   }
 }

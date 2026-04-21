@@ -104,6 +104,22 @@ npm run provision:external-agent-sandbox -- \
   --mandate-ref mnd-0001
 ```
 
+Once the client is provisioned, callback URLs can be managed over the authenticated sandbox API:
+
+```bash
+curl -s http://127.0.0.1:3213/integrations/callbacks/register \
+  -H 'content-type: application/json' \
+  -H 'x-afal-client-id: client-demo-001' \
+  -H 'x-afal-request-timestamp: <iso-timestamp>' \
+  -H 'x-afal-request-signature: <sha256-signature>' \
+  -d '{
+    "requestRef": "req-callback-register-001",
+    "input": {
+      "paymentSettlementUrl": "http://127.0.0.1:4318/callbacks/action-settled"
+    }
+  }'
+```
+
 If you want to run one real LLM-backed sandbox payment pilot with OpenRouter:
 
 ```bash
@@ -166,6 +182,7 @@ This acceptance currently covers:
 The repo also now includes a first external pilot kit under:
 
 - [samples/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/README.md)
+- [standalone-external-agent-pilot/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/standalone-external-agent-pilot/README.md)
 
 If you want to show the local HTTP capability surface:
 

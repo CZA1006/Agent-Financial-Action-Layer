@@ -2,12 +2,22 @@
 
 This directory contains the first external-agent pilot kit samples.
 
+For a repo-external / extractable consumer kit, use:
+
+- [standalone-external-agent-pilot/README.md](./standalone-external-agent-pilot/README.md)
+
 ## External Agent Client
 
 - [payment-client.ts](./external-agent-client/payment-client.ts)
 - [resource-client.ts](./external-agent-client/resource-client.ts)
 
 These scripts show the minimum signed-request path into AFAL's public API.
+
+They are intended to be used alongside the sandbox callback registration routes:
+
+- `POST /integrations/callbacks/register`
+- `POST /integrations/callbacks/get`
+- `POST /integrations/callbacks/list`
 
 Required environment:
 

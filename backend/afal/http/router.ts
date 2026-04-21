@@ -4,7 +4,11 @@ import {
   type AfalApiServiceAdapter,
 } from "../api";
 import type { Did } from "../../../sdk/types";
-import type { ExternalAgentClientService } from "../clients";
+import type {
+  ExternalAgentCallbackRegistrationInput,
+  ExternalAgentClientRecord,
+  ExternalAgentClientService,
+} from "../clients";
 import type { PaymentFlowOrchestrator, ResourceFlowOrchestrator } from "../interfaces";
 import type {
   ApplyApprovalResultHttpBody,
@@ -15,9 +19,12 @@ import type {
   GetAdminAuditEntryHttpBody,
   GetActionStatusHttpBody,
   GetApprovalSessionHttpBody,
+  GetExternalCallbackRegistrationHttpBody,
   GetNotificationDeliveryHttpBody,
   ListAdminAuditEntriesHttpBody,
+  ListExternalCallbackRegistrationsHttpBody,
   ListNotificationDeliveriesHttpBody,
+  RegisterExternalCallbackHttpBody,
   RedeliverNotificationHttpBody,
   ResumeApprovedActionHttpBody,
   ResumeApprovalSessionHttpBody,
@@ -47,6 +54,9 @@ function buildTransportError(args: {
     | "getNotificationWorkerStatus"
     | "getAdminAuditEntry"
     | "listAdminAuditEntries"
+    | "registerExternalCallback"
+    | "getExternalCallbackRegistration"
+    | "listExternalCallbackRegistrations"
     | "getApprovalSession"
     | "applyApprovalResult"
     | "redeliverNotification"
@@ -62,7 +72,8 @@ function buildTransportError(args: {
     | "not-found"
     | "operator-auth-required"
     | "client-auth-required"
-    | "subject-scope-violation";
+    | "subject-scope-violation"
+    | "request-replay-detected";
   message: string;
 }): AfalApiFailure {
   return {
@@ -83,7 +94,10 @@ function buildClientAuthError(args: {
     | "executePayment"
     | "requestResourceApproval"
     | "settleResourceUsage"
-    | "getActionStatus";
+    | "getActionStatus"
+    | "registerExternalCallback"
+    | "getExternalCallbackRegistration"
+    | "listExternalCallbackRegistrations";
   requestRef: string;
   statusCode: 403 | 409;
   code: "client-auth-required" | "subject-scope-violation" | "request-replay-detected";
@@ -189,6 +203,44 @@ function isGetActionStatusBody(body: unknown): body is GetActionStatusHttpBody {
     typeof body.requestRef === "string" &&
     isObjectRecord(body.input) &&
     typeof body.input.actionRef === "string"
+  );
+}
+
+function isRegisterExternalCallbackBody(body: unknown): body is RegisterExternalCallbackHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    isObjectRecord(body.input) &&
+    (body.input.eventTypes === undefined ||
+      (Array.isArray(body.input.eventTypes) &&
+        body.input.eventTypes.every(
+          (eventType) =>
+            eventType === "payment.settled" || eventType === "resource.settled"
+        ))) &&
+    (body.input.paymentSettlementUrl === undefined ||
+      typeof body.input.paymentSettlementUrl === "string") &&
+    (body.input.resourceSettlementUrl === undefined ||
+      typeof body.input.resourceSettlementUrl === "string")
+  );
+}
+
+function isGetExternalCallbackRegistrationBody(
+  body: unknown
+): body is GetExternalCallbackRegistrationHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    (body.input === undefined || isObjectRecord(body.input))
+  );
+}
+
+function isListExternalCallbackRegistrationsBody(
+  body: unknown
+): body is ListExternalCallbackRegistrationsHttpBody {
+  return (
+    isObjectRecord(body) &&
+    typeof body.requestRef === "string" &&
+    (body.input === undefined || isObjectRecord(body.input))
   );
 }
 
@@ -329,30 +381,33 @@ export function createAfalHttpRouter(args?: {
   const externalClientSignatureHeaderName =
     args?.externalClientAuth?.signatureHeaderName ?? "x-afal-request-signature";
 
-  async function ensureExternalClientAuthorization(args: {
+  async function authenticateExternalClientRequest(args: {
     request: AfalHttpRequest;
     capability:
       | "requestPaymentApproval"
       | "executePayment"
       | "requestResourceApproval"
       | "settleResourceUsage"
-      | "getActionStatus";
+      | "getActionStatus"
+      | "registerExternalCallback"
+      | "getExternalCallbackRegistration"
+      | "listExternalCallbackRegistrations";
     requestRef: string;
     subjectDid?: Did;
-  }): Promise<AfalApiFailure | null> {
+  }): Promise<{ client: ExternalAgentClientRecord } | { failure: AfalApiFailure } | null> {
     if (!externalClientAuthService) {
       return null;
     }
 
     try {
-      await externalClientAuthService.authenticateRequest({
+      const client = await externalClientAuthService.authenticateRequest({
         clientId: getHeaderValue(args.request.headers, externalClientIdHeaderName),
         requestRef: args.requestRef,
         timestamp: getHeaderValue(args.request.headers, externalClientTimestampHeaderName),
         signature: getHeaderValue(args.request.headers, externalClientSignatureHeaderName),
         subjectDid: args.subjectDid,
       });
-      return null;
+      return { client };
     } catch (error) {
       if (
         error &&
@@ -361,7 +416,7 @@ export function createAfalHttpRouter(args?: {
         "statusCode" in error &&
         "message" in error
       ) {
-        return buildClientAuthError({
+        const failure = buildClientAuthError({
           capability: args.capability,
           requestRef: args.requestRef,
           statusCode: (error as { statusCode: 403 | 409 }).statusCode,
@@ -373,6 +428,7 @@ export function createAfalHttpRouter(args?: {
           }).code,
           message: (error as { message: string }).message,
         });
+        return { failure };
       }
 
       throw error;
@@ -417,14 +473,14 @@ export function createAfalHttpRouter(args?: {
           return buildJsonResponse(mismatch.statusCode, mismatch);
         }
 
-        const clientAuthFailure = await ensureExternalClientAuthorization({
+        const clientAuth = await authenticateExternalClientRequest({
           request,
           capability: "executePayment",
           requestRef: request.body.requestRef,
           subjectDid: request.body.input.intent.payer.agentDid,
         });
-        if (clientAuthFailure) {
-          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
+        if (clientAuth && "failure" in clientAuth) {
+          return buildJsonResponse(clientAuth.failure.statusCode, clientAuth.failure);
         }
 
         const response = await apiHandlers.handleExecutePayment({
@@ -471,14 +527,14 @@ export function createAfalHttpRouter(args?: {
           return buildJsonResponse(mismatch.statusCode, mismatch);
         }
 
-        const clientAuthFailure = await ensureExternalClientAuthorization({
+        const clientAuth = await authenticateExternalClientRequest({
           request,
           capability: "requestPaymentApproval",
           requestRef: request.body.requestRef,
           subjectDid: request.body.input.intent.payer.agentDid,
         });
-        if (clientAuthFailure) {
-          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
+        if (clientAuth && "failure" in clientAuth) {
+          return buildJsonResponse(clientAuth.failure.statusCode, clientAuth.failure);
         }
 
         const response = await apiHandlers.handleRequestPaymentApproval({
@@ -525,14 +581,14 @@ export function createAfalHttpRouter(args?: {
           return buildJsonResponse(mismatch.statusCode, mismatch);
         }
 
-        const clientAuthFailure = await ensureExternalClientAuthorization({
+        const clientAuth = await authenticateExternalClientRequest({
           request,
           capability: "settleResourceUsage",
           requestRef: request.body.requestRef,
           subjectDid: request.body.input.intent.requester.agentDid,
         });
-        if (clientAuthFailure) {
-          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
+        if (clientAuth && "failure" in clientAuth) {
+          return buildJsonResponse(clientAuth.failure.statusCode, clientAuth.failure);
         }
 
         const response = await apiHandlers.handleSettleResourceUsage({
@@ -579,14 +635,14 @@ export function createAfalHttpRouter(args?: {
           return buildJsonResponse(mismatch.statusCode, mismatch);
         }
 
-        const clientAuthFailure = await ensureExternalClientAuthorization({
+        const clientAuth = await authenticateExternalClientRequest({
           request,
           capability: "requestResourceApproval",
           requestRef: request.body.requestRef,
           subjectDid: request.body.input.intent.requester.agentDid,
         });
-        if (clientAuthFailure) {
-          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
+        if (clientAuth && "failure" in clientAuth) {
+          return buildJsonResponse(clientAuth.failure.statusCode, clientAuth.failure);
         }
 
         const response = await apiHandlers.handleRequestResourceApproval({
@@ -622,13 +678,13 @@ export function createAfalHttpRouter(args?: {
             })
           );
         }
-        const clientAuthFailure = await ensureExternalClientAuthorization({
+        const clientAuth = await authenticateExternalClientRequest({
           request,
           capability: "getActionStatus",
           requestRef: request.body.requestRef,
         });
-        if (clientAuthFailure) {
-          return buildJsonResponse(clientAuthFailure.statusCode, clientAuthFailure);
+        if (clientAuth && "failure" in clientAuth) {
+          return buildJsonResponse(clientAuth.failure.statusCode, clientAuth.failure);
         }
         const response = await apiHandlers.handleGetActionStatus({
           capability: "getActionStatus",
@@ -636,6 +692,193 @@ export function createAfalHttpRouter(args?: {
           input: request.body.input,
         });
         return buildJsonResponse(response.statusCode, response);
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.registerExternalCallback) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "registerExternalCallback",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "registerExternalCallback transport only supports POST",
+            })
+          );
+        }
+        if (!isRegisterExternalCallbackBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "registerExternalCallback",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message:
+                "registerExternalCallback request body must include requestRef and callback input",
+            })
+          );
+        }
+        const clientAuth = await authenticateExternalClientRequest({
+          request,
+          capability: "registerExternalCallback",
+          requestRef: request.body.requestRef,
+        });
+        if (!clientAuth) {
+          const failure = buildTransportError({
+            capability: "registerExternalCallback",
+            requestRef: request.body.requestRef,
+            statusCode: 403,
+            code: "client-auth-required",
+            message: "External client auth is not enabled for callback registration",
+          });
+          return buildJsonResponse(failure.statusCode, failure);
+        }
+        if ("failure" in clientAuth) {
+          return buildJsonResponse(clientAuth.failure.statusCode, clientAuth.failure);
+        }
+        try {
+          const data = await externalClientAuthService!.registerCallback(
+            clientAuth.client.clientId,
+            request.body.input as ExternalAgentCallbackRegistrationInput
+          );
+          return buildJsonResponse(200, {
+            ok: true,
+            capability: "registerExternalCallback",
+            requestRef: request.body.requestRef,
+            statusCode: 200,
+            data,
+          });
+        } catch (error) {
+          if (
+            error &&
+            typeof error === "object" &&
+            "statusCode" in error &&
+            (error as { statusCode: number }).statusCode === 400 &&
+            "message" in error
+          ) {
+            const failure = buildTransportError({
+              capability: "registerExternalCallback",
+              requestRef: request.body.requestRef,
+              statusCode: 400,
+              code: "bad-request",
+              message: (error as { message: string }).message,
+            });
+            return buildJsonResponse(failure.statusCode, failure);
+          }
+          throw error;
+        }
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.getExternalCallbackRegistration) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getExternalCallbackRegistration",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "getExternalCallbackRegistration transport only supports POST",
+            })
+          );
+        }
+        if (!isGetExternalCallbackRegistrationBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "getExternalCallbackRegistration",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "getExternalCallbackRegistration request body must include requestRef",
+            })
+          );
+        }
+        const clientAuth = await authenticateExternalClientRequest({
+          request,
+          capability: "getExternalCallbackRegistration",
+          requestRef: request.body.requestRef,
+        });
+        if (!clientAuth) {
+          const failure = buildTransportError({
+            capability: "getExternalCallbackRegistration",
+            requestRef: request.body.requestRef,
+            statusCode: 403,
+            code: "client-auth-required",
+            message: "External client auth is not enabled for callback registration",
+          });
+          return buildJsonResponse(failure.statusCode, failure);
+        }
+        if ("failure" in clientAuth) {
+          return buildJsonResponse(clientAuth.failure.statusCode, clientAuth.failure);
+        }
+        const data = await externalClientAuthService!.getCallbackRegistration(
+          clientAuth.client.clientId
+        );
+        return buildJsonResponse(200, {
+          ok: true,
+          capability: "getExternalCallbackRegistration",
+          requestRef: request.body.requestRef,
+          statusCode: 200,
+          data,
+        });
+      }
+
+      if (request.path === AFAL_HTTP_ROUTES.listExternalCallbackRegistrations) {
+        if (request.method !== "POST") {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "listExternalCallbackRegistrations",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "listExternalCallbackRegistrations transport only supports POST",
+            })
+          );
+        }
+        if (!isListExternalCallbackRegistrationsBody(request.body)) {
+          return buildJsonResponse(
+            400,
+            buildTransportError({
+              capability: "listExternalCallbackRegistrations",
+              requestRef: "unknown",
+              statusCode: 400,
+              code: "bad-request",
+              message: "listExternalCallbackRegistrations request body must include requestRef",
+            })
+          );
+        }
+        const clientAuth = await authenticateExternalClientRequest({
+          request,
+          capability: "listExternalCallbackRegistrations",
+          requestRef: request.body.requestRef,
+        });
+        if (!clientAuth) {
+          const failure = buildTransportError({
+            capability: "listExternalCallbackRegistrations",
+            requestRef: request.body.requestRef,
+            statusCode: 403,
+            code: "client-auth-required",
+            message: "External client auth is not enabled for callback registration",
+          });
+          return buildJsonResponse(failure.statusCode, failure);
+        }
+        if ("failure" in clientAuth) {
+          return buildJsonResponse(clientAuth.failure.statusCode, clientAuth.failure);
+        }
+        const data = await externalClientAuthService!.listCallbackRegistrations(
+          clientAuth.client.clientId
+        );
+        return buildJsonResponse(200, {
+          ok: true,
+          capability: "listExternalCallbackRegistrations",
+          requestRef: request.body.requestRef,
+          statusCode: 200,
+          data,
+        });
       }
 
       if (request.path === AFAL_HTTP_ROUTES.getNotificationDelivery) {
