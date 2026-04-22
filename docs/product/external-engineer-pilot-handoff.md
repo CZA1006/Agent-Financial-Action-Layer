@@ -51,6 +51,7 @@ The external engineer should receive only these inputs:
 2. one provisioned sandbox client bundle
 3. the standalone pilot kit:
    - `samples/standalone-external-agent-pilot/`
+   - or the exported skeleton from `npm run export:external-agent-pilot`
 4. these docs:
    - `README.md`
    - `docs/product/external-agent-sandbox-onboarding.md`
@@ -58,6 +59,8 @@ The external engineer should receive only these inputs:
    - `docs/product/external-engineer-message-template.md`
    - `docs/product/external-pilot-findings-template.md`
    - `docs/product/sdk-boundary-draft.md`
+   - `docs/product/external-agent-pilot-export-validation.md`
+   - `docs/product/external-agent-pilot-repo-external-runbook.md`
    - `docs/specs/external-agent-auth-contract.md`
    - `docs/specs/receiver-settlement-callback-contract.md`
 
@@ -137,6 +140,14 @@ AFAL_RESOURCE_BUDGET_REF=budg-res-001
 AFAL_RESOURCE_QUOTA_REF=quota-001
 AFAL_PAYMENT_CALLBACK_URL=http://127.0.0.1:3401/callbacks/action-settled
 AFAL_RESOURCE_CALLBACK_URL=http://127.0.0.1:3401/callbacks/action-settled
+```
+
+The AFAL team can generate that `.env` text directly from the provisioning JSON bundle with:
+
+```bash
+npm run render:external-agent-bundle-env -- \
+  --input /tmp/afal-external-bundle.json \
+  --output /tmp/afal-external-agent.env
 ```
 
 Optional but useful:

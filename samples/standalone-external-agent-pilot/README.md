@@ -15,6 +15,25 @@ For the broader handoff context, see:
 - [External Engineer Pilot Handoff](../../docs/product/external-engineer-pilot-handoff.md)
 - [External Engineer Message Template](../../docs/product/external-engineer-message-template.md)
 
+If you want a repo-external copy with only the consumer-facing files, export it from the repo root:
+
+```bash
+npm run export:external-agent-pilot
+```
+
+That writes:
+
+- `dist/standalone-external-agent-pilot-skeleton/`
+
+The exported skeleton contains:
+
+- `.env.example`
+- `.gitignore`
+- `README.md`
+- `package.json`
+- `tsconfig.json`
+- `src/`
+
 ## What It Covers
 
 - signed external-client requests

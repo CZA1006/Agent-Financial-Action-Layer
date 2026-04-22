@@ -24,6 +24,8 @@ It also has:
 
 - internal real-agent sandbox acceptance
 - a standalone external-agent pilot kit
+- a repo-external skeleton export path for that pilot kit
+- a repo-contained validation command for that exported skeleton
 - public external-client auth
 - public callback registration routes
 

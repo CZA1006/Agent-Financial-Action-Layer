@@ -227,6 +227,35 @@ The repo also now includes a first external pilot kit under:
 - [external-pilot-findings-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-pilot-findings-template.md)
 - [sdk-boundary-draft.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/sdk-boundary-draft.md)
 
+You can now export the standalone pilot as a repo-external consumer skeleton with:
+
+```bash
+npm run export:external-agent-pilot
+```
+
+Default output:
+
+- `dist/standalone-external-agent-pilot-skeleton/`
+
+You can validate that export path inside this repo with:
+
+```bash
+npm run validate:external-agent-pilot-export
+```
+
+Reference:
+
+- [external-agent-pilot-export-validation.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-export-validation.md)
+- [external-agent-pilot-repo-external-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-repo-external-runbook.md)
+
+To convert a provisioning JSON bundle into `.env` text for the external skeleton:
+
+```bash
+npm run render:external-agent-bundle-env -- \
+  --input /tmp/afal-external-bundle.json \
+  --output /tmp/afal-external-agent.env
+```
+
 Recommended next validation step:
 
 - hand the standalone pilot kit to a second engineer
