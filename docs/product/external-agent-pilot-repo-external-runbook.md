@@ -50,7 +50,19 @@ node scripts/render-external-agent-bundle-env.mjs \
   --output /tmp/afal-external-agent.env
 ```
 
-Send the external engineer:
+4. Package one complete handoff directory:
+
+```bash
+npm run package:external-agent-pilot-handoff -- \
+  --bundle-json /tmp/afal-external-bundle.json \
+  --output-dir dist/external-agent-pilot-handoff
+```
+
+Send the external engineer either:
+
+- `dist/external-agent-pilot-handoff/`
+
+or, if they prefer the pieces separately:
 
 - the exported skeleton directory
 - the rendered `.env`
@@ -63,22 +75,23 @@ Send the external engineer:
 
 In a separate workspace:
 
-1. copy the exported skeleton into a fresh repo
-2. copy the rendered `.env` into the repo root
-3. run:
+1. copy `dist/external-agent-pilot-handoff/pilot/` into a fresh repo
+2. copy `dist/external-agent-pilot-handoff/.env` into the repo root
+3. keep `dist/external-agent-pilot-handoff/docs/` available as reference material
+4. run:
 
 ```bash
 npm install
 npx tsc --noEmit
 ```
 
-4. start the callback receiver:
+5. start the callback receiver:
 
 ```bash
 npm run callback:receiver
 ```
 
-5. in a second terminal, run:
+6. in a second terminal, run:
 
 ```bash
 npm run callbacks:register
@@ -88,7 +101,7 @@ npm run payment
 npm run resource
 ```
 
-6. save:
+7. save:
 
 - callback registration output
 - callback readback output

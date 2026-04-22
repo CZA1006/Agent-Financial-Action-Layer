@@ -256,6 +256,22 @@ npm run render:external-agent-bundle-env -- \
   --output /tmp/afal-external-agent.env
 ```
 
+To package one complete external-engineer handoff directory in a single step:
+
+```bash
+npm run package:external-agent-pilot-handoff -- \
+  --bundle-json /tmp/afal-external-bundle.json \
+  --output-dir dist/external-agent-pilot-handoff
+```
+
+Default packaged output:
+
+- `dist/external-agent-pilot-handoff/pilot/`
+- `dist/external-agent-pilot-handoff/.env`
+- `dist/external-agent-pilot-handoff/bundle.json`
+- `dist/external-agent-pilot-handoff/docs/`
+- `dist/external-agent-pilot-handoff/manifest.json`
+
 Recommended next validation step:
 
 - hand the standalone pilot kit to a second engineer
