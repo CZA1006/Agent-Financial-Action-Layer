@@ -96,6 +96,61 @@ Local merge expectation remains broader than CI:
 
 Do not treat a green PR as sufficient if the change obviously touches a broader integration slice than the required CI jobs cover.
 
+## Fast Experiment vs Protected Surface
+
+Not every change in this repo needs the same level of ceremony during development.
+The right boundary is:
+
+- move fast on feature branches for internal experiments
+- be strict before anything reaches `main`
+
+### Safe To Explore Quickly On A Feature Branch
+
+These are reasonable to prototype quickly before full PR polish:
+
+- new internal demo scripts
+- new experimental harnesses
+- roadmap, design, or brainstorming docs
+- exploratory sample code that is not part of the canonical onboarding path
+- one-off debugging or data-inspection scripts
+- draft SDK or package ideas that are not yet wired into onboarding or CI
+
+These changes are lower risk because they do **not** directly redefine how an external engineer consumes AFAL.
+
+### Must Be Treated As Protected Surface
+
+The following areas should be treated as contract-bearing surfaces.
+If you change them, assume the change must go through PR + required checks:
+
+- `backend/afal/http/`
+- `backend/afal/clients/`
+- `samples/standalone-external-agent-pilot/`
+- provisioning and onboarding scripts under `scripts/`
+- export / repo-external skeleton scripts under `scripts/`
+- `.github/workflows/`
+- `.github/pull_request_template.md`
+- external-facing product docs under `docs/product/`
+- external-facing specs and examples under `docs/specs/` and `docs/examples/http/`
+
+Why these are stricter:
+
+- they affect the public integration boundary
+- they affect the external engineer onboarding path
+- they affect what `main` means as a handoff-ready branch
+
+### Simple Decision Rule
+
+Treat a change as protected surface if **any** of these are true:
+
+1. it changes how an external engineer configures `.env`, auth, requests, callbacks, or action-status reads
+2. it changes the standalone pilot or exported skeleton behavior
+3. it changes OpenAPI, HTTP examples, or external-facing docs
+4. it changes CI, onboarding smoke, or merge-gate behavior
+5. if broken, it would make `main` unreliable as the external integration baseline
+
+If any answer is yes, do not treat the change as a casual direct-to-main style update.
+Use a feature branch, open a PR, and wait for the required checks.
+
 ## Scope Guardrails
 
 Do not treat the current repo as a production settlement system.

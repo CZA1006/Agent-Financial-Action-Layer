@@ -7,6 +7,30 @@ For a repo-external / extractable consumer kit, use:
 - [standalone-external-agent-pilot/README.md](./standalone-external-agent-pilot/README.md)
 - [external-engineer-pilot-handoff.md](../docs/product/external-engineer-pilot-handoff.md)
 
+To export that pilot as a repo-external skeleton:
+
+```bash
+npm run export:external-agent-pilot
+```
+
+Default output:
+
+- `dist/standalone-external-agent-pilot-skeleton/`
+
+To validate the exported skeleton structure from inside the monorepo:
+
+```bash
+npm run validate:external-agent-pilot-export
+```
+
+To turn a provisioning bundle into external-repo `.env` text:
+
+```bash
+npm run render:external-agent-bundle-env -- \
+  --input /tmp/afal-external-bundle.json \
+  --output /tmp/afal-external-agent.env
+```
+
 ## External Agent Client
 
 - [payment-client.ts](./external-agent-client/payment-client.ts)
