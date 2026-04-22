@@ -1,0 +1,46 @@
+name: External Agent Handoff Artifact
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: external-agent-handoff-artifact-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-handoff-artifact:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build external-agent handoff artifact
+        run: npm run build:external-agent-pilot-handoff-artifact
+
+      - name: Upload handoff artifact directory
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-agent-pilot-handoff-${{ github.sha }}
+          path: |
+            dist/external-agent-pilot-release/external-agent-pilot-handoff/
+            dist/external-agent-pilot-release/afal-external-bundle.json
+            dist/external-agent-pilot-release/external-agent-pilot-handoff.tar.gz
+          if-no-files-found: error
+          retention-days: 14

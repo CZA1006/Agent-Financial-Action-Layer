@@ -272,6 +272,64 @@ Default packaged output:
 - `dist/external-agent-pilot-handoff/docs/`
 - `dist/external-agent-pilot-handoff/manifest.json`
 
+To build the CI-style release artifact locally, including a provisioned bundle, handoff directory, and `.tar.gz` archive:
+
+```bash
+npm run build:external-agent-pilot-handoff-artifact
+```
+
+Default release-artifact output:
+
+- `dist/external-agent-pilot-release/external-agent-pilot-handoff/`
+- `dist/external-agent-pilot-release/afal-external-bundle.json`
+- `dist/external-agent-pilot-release/external-agent-pilot-handoff.tar.gz`
+
+GitHub Actions also publishes this artifact automatically on pushes to `main` and on manual workflow dispatch through:
+
+- [external-agent-handoff-artifact.yml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-handoff-artifact.yml)
+
+Important boundary:
+
+- this handoff artifact is for direct AFAL-team-to-engineer transfer
+- it includes a live provisioned sandbox bundle and `.env`
+- do not publish it as a public release artifact
+
+To build a release-safe public package instead:
+
+```bash
+npm run build:external-agent-pilot-public-release
+```
+
+Default public-release output:
+
+- `dist/external-agent-pilot-public-release/external-agent-pilot-public-release/`
+- `dist/external-agent-pilot-public-release/external-agent-pilot-public-release.tar.gz`
+
+This package includes:
+
+- the standalone pilot consumer skeleton
+- the onboarding and callback docs
+- `bundle.template.json`
+- `.env.template`
+
+This package does not include:
+
+- a live provisioned client
+- a real signing key
+- a ready-to-use `.env`
+
+GitHub can publish this release-safe package on tag pushes matching `external-agent-pilot-v*` through:
+
+- [external-agent-pilot-release.yml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-pilot-release.yml)
+- [external-agent-pilot-release-handbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-handbook.md)
+- [external-agent-pilot-release-quickstart.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-quickstart.md)
+
+To validate that the internal handoff and public release surfaces stay correctly separated:
+
+```bash
+npm run validate:external-agent-pilot-release-surfaces
+```
+
 Recommended next validation step:
 
 - hand the standalone pilot kit to a second engineer

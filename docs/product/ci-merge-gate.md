@@ -15,6 +15,7 @@ This is especially important now that AFAL has:
 - a sandbox-facing external-client auth boundary
 - a standalone external-agent pilot kit
 - a repo-contained second-engineer onboarding smoke path
+- split internal-handoff vs public-release distribution surfaces
 
 ---
 
@@ -42,6 +43,21 @@ What each one covers:
 
 This third check is the one that protects against the exact class of regressions surfaced by external engineer pilot feedback.
 
+The CI workflow also includes one additional non-required advisory job:
+
+4. `external-release-surfaces`
+
+What it covers:
+
+4. `external-release-surfaces`
+   Builds both the credential-bearing internal handoff artifact and the release-safe public package, then verifies they stay correctly separated.
+
+Current reason it is not required yet:
+
+- it is new
+- it should collect some runtime and flake history on GitHub-hosted runners first
+- the team should confirm its stability before promoting it into branch protection
+
 ---
 
 ## Merge Policy
@@ -51,6 +67,7 @@ For the current Phase 1 repo, the merge rule should be:
 - do not merge while any required check is failing
 - do not merge while any required check is still pending
 - do not merge if a PR changes onboarding, public auth, provisioning, callback registration, or standalone samples without `external-onboarding` green
+- do not merge if a PR changes handoff packaging, public-release packaging, or release-surface guardrails without `external-release-surfaces` green, even while it remains advisory
 - do not merge if a PR changes SQLite runtime or HTTP behavior without `accept:sqlite` being run locally, even if that command is not yet a required CI check
 
 In other words:
@@ -73,6 +90,9 @@ Configure branch protection on `main` with these settings:
    - `test-mock`
    - `external-onboarding`
 6. Enable `Require branches to be up to date before merging`
+
+Do not add `external-release-surfaces` to required checks yet.
+Promote it only after it has demonstrated stable GitHub runner behavior.
 
 Recommended additional settings:
 
@@ -166,10 +186,12 @@ That creates branch protection drift and blocks merges for avoidable reasons.
 Current recommended posture:
 
 1. keep `typecheck`, `test-mock`, and `external-onboarding` as required GitHub checks
-2. keep `accept:sqlite` as a documented local merge gate
-3. revisit whether `accept:sqlite` should enter CI after measuring runtime and flake rate on GitHub-hosted runners
+2. run `external-release-surfaces` in CI as a non-required advisory job
+3. keep `accept:sqlite` as a documented local merge gate
+4. revisit whether `external-release-surfaces` and `accept:sqlite` should enter the required set after measuring runtime and flake rate on GitHub-hosted runners
 
 That is the right balance for the repo today:
 
 - strict enough to protect the public integration boundary
+- stronger on release-surface safety
 - still light enough to keep iteration practical
