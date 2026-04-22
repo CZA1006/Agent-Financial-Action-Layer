@@ -58,9 +58,48 @@ npm run package:external-agent-pilot-handoff -- \
   --output-dir dist/external-agent-pilot-handoff
 ```
 
+5. If you want the same deliverable shape that CI publishes, build the release artifact instead:
+
+```bash
+npm run build:external-agent-pilot-handoff-artifact
+```
+
 Send the external engineer either:
 
 - `dist/external-agent-pilot-handoff/`
+- `dist/external-agent-pilot-release/external-agent-pilot-handoff/`
+
+CI-style artifact output:
+
+- `dist/external-agent-pilot-release/external-agent-pilot-handoff/`
+- `dist/external-agent-pilot-release/afal-external-bundle.json`
+- `dist/external-agent-pilot-release/external-agent-pilot-handoff.tar.gz`
+
+GitHub Actions also uploads this artifact on `main` through:
+
+- [`external-agent-handoff-artifact.yml`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-handoff-artifact.yml)
+
+Important boundary:
+
+- this handoff artifact contains a live provisioned sandbox bundle
+- it is suitable for direct AFAL-team-to-engineer transfer
+- it is not the right asset to publish as a public GitHub release
+
+If you want a release-safe public package instead:
+
+```bash
+npm run build:external-agent-pilot-public-release
+```
+
+Public release output:
+
+- `dist/external-agent-pilot-public-release/external-agent-pilot-public-release/`
+- `dist/external-agent-pilot-public-release/external-agent-pilot-public-release.tar.gz`
+
+GitHub can publish that release-safe tarball on tags matching `external-agent-pilot-v*` through:
+
+- [`external-agent-pilot-release.yml`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-pilot-release.yml)
+- [`external-agent-pilot-release-handbook.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-handbook.md)
 
 or, if they prefer the pieces separately:
 

@@ -1,0 +1,71 @@
+name: External Agent Pilot Release
+
+on:
+  push:
+    tags:
+      - external-agent-pilot-v*
+
+permissions:
+  contents: write
+
+concurrency:
+  group: external-agent-pilot-release-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build release-safe package
+        run: npm run build:external-agent-pilot-public-release
+
+      - name: Upload release build artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-agent-pilot-public-release-${{ github.ref_name }}
+          path: |
+            dist/external-agent-pilot-public-release/external-agent-pilot-public-release/
+            dist/external-agent-pilot-public-release/external-agent-pilot-public-release.tar.gz
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Write release notes
+        run: |
+          cat > /tmp/external-agent-pilot-release-notes.md <<'EOF'
+          AFAL external-agent pilot public release package.
+
+          This asset is release-safe:
+          - includes the standalone pilot consumer skeleton
+          - includes onboarding and callback contract docs
+          - includes `bundle.template.json` and `.env.template`
+          - does not include a live provisioned client or a real signing key
+
+          To run against a real AFAL sandbox, request a provisioned bundle from the AFAL team.
+          EOF
+
+      - name: Create GitHub release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "${GITHUB_REF_NAME}" \
+            dist/external-agent-pilot-public-release/external-agent-pilot-public-release.tar.gz \
+            --repo "${GITHUB_REPOSITORY}" \
+            --verify-tag \
+            --title "AFAL external-agent pilot release ${GITHUB_REF_NAME}" \
+            --notes-file /tmp/external-agent-pilot-release-notes.md
