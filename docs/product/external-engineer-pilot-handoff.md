@@ -33,6 +33,14 @@ What is still missing is one controlled validation step:
 - an engineer should use the standalone kit from a separate repo or separate workspace
 - the engineer should rely only on public HTTP routes, onboarding docs, and the standalone sample code
 
+Before sending the handoff, the AFAL team should run:
+
+```bash
+npm run accept:external-onboarding
+```
+
+That command is the internal smoke test for the exact command-line onboarding path the second engineer is expected to follow.
+
 ---
 
 ## What The External Engineer Should Use

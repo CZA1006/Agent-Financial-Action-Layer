@@ -78,6 +78,24 @@ A good PR should state:
 - which validation command was run
 - whether any local-port restriction required `--skip-http`
 
+## Merge Gate
+
+The current repo merge gate is documented in:
+
+- [docs/product/ci-merge-gate.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/ci-merge-gate.md)
+
+Current required CI checks for `main` should be:
+
+- `typecheck`
+- `test-mock`
+- `external-onboarding`
+
+Local merge expectation remains broader than CI:
+
+- run `npm run accept:sqlite` for SQLite runtime, HTTP, callback, bilateral harness, notification worker, or adapter-boundary changes
+
+Do not treat a green PR as sufficient if the change obviously touches a broader integration slice than the required CI jobs cover.
+
 ## Scope Guardrails
 
 Do not treat the current repo as a production settlement system.

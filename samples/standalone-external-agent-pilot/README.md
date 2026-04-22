@@ -35,6 +35,18 @@ If this directory is being used by a second engineer, the preferred workflow is:
 - AFAL team provisions the client
 - external engineer only consumes the public surface from this directory
 
+Before handing this kit to a second engineer, the AFAL team should replay the same flow inside the main repo:
+
+```bash
+npm run accept:external-onboarding
+```
+
+If you want to preserve the generated bundle, request outputs, and logs:
+
+```bash
+npm run accept:external-onboarding -- --artifacts-root ./.afal-external-onboarding-artifacts
+```
+
 Example provisioning flow in the main repo:
 
 ```bash
@@ -44,10 +56,20 @@ npm run provision:external-agent-sandbox -- \
   --tenant-id tenant-demo-001 \
   --agent-id agent-demo-001 \
   --subject-did did:afal:agent:payment-agent-01 \
-  --mandate-ref mnd-0001 \
+  --mandate-refs mnd-0001,mnd-0002 \
+  --monetary-budget-refs budg-money-001 \
+  --resource-budget-refs budg-res-001 \
+  --resource-quota-refs quota-001 \
   --payment-payee-did did:afal:agent:fraud-service-01 \
   --resource-provider-did did:afal:institution:provider-openai
 ```
+
+This standalone kit intentionally uses the same sandbox subject for both sample commands:
+
+- payment requester subject: `did:afal:agent:payment-agent-01`
+- resource requester subject: `did:afal:agent:payment-agent-01`
+
+That keeps the first external-engineer pilot focused on AFAL consumption, not multi-subject client provisioning.
 
 ## Setup
 
@@ -71,6 +93,8 @@ Usually also needed:
 - `AFAL_RESOURCE_CALLBACK_URL`
 
 If the engineer cannot tell where those values come from, the AFAL team has not provided a clean enough handoff bundle yet.
+
+These refs should match the provisioning command above. The standalone kit should not rely on undocumented seeded defaults.
 
 ## Register Callbacks
 

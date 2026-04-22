@@ -24,7 +24,9 @@ Start AFAL's SQLite-backed HTTP server:
 npm run serve:sqlite-http
 ```
 
-If you want external client auth enabled for a custom launcher, the server wiring must enable the external client auth option in the SQLite HTTP runtime.
+This default server entrypoint now enables external-client auth automatically.
+
+If you use a custom launcher instead of `npm run serve:sqlite-http`, you must still enable the external client auth option yourself.
 
 For an external engineer pilot, the better setup is:
 
@@ -47,8 +49,12 @@ node --import tsx/esm scripts/provision-external-agent-sandbox.ts \
   --tenant-id tenant-demo-001 \
   --agent-id agent-demo-001 \
   --subject-did did:afal:agent:payment-agent-01 \
-  --mandate-ref mnd-0001 \
-  --monetary-budget-refs budg-money-001
+  --mandate-refs mnd-0001,mnd-0002 \
+  --monetary-budget-refs budg-money-001 \
+  --resource-budget-refs budg-res-001 \
+  --resource-quota-refs quota-001 \
+  --payment-payee-did did:afal:agent:fraud-service-01 \
+  --resource-provider-did did:afal:institution:provider-openai
 ```
 
 The script writes the client record into the shared SQLite integration database and prints a sandbox bundle containing:
@@ -62,6 +68,12 @@ The script writes the client record into the shared SQLite integration database 
 - required auth headers
 
 When handing off to another engineer, send the output as a single bundle rather than scattered values.
+
+For the current standalone pilot kit, one sandbox subject is used for both payment and resource sample requests:
+
+- `did:afal:agent:payment-agent-01`
+
+This is a sandbox simplification for external onboarding. It avoids forcing the external engineer to manage multiple client identities in the first validation pass.
 
 ---
 
@@ -146,6 +158,22 @@ If you want persistent JSON evidence for every scenario:
 ```bash
 npm run accept:external-agent -- --artifacts-root ./.afal-openrouter-acceptance-artifacts
 ```
+
+If you want one command that replays the second-engineer onboarding sequence inside this repo:
+
+```bash
+npm run accept:external-onboarding
+```
+
+This onboarding smoke command starts a sandbox server, provisions one external client, launches the standalone callback receiver, registers callback URLs, reads them back, and submits one payment plus one resource request.
+
+Use this before sending the standalone kit to another engineer. It is the fastest way to catch regressions in:
+
+- default external-client auth
+- provisioning examples
+- standalone fixture IDs and subjects
+- callback registration docs
+- command-line onboarding assumptions
 
 Reference checklist:
 

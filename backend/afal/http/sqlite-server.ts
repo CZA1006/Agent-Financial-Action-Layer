@@ -369,11 +369,25 @@ async function main(): Promise<void> {
   const dataDir = process.argv[2] ?? join(process.cwd(), ".afal-sqlite-http-data");
   const host = process.argv[3] ?? DEFAULT_HOST;
   const port = Number(process.argv[4] ?? DEFAULT_PORT);
+  const externalClientAuthEnabled =
+    process.env.AFAL_EXTERNAL_CLIENT_AUTH === "true" ||
+    process.env.AFAL_EXTERNAL_CLIENT_AUTH === "1";
+  const externalClientAuthMaxRequestAgeMs = process.env.AFAL_EXTERNAL_CLIENT_AUTH_MAX_REQUEST_AGE_MS
+    ? Number(process.env.AFAL_EXTERNAL_CLIENT_AUTH_MAX_REQUEST_AGE_MS)
+    : undefined;
 
   const server = await startSeededSqliteAfalHttpServer({
     dataDir,
     host,
     port,
+    externalClientAuth: externalClientAuthEnabled
+      ? {
+          enabled: true,
+          maxRequestAgeMs: Number.isFinite(externalClientAuthMaxRequestAgeMs)
+            ? externalClientAuthMaxRequestAgeMs
+            : undefined,
+        }
+      : undefined,
   });
 
   console.log(
@@ -384,6 +398,14 @@ async function main(): Promise<void> {
         port: server.port,
         url: server.url,
         paths: server.paths,
+        externalClientAuth: {
+          enabled: externalClientAuthEnabled,
+          maxRequestAgeMs:
+            Number.isFinite(externalClientAuthMaxRequestAgeMs) &&
+            externalClientAuthMaxRequestAgeMs !== undefined
+              ? externalClientAuthMaxRequestAgeMs
+              : null,
+        },
       },
       null,
       2

@@ -5,7 +5,7 @@ export function createPaymentRequestTemplate() {
       requestRef: "req-standalone-payment",
       monetaryBudgetRef: process.env.AFAL_MONETARY_BUDGET_REF ?? "budg-money-001",
       intent: {
-        intentId: "payint-standalone-0001",
+        intentId: "payint-0001",
         schemaVersion: "0.1",
         intentType: "payment",
         payer: {
@@ -45,12 +45,12 @@ export function createResourceRequestTemplate() {
       resourceBudgetRef: process.env.AFAL_RESOURCE_BUDGET_REF ?? "budg-res-001",
       resourceQuotaRef: process.env.AFAL_RESOURCE_QUOTA_REF ?? "quota-001",
       intent: {
-        intentId: "resint-standalone-0001",
+        intentId: "resint-0001",
         schemaVersion: "0.1",
         intentType: "resource",
         requester: {
-          agentDid: "did:afal:agent:research-agent-01",
-          accountId: "acct-agent-002",
+          agentDid: "did:afal:agent:payment-agent-01",
+          accountId: "acct-agent-001",
         },
         provider: {
           providerId: "provider-openai",

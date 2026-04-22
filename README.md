@@ -49,8 +49,12 @@ The repo now includes:
 Current validated state:
 - `npm run typecheck` passes
 - targeted harness, notification, API, HTTP, and OpenAPI tests pass
+- `npm run accept:external-onboarding` passes for the repo-contained second-engineer onboarding path
 - `npm run accept:sqlite` passes for the current externally integrated runtime slice
 - `npm run accept:external-agent` passes for the current internal real-agent sandbox matrix
+- GitHub Actions CI now runs `typecheck`, `test:mock`, and `accept:external-onboarding` on pull requests and pushes to `main`
+- branch protection and required-check guidance lives in [docs/product/ci-merge-gate.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/ci-merge-gate.md)
+- repo-admin setup can be scripted with [scripts/configure-branch-protection.sh](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/scripts/configure-branch-protection.sh)
 - both canonical flows run in:
   - seeded in-memory mode
   - seeded local durable mode
@@ -102,8 +106,20 @@ npm run provision:external-agent-sandbox -- \
   --tenant-id tenant-demo-001 \
   --agent-id agent-demo-001 \
   --subject-did did:afal:agent:payment-agent-01 \
-  --mandate-ref mnd-0001
+  --mandate-refs mnd-0001,mnd-0002 \
+  --monetary-budget-refs budg-money-001 \
+  --resource-budget-refs budg-res-001 \
+  --resource-quota-refs quota-001 \
+  --payment-payee-did did:afal:agent:fraud-service-01 \
+  --resource-provider-did did:afal:institution:provider-openai
 ```
+
+For the current standalone pilot kit, one sandbox client is expected to cover both:
+
+- payment requests for `did:afal:agent:payment-agent-01`
+- resource requests for the same sandbox subject
+
+That is a deliberate simplification for repo-external onboarding. It keeps the pilot focused on AFAL consumption rather than multi-subject client management.
 
 Once the client is provisioned, callback URLs can be managed over the authenticated sandbox API:
 
@@ -171,6 +187,18 @@ If you want structured JSON evidence for every acceptance scenario:
 npm run accept:external-agent -- --artifacts-root ./.afal-openrouter-acceptance-artifacts
 ```
 
+If you want to replay the external engineer onboarding path inside this repo before handing off the standalone kit:
+
+```bash
+npm run accept:external-onboarding
+```
+
+If you want to keep the onboarding smoke outputs, server log, and callback receiver log:
+
+```bash
+npm run accept:external-onboarding -- --artifacts-root ./.afal-external-onboarding-artifacts
+```
+
 This acceptance currently covers:
 
 - payment happy path
@@ -179,6 +207,16 @@ This acceptance currently covers:
 - resource transient retry recovery
 - payment callback recovery
 - resource callback recovery
+
+The onboarding smoke command covers the narrower second-engineer command sequence:
+
+- start the SQLite HTTP sandbox with external-client auth enabled
+- provision one external client bundle
+- start the standalone callback receiver
+- register callback URLs
+- read callback registration back with `get` and `list`
+- submit one payment request and one resource request
+- assert both responses stay at `pending-approval`
 
 The repo also now includes a first external pilot kit under:
 
@@ -202,6 +240,11 @@ That is the current gate between:
 and:
 
 - **externally validated external-agent sandbox**
+
+Important current behavior:
+
+- `npm run serve:sqlite-http` now enables external-client auth by default
+- this is the correct default for sandbox-facing external engineer testing
 
 If you want to show the local HTTP capability surface:
 

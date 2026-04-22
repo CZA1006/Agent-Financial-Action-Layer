@@ -45,6 +45,35 @@ When `--artifacts-root` is provided, each scenario also writes JSON artifacts su
 - `actionStatus.json`, `deliveryBeforeWorker.json`, `deliveryAfterWorker.json`, or similar
 - `result.json`
 
+## Companion Onboarding Smoke Command
+
+Run the repo-contained second-engineer onboarding replay with:
+
+```bash
+npm run accept:external-onboarding
+```
+
+If you want to preserve the generated bundle, callback readbacks, request outputs, and logs:
+
+```bash
+npm run accept:external-onboarding -- --artifacts-root ./.afal-external-onboarding-artifacts
+```
+
+This command is intentionally narrower than `accept:external-agent`.
+
+It proves that AFAL's current onboarding docs and standalone pilot kit are internally self-consistent for the basic command-line flow:
+
+- start sandbox server
+- provision external client
+- start standalone callback receiver
+- register callback URLs
+- read callback registration back
+- submit one payment request
+- submit one resource request
+
+It does not prove trusted-surface approval, settlement, callback delivery success, or callback recovery.
+Those remain covered by `accept:external-agent`.
+
 ---
 
 ## Scope
@@ -148,7 +177,7 @@ Passing `accept:external-agent` currently proves:
 It does **not yet** prove:
 
 - that a second engineer can consume AFAL from a separate repo without monorepo context
-- that the current docs and standalone kit are friction-free for external onboarding
+- that the current docs and standalone kit are fully friction-free for external onboarding
 
 It also does **not** prove:
 
