@@ -28,6 +28,8 @@ async function main() {
   const docsToCopy = [
     "docs/product/external-agent-pilot-repo-external-runbook.md",
     "docs/product/external-engineer-pilot-handoff.md",
+    "docs/product/external-agent-repo-external-validation-plan.md",
+    "docs/product/external-agent-validation-round-checklist.md",
     "docs/product/external-pilot-findings-template.md",
     "docs/specs/external-agent-auth-contract.md",
     "docs/specs/receiver-settlement-callback-contract.md",
