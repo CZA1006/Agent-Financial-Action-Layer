@@ -24,12 +24,16 @@ What I’m asking you to validate:
 
 What to use:
 - standalone kit:
-  samples/standalone-external-agent-pilot/
+  the extracted handoff directory or release tarball contents only
 - docs:
   docs/product/external-engineer-pilot-handoff.md
   docs/product/external-agent-sandbox-onboarding.md
+  docs/product/external-agent-repo-external-validation-plan.md
   docs/specs/external-agent-auth-contract.md
   docs/specs/receiver-settlement-callback-contract.md
+
+Do not run this validation from inside the AFAL monorepo root.
+If the package you received still lives next to `backend/`, `agents/`, or other AFAL implementation directories, stop and report that immediately.
 
 Environment bundle:
 AFAL_BASE_URL=<fill>
@@ -68,6 +72,7 @@ Suggested fix:
 Also please summarize:
 - your OS
 - Node version
+- the exact artifact / tarball / commit you used
 - whether anything blocked you completely
 - the top 3 fixes you would want before using AFAL as a real dependency
 

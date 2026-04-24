@@ -335,6 +335,8 @@ Recommended next validation step:
 - hand the standalone pilot kit to a second engineer
 - require that they work from a separate repo or separate workspace
 - require that they use only AFAL public routes, provisioning output, and published docs
+- use [external-agent-repo-external-validation-plan.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-repo-external-validation-plan.md) as the pass/fail plan for that round
+- fill [external-agent-validation-round-checklist.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md) before sending the artifact
 
 That is the current gate between:
 

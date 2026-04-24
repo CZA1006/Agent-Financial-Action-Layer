@@ -41,6 +41,11 @@ npm run accept:external-onboarding
 
 That command is the internal smoke test for the exact command-line onboarding path the second engineer is expected to follow.
 
+For the broader external-validation milestone definition and pass/fail criteria, use:
+
+- [external-agent-repo-external-validation-plan.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-repo-external-validation-plan.md)
+- [external-agent-validation-round-checklist.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md)
+
 ---
 
 ## What The External Engineer Should Use
@@ -49,9 +54,9 @@ The external engineer should receive only these inputs:
 
 1. one running AFAL sandbox instance
 2. one provisioned sandbox client bundle
-3. the standalone pilot kit:
-   - `samples/standalone-external-agent-pilot/`
-   - or the exported skeleton from `npm run export:external-agent-pilot`
+3. one extracted external-consumer artifact:
+   - internal handoff package
+   - or public release-safe package
 4. these docs:
    - `README.md`
    - `docs/product/external-agent-sandbox-onboarding.md`
@@ -70,8 +75,12 @@ The engineer should **not** need:
 - `agents/test-harness/`
 - internal OpenRouter pilot scripts
 - internal test fixtures
+- the AFAL monorepo root as their execution environment
 
 If the engineer needs those, the external integration surface is still too implicit.
+
+For a repo-external validation round, do not ask the engineer to run from inside the AFAL monorepo checkout.
+That makes the validation ambiguous and weakens the signal.
 
 ---
 
