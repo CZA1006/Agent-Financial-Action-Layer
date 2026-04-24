@@ -59,6 +59,12 @@ test("package-external-agent-pilot-handoff produces a single external handoff di
     assert.equal(manifest.clientId, "client-demo-001");
     assert.equal(manifest.subjectDid, "did:afal:agent:payment-agent-01");
     assert.ok(manifest.includedDocs.includes("docs/specs/external-agent-auth-contract.md"));
+    assert.ok(
+      manifest.includedDocs.includes("docs/product/external-agent-repo-external-validation-plan.md")
+    );
+    assert.ok(
+      manifest.includedDocs.includes("docs/product/external-agent-validation-round-checklist.md")
+    );
 
     await stat(join(outputDir, "pilot", "package.json"));
     await stat(join(outputDir, "pilot", "README.md"));
@@ -66,6 +72,8 @@ test("package-external-agent-pilot-handoff produces a single external handoff di
     await stat(join(outputDir, "bundle.json"));
     await stat(join(outputDir, "manifest.json"));
     await stat(join(outputDir, "docs", "product", "external-engineer-pilot-handoff.md"));
+    await stat(join(outputDir, "docs", "product", "external-agent-repo-external-validation-plan.md"));
+    await stat(join(outputDir, "docs", "product", "external-agent-validation-round-checklist.md"));
     await stat(join(outputDir, "docs", "specs", "receiver-settlement-callback-contract.md"));
 
     const envText = await readFile(join(outputDir, ".env"), "utf8");

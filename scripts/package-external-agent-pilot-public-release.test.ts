@@ -30,6 +30,8 @@ test("package-external-agent-pilot-public-release produces a release-safe packag
     await stat(join(outputDir, "README.md"));
     await stat(join(outputDir, "pilot", "README.md"));
     await stat(join(outputDir, "docs", "product", "external-engineer-pilot-handoff.md"));
+    await stat(join(outputDir, "docs", "product", "external-agent-repo-external-validation-plan.md"));
+    await stat(join(outputDir, "docs", "product", "external-agent-validation-round-checklist.md"));
     await stat(join(outputDir, "bundle.template.json"));
     await stat(join(outputDir, ".env.template"));
     await stat(join(outputDir, "manifest.json"));
