@@ -89,7 +89,7 @@ test("package-external-agent-pilot-handoff produces a single external handoff di
       join(outputDir, "docs", "product", "external-agent-pilot-repo-external-runbook.md"),
       "utf8"
     );
-    assert.doesNotMatch(runbook, /\/Users\/caizhuoang\//);
+    assert.doesNotMatch(runbook, /\/Users\/|\/home\/runner\//);
 
     const packagedManifest = JSON.parse(
       await readFile(join(outputDir, "manifest.json"), "utf8")

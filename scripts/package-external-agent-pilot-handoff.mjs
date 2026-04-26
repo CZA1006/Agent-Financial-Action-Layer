@@ -1,5 +1,5 @@
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join, relative, resolve } from "node:path";
+import { mkdir, readFile, rm, writeFile, cp } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve } from "node:path";
 
 import { renderEnvText } from "./render-external-agent-bundle-env.mjs";
 
@@ -22,7 +22,20 @@ function requireArg(flag) {
 function rewritePackagedMarkdownLinks(sourceText, sourceRoot, sourceRelativePath) {
   return sourceText.replace(/\]\(([^)]+)\)/g, (_match, target) => {
     if (!target.startsWith(sourceRoot)) {
-      return `](${target})`;
+      if (!target.startsWith("/")) {
+        return `](${target})`;
+      }
+
+      const repoName = basename(sourceRoot);
+      const marker = `/${repoName}/`;
+      const markerIndex = target.indexOf(marker);
+      if (markerIndex === -1) {
+        return `](${target})`;
+      }
+
+      const strippedTarget = target.slice(markerIndex + marker.length);
+      const relativeTarget = relative(dirname(sourceRelativePath), strippedTarget);
+      return `](${relativeTarget})`;
     }
 
     const strippedTarget = target.slice(sourceRoot.length + 1);

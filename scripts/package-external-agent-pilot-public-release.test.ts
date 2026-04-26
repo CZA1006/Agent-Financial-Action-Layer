@@ -53,7 +53,7 @@ test("package-external-agent-pilot-public-release produces a release-safe packag
       join(outputDir, "docs", "product", "external-agent-pilot-repo-external-runbook.md"),
       "utf8"
     );
-    assert.doesNotMatch(runbook, /\/Users\/caizhuoang\//);
+    assert.doesNotMatch(runbook, /\/Users\/|\/home\/runner\//);
 
     const packagedManifest = JSON.parse(
       await readFile(join(outputDir, "manifest.json"), "utf8")
