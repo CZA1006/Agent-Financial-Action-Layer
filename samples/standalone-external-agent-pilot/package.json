@@ -3,12 +3,14 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "preflight": "node --import tsx/esm src/preflight.ts",
     "callback:receiver": "node --import tsx/esm src/callback-receiver.ts",
     "callbacks:get": "node --import tsx/esm src/get-callback-registration.ts",
     "callbacks:list": "node --import tsx/esm src/list-callback-registrations.ts",
     "callbacks:register": "node --import tsx/esm src/register-callback.ts",
     "payment": "node --import tsx/esm src/payment-client.ts",
-    "resource": "node --import tsx/esm src/resource-client.ts"
+    "resource": "node --import tsx/esm src/resource-client.ts",
+    "tunnel:start": "sh scripts/start-tunnel.sh"
   },
   "devDependencies": {
     "@types/node": "^22.15.21",

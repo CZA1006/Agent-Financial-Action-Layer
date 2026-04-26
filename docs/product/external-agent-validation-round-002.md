@@ -3,7 +3,7 @@
 ## Status
 
 - Round: `002`
-- Status: `prepared locally, not yet sent`
+- Status: `attempted once, blocked at artifact delivery; restart required`
 - Recommended mode: `directed-internal-handoff`
 - Validation owner: `AFAL team`
 - External engineer: `TBD`
@@ -63,6 +63,82 @@ Important interpretation:
 - the repo-contained onboarding smoke path is currently green
 - the release-surface guardrail is currently green
 - both internal handoff and public release packages now include the validation-plan and round-checklist docs that were missing from the earlier external round baseline
+
+---
+
+## Restart Trigger
+
+The first Round 002 send attempt did not fail on AFAL runtime behavior.
+It failed earlier at the logistics layer:
+
+- the external engineer did not actually receive the handoff tarball in an accessible local path
+- the engineer also flagged that no tunnel tool was preinstalled in their environment
+
+This means Round 002 is not yet a valid product-surface result.
+It needs a controlled restart from a correctly delivered artifact.
+
+Current interpretation:
+
+- artifact-delivery failure: `blocker`
+- tunnel-tool prerequisite disclosure: `medium`
+
+---
+
+## External Feedback From First Restart Attempt
+
+After the artifact was re-sent, the external engineer reported a second blocked attempt.
+
+The feedback splits into two groups.
+
+### Group A: AFAL-controlled product or packaging issues
+
+- `F1` callback receiver command in the round prompt did not match the shipped package layout
+- `F2` `.env` lived at the handoff root while scripts were run from `pilot/`
+- `F3` the round prompt and bundled runbook conflicted
+- `F4` bundled docs and manifest still exposed absolute maintainer-machine paths
+
+These are valid AFAL-side issues and should be treated as real consumer-surface friction.
+
+### Group B: External runtime prerequisites or temporary live-host issues
+
+- `B1` the pinned `AFAL_BASE_URL` was offline at the time of the engineer retry
+- `B2` `ngrok` was installed but unusable without verified account plus authtoken
+
+These do not invalidate the earlier AFAL-side fixes, but they do show that:
+
+- a temporary `ngrok-free` URL is too fragile to act as a durable pinned baseline
+- tunnel-tool assumptions must be explicit in the handoff itself
+
+Current interpretation:
+
+- live sandbox availability: `critical`
+- tunnel prerequisite disclosure: `major`
+- package layout / command consistency: `major`
+- path sanitization: `minor`
+
+---
+
+## Local Fixes Applied After External Feedback
+
+The repo has now been updated locally to reduce the AFAL-controlled friction:
+
+1. the standalone pilot now exposes:
+   - `npm run preflight`
+   - `npm run tunnel:start`
+2. `.env` loading now walks parent directories, so running from `pilot/` still finds the handoff-root `.env`
+3. packaged handoff output now includes `.env` inside both:
+   - handoff root
+   - `pilot/`
+4. packaged docs now rewrite maintainer absolute links to packaged relative links
+5. packaged manifests now use artifact-relative paths instead of maintainer local filesystem paths
+6. the runbook and message template are now aligned around:
+   - `cd pilot`
+   - `npm install`
+   - `npm run preflight`
+   - `npm run callback:receiver`
+   - `npm run tunnel:start`
+
+These fixes address the repo-controlled portion of the second blocked attempt.
 
 ---
 
@@ -145,6 +221,12 @@ npm run build:external-agent-pilot-handoff-artifact -- \
 ```
 
 If the engineer is remote, do not send a bundle that still points at `127.0.0.1`.
+
+Also, before declaring the round started, AFAL team must confirm:
+
+1. the actual tarball or extracted directory has been transferred to the engineer
+2. the engineer knows the exact local path of that artifact
+3. the engineer has one tunnel tool available for callback exposure, or explicit install instructions
 
 ---
 

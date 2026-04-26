@@ -1,5 +1,5 @@
 import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { dirname, join, relative, resolve } from "node:path";
 
 import { renderEnvText } from "./render-external-agent-bundle-env.mjs";
 
@@ -19,10 +19,30 @@ function requireArg(flag) {
   return value;
 }
 
+function rewritePackagedMarkdownLinks(sourceText, sourceRoot, sourceRelativePath) {
+  return sourceText.replace(/\]\(([^)]+)\)/g, (_match, target) => {
+    if (!target.startsWith(sourceRoot)) {
+      return `](${target})`;
+    }
+
+    const strippedTarget = target.slice(sourceRoot.length + 1);
+    const relativeTarget = relative(dirname(sourceRelativePath), strippedTarget);
+    return `](${relativeTarget})`;
+  });
+}
+
 async function copyFile(sourceRoot, outputRoot, relativePath) {
   const sourcePath = join(sourceRoot, relativePath);
   const outputPath = join(outputRoot, relativePath);
   await mkdir(dirname(outputPath), { recursive: true });
+
+  if (relativePath.endsWith(".md")) {
+    const sourceText = await readFile(sourcePath, "utf8");
+    const rewritten = rewritePackagedMarkdownLinks(sourceText, sourceRoot, relativePath);
+    await writeFile(outputPath, rewritten, "utf8");
+    return;
+  }
+
   await cp(sourcePath, outputPath);
 }
 
@@ -62,6 +82,7 @@ async function main() {
   });
 
   await writeFile(join(outputRoot, ".env"), envText, "utf8");
+  await writeFile(join(pilotRoot, ".env"), envText, "utf8");
   await writeFile(join(outputRoot, "bundle.json"), `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
 
   for (const relativePath of docsToCopy) {
@@ -70,11 +91,11 @@ async function main() {
 
   const manifest = {
     generatedAt: new Date().toISOString(),
-    sourceBundle: bundlePath,
-    outputDir: outputRoot,
-    pilotDir: pilotRoot,
-    envPath: join(outputRoot, ".env"),
-    docsDir: join(outputRoot, "docs"),
+    sourceBundle: "bundle.json",
+    outputDir: ".",
+    pilotDir: "pilot",
+    envPath: ".env",
+    docsDir: "docs",
     clientId: bundle.clientId ?? bundle.auth?.clientId ?? "",
     subjectDid: bundle.subjectDid ?? "",
     includedDocs: docsToCopy,

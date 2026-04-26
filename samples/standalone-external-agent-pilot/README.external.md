@@ -37,7 +37,7 @@ If the AFAL team cannot provide those values as one clean bundle, the onboarding
 ## Setup
 
 ```bash
-cp .env.example .env
+cd pilot
 npm install
 ```
 
@@ -45,6 +45,7 @@ Optional but recommended:
 
 ```bash
 npx tsc --noEmit
+npm run preflight
 ```
 
 ## Environment
@@ -70,6 +71,8 @@ CALLBACK_RECEIVER_ARTIFACTS_DIR=./artifacts/callbacks
 
 ## Minimal Validation Path
 
+Start from inside `pilot/`.
+
 Start the callback receiver:
 
 ```bash
@@ -77,6 +80,17 @@ npm run callback:receiver
 ```
 
 In a second terminal:
+
+```bash
+npm run tunnel:start
+```
+
+Take the public HTTPS callback URL from your tunnel and update:
+
+- `AFAL_PAYMENT_CALLBACK_URL`
+- `AFAL_RESOURCE_CALLBACK_URL`
+
+Then run:
 
 ```bash
 npm run callbacks:register
@@ -95,7 +109,9 @@ Expected results:
 
 ## Scripts
 
+- `npm run preflight`
 - `npm run callback:receiver`
+- `npm run tunnel:start`
 - `npm run callbacks:register`
 - `npm run callbacks:get`
 - `npm run callbacks:list`

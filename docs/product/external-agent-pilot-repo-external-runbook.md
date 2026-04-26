@@ -114,23 +114,36 @@ or, if they prefer the pieces separately:
 
 In a separate workspace:
 
-1. copy `dist/external-agent-pilot-handoff/pilot/` into a fresh repo
-2. copy `dist/external-agent-pilot-handoff/.env` into the repo root
-3. keep `dist/external-agent-pilot-handoff/docs/` available as reference material
-4. run:
+1. extract the handoff package outside the AFAL monorepo
+2. `cd pilot`
+3. run:
 
 ```bash
 npm install
 npx tsc --noEmit
+npm run preflight
 ```
 
-5. start the callback receiver:
+4. start the callback receiver:
 
 ```bash
 npm run callback:receiver
 ```
 
-6. in a second terminal, run:
+5. in a second terminal, expose the callback receiver:
+
+```bash
+npm run tunnel:start
+```
+
+Preferred tunnel rule:
+
+- use `cloudflared` if available
+- if using `ngrok`, make sure the engineer already has a verified account and configured authtoken
+
+6. update the callback URL values in `.env`
+
+7. then run:
 
 ```bash
 npm run callbacks:register
@@ -156,6 +169,8 @@ The external engineer should receive these docs with the skeleton:
 
 - [`docs/product/external-engineer-pilot-handoff.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-pilot-handoff.md)
 - [`docs/product/external-engineer-message-template.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-message-template.md)
+- [`docs/product/external-agent-repo-external-validation-plan.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-repo-external-validation-plan.md)
+- [`docs/product/external-agent-validation-round-checklist.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md)
 - [`docs/product/external-pilot-findings-template.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-pilot-findings-template.md)
 - [`docs/specs/external-agent-auth-contract.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/external-agent-auth-contract.md)
 - [`docs/specs/receiver-settlement-callback-contract.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/receiver-settlement-callback-contract.md)

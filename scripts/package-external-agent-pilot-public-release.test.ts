@@ -24,7 +24,7 @@ test("package-external-agent-pilot-public-release produces a release-safe packag
       envTemplatePath: string;
     };
 
-    assert.equal(manifest.outputDir, outputDir);
+    assert.equal(manifest.outputDir, ".");
     assert.equal(manifest.releaseSafe, true);
 
     await stat(join(outputDir, "README.md"));
@@ -34,6 +34,7 @@ test("package-external-agent-pilot-public-release produces a release-safe packag
     await stat(join(outputDir, "docs", "product", "external-agent-validation-round-checklist.md"));
     await stat(join(outputDir, "bundle.template.json"));
     await stat(join(outputDir, ".env.template"));
+    await stat(join(outputDir, "pilot", ".env.template"));
     await stat(join(outputDir, "manifest.json"));
 
     const packageReadme = await readFile(join(outputDir, "README.md"), "utf8");
@@ -47,6 +48,19 @@ test("package-external-agent-pilot-public-release produces a release-safe packag
     const envTemplate = await readFile(join(outputDir, ".env.template"), "utf8");
     assert.match(envTemplate, /AFAL_SIGNING_KEY=request-from-afal-team/);
     assert.match(envTemplate, /AFAL_BASE_URL=https:\/\/replace-with-afal-base-url/);
+
+    const runbook = await readFile(
+      join(outputDir, "docs", "product", "external-agent-pilot-repo-external-runbook.md"),
+      "utf8"
+    );
+    assert.doesNotMatch(runbook, /\/Users\/caizhuoang\//);
+
+    const packagedManifest = JSON.parse(
+      await readFile(join(outputDir, "manifest.json"), "utf8")
+    ) as { outputDir: string; pilotDir: string; templateBundlePath: string };
+    assert.equal(packagedManifest.outputDir, ".");
+    assert.equal(packagedManifest.pilotDir, "pilot");
+    assert.equal(packagedManifest.templateBundlePath, "bundle.template.json");
   } finally {
     await rm(outputDir, { recursive: true, force: true });
   }

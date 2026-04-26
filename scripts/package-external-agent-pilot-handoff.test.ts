@@ -55,7 +55,7 @@ test("package-external-agent-pilot-handoff produces a single external handoff di
       subjectDid: string;
     };
 
-    assert.equal(manifest.outputDir, outputDir);
+    assert.equal(manifest.outputDir, ".");
     assert.equal(manifest.clientId, "client-demo-001");
     assert.equal(manifest.subjectDid, "did:afal:agent:payment-agent-01");
     assert.ok(manifest.includedDocs.includes("docs/specs/external-agent-auth-contract.md"));
@@ -69,6 +69,7 @@ test("package-external-agent-pilot-handoff produces a single external handoff di
     await stat(join(outputDir, "pilot", "package.json"));
     await stat(join(outputDir, "pilot", "README.md"));
     await stat(join(outputDir, ".env"));
+    await stat(join(outputDir, "pilot", ".env"));
     await stat(join(outputDir, "bundle.json"));
     await stat(join(outputDir, "manifest.json"));
     await stat(join(outputDir, "docs", "product", "external-engineer-pilot-handoff.md"));
@@ -82,11 +83,20 @@ test("package-external-agent-pilot-handoff produces a single external handoff di
 
     const readme = await readFile(join(outputDir, "pilot", "README.md"), "utf8");
     assert.match(readme, /repo-external consumer skeleton/);
+    assert.match(readme, /npm run preflight/);
+
+    const runbook = await readFile(
+      join(outputDir, "docs", "product", "external-agent-pilot-repo-external-runbook.md"),
+      "utf8"
+    );
+    assert.doesNotMatch(runbook, /\/Users\/caizhuoang\//);
 
     const packagedManifest = JSON.parse(
       await readFile(join(outputDir, "manifest.json"), "utf8")
-    ) as { envPath: string };
-    assert.equal(packagedManifest.envPath, join(outputDir, ".env"));
+    ) as { envPath: string; outputDir: string; pilotDir: string };
+    assert.equal(packagedManifest.envPath, ".env");
+    assert.equal(packagedManifest.outputDir, ".");
+    assert.equal(packagedManifest.pilotDir, "pilot");
   } finally {
     await rm(tempDir, { recursive: true, force: true });
   }
