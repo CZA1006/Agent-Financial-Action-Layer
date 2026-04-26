@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
@@ -10,11 +10,13 @@ const execFileAsync = promisify(execFile);
 
 test("package-external-agent-pilot-public-release produces a release-safe package", async () => {
   const outputDir = await mkdtemp(join(tmpdir(), "afal-external-public-release-"));
+  const repoAlias = join(outputDir, "Agent-Financial-Action-Layer");
 
   try {
-    const scriptPath = resolve(process.cwd(), "scripts/package-external-agent-pilot-public-release.mjs");
+    await symlink(process.cwd(), repoAlias);
+    const scriptPath = resolve(repoAlias, "scripts/package-external-agent-pilot-public-release.mjs");
     const { stdout } = await execFileAsync("node", [scriptPath, "--output-dir", outputDir], {
-      cwd: process.cwd(),
+      cwd: repoAlias,
     });
 
     const manifest = JSON.parse(stdout) as {

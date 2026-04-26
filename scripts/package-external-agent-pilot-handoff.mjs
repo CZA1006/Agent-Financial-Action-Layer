@@ -21,24 +21,18 @@ function requireArg(flag) {
 
 function rewritePackagedMarkdownLinks(sourceText, sourceRoot, sourceRelativePath) {
   return sourceText.replace(/\]\(([^)]+)\)/g, (_match, target) => {
-    if (!target.startsWith(sourceRoot)) {
-      if (!target.startsWith("/")) {
-        return `](${target})`;
-      }
-
-      const repoName = basename(sourceRoot);
-      const marker = `/${repoName}/`;
-      const markerIndex = target.indexOf(marker);
-      if (markerIndex === -1) {
-        return `](${target})`;
-      }
-
-      const strippedTarget = target.slice(markerIndex + marker.length);
-      const relativeTarget = relative(dirname(sourceRelativePath), strippedTarget);
-      return `](${relativeTarget})`;
+    if (!target.startsWith("/")) {
+      return `](${target})`;
     }
 
-    const strippedTarget = target.slice(sourceRoot.length + 1);
+    const repoName = basename(sourceRoot).toLowerCase();
+    const segments = target.split("/").filter(Boolean);
+    const repoIndex = segments.findIndex((segment) => segment.toLowerCase() === repoName);
+    if (repoIndex === -1) {
+      return `](${target})`;
+    }
+
+    const strippedTarget = segments.slice(repoIndex + 1).join("/");
     const relativeTarget = relative(dirname(sourceRelativePath), strippedTarget);
     return `](${relativeTarget})`;
   });
