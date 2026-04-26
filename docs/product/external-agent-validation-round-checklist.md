@@ -58,6 +58,12 @@ npm run typecheck
 npm run test:mock
 npm run accept:external-onboarding
 npm run validate:external-agent-pilot-release-surfaces
+npm run build:external-agent-pilot-live-handoff -- \
+  --afal-base-url <reachable-afal-base-url> \
+  --output-root <handoff-output-root> \
+  --client-id <client-id> \
+  --tenant-id <tenant-id> \
+  --agent-id <agent-id>
 ```
 
 Record results:
@@ -66,9 +72,13 @@ Record results:
 - `test:mock`:
 - `accept:external-onboarding`:
 - `validate:external-agent-pilot-release-surfaces`:
+- `build:external-agent-pilot-live-handoff`:
 
 Do not skip `accept:external-onboarding`.
 That is the closest internal smoke test to the exact command-line path the external engineer will use.
+
+Do not skip the live handoff builder for remote engineer rounds.
+It is the liveness check that prevents sending a package pinned to an offline or local-only AFAL URL.
 
 ---
 
