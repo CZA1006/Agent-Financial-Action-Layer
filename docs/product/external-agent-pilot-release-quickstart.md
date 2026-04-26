@@ -31,13 +31,21 @@ npm run typecheck
 npm run test:mock
 npm run accept:external-onboarding
 npm run validate:external-agent-pilot-release-surfaces
-npm run build:external-agent-pilot-handoff-artifact
+npm run build:external-agent-pilot-live-handoff -- \
+  --afal-base-url https://replace-with-reachable-afal-sandbox-url \
+  --output-root dist/round-002-live-handoff \
+  --client-id client-round-002-001 \
+  --tenant-id tenant-round-002-001 \
+  --agent-id agent-round-002-001
 ```
 
 Deliver:
 
-- `dist/external-agent-pilot-release/external-agent-pilot-handoff/`
-- or `dist/external-agent-pilot-release/external-agent-pilot-handoff.tar.gz`
+- `dist/round-002-live-handoff/external-agent-pilot-handoff/`
+- or `dist/round-002-live-handoff/external-agent-pilot-handoff.tar.gz`
+
+The live handoff command refuses `127.0.0.1` / `localhost` by default and pings the AFAL base URL before packaging.
+Use `--allow-local` only for local operator drills, not for external validation.
 
 Do not:
 
