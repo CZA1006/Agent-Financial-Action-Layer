@@ -55,6 +55,7 @@ Current validated state:
 - GitHub Actions CI now runs `typecheck`, `test:mock`, and `accept:external-onboarding` on pull requests and pushes to `main`
 - branch protection and required-check guidance lives in [docs/product/ci-merge-gate.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/ci-merge-gate.md)
 - repo-admin setup can be scripted with [scripts/configure-branch-protection.sh](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/scripts/configure-branch-protection.sh)
+- stable external validation should use the staging sandbox operator flow in [docs/product/staging-sandbox-operator-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/staging-sandbox-operator-runbook.md)
 - both canonical flows run in:
   - seeded in-memory mode
   - seeded local durable mode
@@ -217,6 +218,19 @@ The onboarding smoke command covers the narrower second-engineer command sequenc
 - read callback registration back with `get` and `list`
 - submit one payment request and one resource request
 - assert both responses stay at `pending-approval`
+
+If you want to prepare a live handoff package for a remote external engineer, first run a reachable staging sandbox and then build the package with:
+
+```bash
+npm run build:external-agent-pilot-live-handoff -- \
+  --afal-base-url https://replace-with-reachable-afal-sandbox-url \
+  --output-root dist/round-002-live-handoff \
+  --client-id client-round-002-001 \
+  --tenant-id tenant-round-002-001 \
+  --agent-id agent-round-002-001
+```
+
+Use [docs/product/staging-sandbox-operator-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/staging-sandbox-operator-runbook.md) before sending that package to another engineer.
 
 The repo also now includes a first external pilot kit under:
 

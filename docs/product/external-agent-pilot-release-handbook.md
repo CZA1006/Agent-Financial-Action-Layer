@@ -205,6 +205,7 @@ Before internal handoff specifically, verify:
 - the provisioned client scope is correct
 - the correct sandbox base URL is present
 - callback URLs are appropriate for the target environment
+- the staging sandbox URL passes the live handoff preflight
 
 ---
 
@@ -236,6 +237,7 @@ If a public release ever contains a live signing key, treat it as a credential l
 
 Use this handbook together with:
 
+- [staging-sandbox-operator-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/staging-sandbox-operator-runbook.md)
 - [external-agent-pilot-repo-external-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-repo-external-runbook.md)
 - [external-engineer-pilot-handoff.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-pilot-handoff.md)
 - [external-agent-sandbox-onboarding.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-sandbox-onboarding.md)
