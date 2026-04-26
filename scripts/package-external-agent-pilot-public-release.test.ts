@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { execFile } from "node:child_process";
-import { mkdtemp, readFile, rm, stat } from "node:fs/promises";
+import { mkdtemp, readFile, rm, stat, symlink } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "node:test";
@@ -10,11 +10,13 @@ const execFileAsync = promisify(execFile);
 
 test("package-external-agent-pilot-public-release produces a release-safe package", async () => {
   const outputDir = await mkdtemp(join(tmpdir(), "afal-external-public-release-"));
+  const repoAlias = join(outputDir, "Agent-Financial-Action-Layer");
 
   try {
-    const scriptPath = resolve(process.cwd(), "scripts/package-external-agent-pilot-public-release.mjs");
+    await symlink(process.cwd(), repoAlias);
+    const scriptPath = resolve(repoAlias, "scripts/package-external-agent-pilot-public-release.mjs");
     const { stdout } = await execFileAsync("node", [scriptPath, "--output-dir", outputDir], {
-      cwd: process.cwd(),
+      cwd: repoAlias,
     });
 
     const manifest = JSON.parse(stdout) as {
@@ -24,7 +26,7 @@ test("package-external-agent-pilot-public-release produces a release-safe packag
       envTemplatePath: string;
     };
 
-    assert.equal(manifest.outputDir, outputDir);
+    assert.equal(manifest.outputDir, ".");
     assert.equal(manifest.releaseSafe, true);
 
     await stat(join(outputDir, "README.md"));
@@ -34,6 +36,7 @@ test("package-external-agent-pilot-public-release produces a release-safe packag
     await stat(join(outputDir, "docs", "product", "external-agent-validation-round-checklist.md"));
     await stat(join(outputDir, "bundle.template.json"));
     await stat(join(outputDir, ".env.template"));
+    await stat(join(outputDir, "pilot", ".env.template"));
     await stat(join(outputDir, "manifest.json"));
 
     const packageReadme = await readFile(join(outputDir, "README.md"), "utf8");
@@ -47,6 +50,19 @@ test("package-external-agent-pilot-public-release produces a release-safe packag
     const envTemplate = await readFile(join(outputDir, ".env.template"), "utf8");
     assert.match(envTemplate, /AFAL_SIGNING_KEY=request-from-afal-team/);
     assert.match(envTemplate, /AFAL_BASE_URL=https:\/\/replace-with-afal-base-url/);
+
+    const runbook = await readFile(
+      join(outputDir, "docs", "product", "external-agent-pilot-repo-external-runbook.md"),
+      "utf8"
+    );
+    assert.doesNotMatch(runbook, /\/Users\/|\/home\/runner\//);
+
+    const packagedManifest = JSON.parse(
+      await readFile(join(outputDir, "manifest.json"), "utf8")
+    ) as { outputDir: string; pilotDir: string; templateBundlePath: string };
+    assert.equal(packagedManifest.outputDir, ".");
+    assert.equal(packagedManifest.pilotDir, "pilot");
+    assert.equal(packagedManifest.templateBundlePath, "bundle.template.json");
   } finally {
     await rm(outputDir, { recursive: true, force: true });
   }

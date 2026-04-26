@@ -34,6 +34,7 @@ What to use:
 
 Do not run this validation from inside the AFAL monorepo root.
 If the package you received still lives next to `backend/`, `agents/`, or other AFAL implementation directories, stop and report that immediately.
+If the handoff tarball itself is missing or was never actually delivered to your machine, stop immediately and report that as a blocker.
 
 Environment bundle:
 AFAL_BASE_URL=<fill>
@@ -45,14 +46,23 @@ AFAL_RESOURCE_QUOTA_REF=<fill>
 AFAL_PAYMENT_CALLBACK_URL=<fill>
 AFAL_RESOURCE_CALLBACK_URL=<fill>
 
+Additional prerequisite:
+- you need one public HTTPS callback URL for your local callback receiver
+- `cloudflared` is preferred because it works without an account flow
+- `ngrok` is acceptable, but may require a verified account and configured authtoken
+- if no working tunnel tool is available in your environment, report that before attempting callback registration
+
 Expected workflow:
-1. copy `.env.example` to `.env`
+1. `cd pilot`
 2. run `npm install`
-3. run `npm run callback:receiver`
-4. run `npm run callbacks:register`
-5. run `npm run callbacks:get`
-6. run `npm run payment`
-7. run `npm run resource`
+3. run `npm run preflight`
+4. start the callback receiver with `npm run callback:receiver`
+5. expose the callback receiver through a public HTTPS tunnel with `npm run tunnel:start`
+6. update `AFAL_PAYMENT_CALLBACK_URL` and `AFAL_RESOURCE_CALLBACK_URL` in `../.env`
+7. run `npm run callbacks:register`
+8. run `npm run callbacks:get`
+9. run `npm run payment`
+10. run `npm run resource`
 
 Please send back:
 1. output from `callbacks:register`
@@ -88,8 +98,10 @@ Before sending the message:
 
 1. confirm the AFAL sandbox is reachable
 2. confirm the client bundle is correct
-3. confirm the callback URL in the bundle matches the engineer’s local receiver plan
-4. confirm the engineer does not need hidden context from `agents/test-harness/`
+3. confirm the handoff tarball or extracted directory has actually been delivered to the engineer in a known path
+4. confirm the engineer has a tunnel tool plan for callback exposure
+5. confirm the callback URL in the bundle matches the engineer’s local receiver plan
+6. confirm the engineer does not need hidden context from `agents/test-harness/`
 
 If the external engineer gets blocked, do not immediately jump into implementation details.
 First determine whether the blocker came from:

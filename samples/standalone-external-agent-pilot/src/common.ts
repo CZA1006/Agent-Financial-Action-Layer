@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { readFile } from "node:fs/promises";
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
 
 function sha256(value: string): string {
   return createHash("sha256").update(value).digest("hex");
@@ -52,30 +52,44 @@ export async function postJson<T>(
   return (await response.json()) as T;
 }
 
-export async function loadEnvFileIfPresent(path = ".env"): Promise<void> {
-  const envPath = resolve(path);
+function applyEnvContents(contents: string): void {
+  for (const rawLine of contents.split(/\r?\n/u)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#")) {
+      continue;
+    }
+    const equalsIndex = line.indexOf("=");
+    if (equalsIndex === -1) {
+      continue;
+    }
+    const key = line.slice(0, equalsIndex).trim();
+    const value = line.slice(equalsIndex + 1).trim();
+    if (!(key in process.env)) {
+      process.env[key] = value;
+    }
+  }
+}
 
-  try {
-    const contents = await readFile(envPath, "utf8");
-    for (const rawLine of contents.split(/\r?\n/u)) {
-      const line = rawLine.trim();
-      if (!line || line.startsWith("#")) {
-        continue;
-      }
-      const equalsIndex = line.indexOf("=");
-      if (equalsIndex === -1) {
-        continue;
-      }
-      const key = line.slice(0, equalsIndex).trim();
-      const value = line.slice(equalsIndex + 1).trim();
-      if (!(key in process.env)) {
-        process.env[key] = value;
+export async function loadEnvFileIfPresent(path = ".env"): Promise<void> {
+  let currentDir = process.cwd();
+
+  while (true) {
+    const envPath = resolve(currentDir, path);
+    try {
+      const contents = await readFile(envPath, "utf8");
+      applyEnvContents(contents);
+      return;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
+        throw error;
       }
     }
-  } catch (error) {
-    if ((error as NodeJS.ErrnoException).code !== "ENOENT") {
-      throw error;
+
+    const parentDir = dirname(currentDir);
+    if (parentDir === currentDir) {
+      return;
     }
+    currentDir = parentDir;
   }
 }
 

@@ -122,6 +122,7 @@ Only after this pilot passes should the engineer replace the standalone scripts 
 - a cloned standalone pilot repo or copied standalone pilot directory
 - a local `.env`
 - a local callback receiver process
+- one public HTTPS tunnel for the callback receiver, for example through `ngrok` or `cloudflared`
 
 ### Recommended Host Assumptions
 
@@ -131,12 +132,16 @@ The external engineer's machine should have:
 - `npm`
 - ability to reach the AFAL base URL over HTTP
 - ability to bind one local loopback port for callback testing
+- one available way to expose the callback receiver over public HTTPS
 
 ---
 
 ## What AFAL Team Should Send
 
 The cleanest handoff is one copy-paste bundle instead of scattered values.
+
+The handoff is not complete unless the actual tarball or extracted directory has been delivered to the engineer in a known path on their machine.
+Telling them a filename without transferring the artifact is not sufficient.
 
 Recommended handoff bundle:
 
@@ -233,6 +238,23 @@ If this does not start, the engineer should report:
 - missing runtime dependency
 - missing env
 - unexpected local filesystem writes
+
+### 1b. Public Callback Exposure
+
+Before callback registration, the engineer should expose the local callback receiver through one public HTTPS URL.
+
+Acceptable options:
+
+- `ngrok`
+- `cloudflared`
+- another equivalent HTTPS tunnel
+
+Expected result:
+
+- one public URL that forwards to:
+  `http://127.0.0.1:3401/callbacks/action-settled`
+
+If no tunnel tool is installed and no installation step was provided, that is onboarding friction and should be reported.
 
 ### 2. Callback Registration
 

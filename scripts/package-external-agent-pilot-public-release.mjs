@@ -1,5 +1,5 @@
-import { cp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
-import { dirname, join, resolve } from "node:path";
+import { mkdir, readFile, rm, writeFile, cp } from "node:fs/promises";
+import { basename, dirname, join, relative, resolve } from "node:path";
 
 import { renderEnvText } from "./render-external-agent-bundle-env.mjs";
 
@@ -11,10 +11,37 @@ function getArg(flag) {
   return process.argv[index + 1];
 }
 
+function rewritePackagedMarkdownLinks(sourceText, sourceRoot, sourceRelativePath) {
+  return sourceText.replace(/\]\(([^)]+)\)/g, (_match, target) => {
+    if (!target.startsWith("/")) {
+      return `](${target})`;
+    }
+
+    const repoName = basename(sourceRoot).toLowerCase();
+    const segments = target.split("/").filter(Boolean);
+    const repoIndex = segments.findIndex((segment) => segment.toLowerCase() === repoName);
+    if (repoIndex === -1) {
+      return `](${target})`;
+    }
+
+    const strippedTarget = segments.slice(repoIndex + 1).join("/");
+    const relativeTarget = relative(dirname(sourceRelativePath), strippedTarget);
+    return `](${relativeTarget})`;
+  });
+}
+
 async function copyFile(sourceRoot, outputRoot, relativePath) {
   const sourcePath = join(sourceRoot, relativePath);
   const outputPath = join(outputRoot, relativePath);
   await mkdir(dirname(outputPath), { recursive: true });
+
+  if (relativePath.endsWith(".md")) {
+    const sourceText = await readFile(sourcePath, "utf8");
+    const rewritten = rewritePackagedMarkdownLinks(sourceText, sourceRoot, relativePath);
+    await writeFile(outputPath, rewritten, "utf8");
+    return;
+  }
+
   await cp(sourcePath, outputPath);
 }
 
@@ -105,14 +132,15 @@ async function main() {
     "utf8"
   );
   await writeFile(join(outputRoot, ".env.template"), renderEnvText(templateBundle), "utf8");
+  await writeFile(join(pilotRoot, ".env.template"), renderEnvText(templateBundle), "utf8");
 
   const manifest = {
     generatedAt: new Date().toISOString(),
-    outputDir: outputRoot,
-    pilotDir: pilotRoot,
-    docsDir: join(outputRoot, "docs"),
-    templateBundlePath: join(outputRoot, "bundle.template.json"),
-    envTemplatePath: join(outputRoot, ".env.template"),
+    outputDir: ".",
+    pilotDir: "pilot",
+    docsDir: "docs",
+    templateBundlePath: "bundle.template.json",
+    envTemplatePath: ".env.template",
     releaseSafe: true,
     includedDocs: docsToCopy,
   };
