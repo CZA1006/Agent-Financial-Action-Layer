@@ -10,6 +10,7 @@
     "accept:external-onboarding": "bash scripts/check-external-onboarding-smoke.sh",
     "accept:sqlite": "bash scripts/check-sqlite-acceptance.sh",
     "build:external-agent-pilot-handoff-artifact": "bash scripts/build-external-agent-pilot-handoff-artifact.sh",
+    "build:external-agent-pilot-live-handoff": "bash scripts/build-external-agent-pilot-live-handoff.sh",
     "build:external-agent-pilot-public-release": "bash scripts/build-external-agent-pilot-public-release.sh",
     "demo:agent-payment-bilateral": "node --import tsx/esm agents/test-harness/payment-bilateral-harness.ts",
     "demo:agent-payment": "node --import tsx/esm agents/test-harness/payment-harness.ts",

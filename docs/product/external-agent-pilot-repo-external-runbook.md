@@ -58,22 +58,39 @@ npm run package:external-agent-pilot-handoff -- \
   --output-dir dist/external-agent-pilot-handoff
 ```
 
-5. If you want the same deliverable shape that CI publishes, build the release artifact instead:
+5. For a local CI-style artifact, build the release artifact:
 
 ```bash
 npm run build:external-agent-pilot-handoff-artifact
 ```
 
+For a real external engineer round, use the live handoff builder instead.
+It verifies the public AFAL base URL before creating the credential-bearing package:
+
+```bash
+npm run build:external-agent-pilot-live-handoff -- \
+  --afal-base-url https://replace-with-reachable-afal-sandbox-url \
+  --output-root dist/round-002-live-handoff \
+  --client-id client-round-002-001 \
+  --tenant-id tenant-round-002-001 \
+  --agent-id agent-round-002-001
+```
+
+The live handoff builder refuses `127.0.0.1` / `localhost` by default.
+Use `--allow-local` only for local operator drills.
+
 Send the external engineer either:
 
 - `dist/external-agent-pilot-handoff/`
 - `dist/external-agent-pilot-release/external-agent-pilot-handoff/`
+- `dist/round-002-live-handoff/external-agent-pilot-handoff/`
 
 CI-style artifact output:
 
 - `dist/external-agent-pilot-release/external-agent-pilot-handoff/`
 - `dist/external-agent-pilot-release/afal-external-bundle.json`
 - `dist/external-agent-pilot-release/external-agent-pilot-handoff.tar.gz`
+- `dist/round-002-live-handoff/external-agent-pilot-handoff.tar.gz`
 
 GitHub Actions also uploads this artifact on `main` through:
 

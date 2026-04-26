@@ -212,13 +212,16 @@ Before sending Round 002 to an external engineer, AFAL team must rebuild the int
 Expected command shape:
 
 ```bash
-npm run build:external-agent-pilot-handoff-artifact -- \
+npm run build:external-agent-pilot-live-handoff -- \
   --output-root <handoff-output-root> \
   --afal-base-url <reachable-afal-base-url> \
   --client-id <provisioned-client-id> \
   --tenant-id <tenant-id> \
   --agent-id <agent-id>
 ```
+
+The live handoff command performs a liveness preflight before packaging and refuses
+`127.0.0.1` / `localhost` unless `--allow-local` is passed for an operator-only drill.
 
 If the engineer is remote, do not send a bundle that still points at `127.0.0.1`.
 
