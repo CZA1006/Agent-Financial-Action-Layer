@@ -48,6 +48,11 @@ npx tsc --noEmit
 npm run preflight
 ```
 
+`npm run preflight` verifies both AFAL reachability and whether the bundled
+external-client credentials are accepted by AFAL. If it fails with
+`Unknown external agent client`, ask the AFAL team for a bundle provisioned
+against the same deployed sandbox instance named by `AFAL_BASE_URL`.
+
 ## Environment
 
 Expected `.env` fields:
@@ -83,6 +88,16 @@ In a second terminal:
 
 ```bash
 npm run tunnel:start
+```
+
+The preferred tunnel tool is `cloudflared`; it supports anonymous HTTPS tunnels
+and does not require an account for this pilot path. If `ngrok` is used instead,
+configure a verified account and authtoken first.
+
+On macOS:
+
+```bash
+brew install cloudflared
 ```
 
 Take the public HTTPS callback URL from your tunnel and update:

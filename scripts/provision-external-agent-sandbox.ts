@@ -52,6 +52,7 @@ async function main(): Promise<void> {
     tenantId: requireArg("--tenant-id"),
     agentId: requireArg("--agent-id"),
     subjectDid: requireArg("--subject-did"),
+    signingKey: getArg("--signing-key"),
     mandateRefs: getListArg("--mandate-refs") ?? [requireArg("--mandate-ref")],
     monetaryBudgetRefs: getListArg("--monetary-budget-refs"),
     resourceBudgetRefs: getListArg("--resource-budget-refs"),

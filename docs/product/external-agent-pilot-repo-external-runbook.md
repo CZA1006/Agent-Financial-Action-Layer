@@ -70,6 +70,7 @@ It verifies the public AFAL base URL before creating the credential-bearing pack
 ```bash
 npm run build:external-agent-pilot-live-handoff -- \
   --afal-base-url https://replace-with-reachable-afal-sandbox-url \
+  --data-dir /srv/afal/round-002/sqlite-data \
   --output-root dist/round-002-live-handoff \
   --client-id client-round-002-001 \
   --tenant-id tenant-round-002-001 \
@@ -78,6 +79,11 @@ npm run build:external-agent-pilot-live-handoff -- \
 
 The live handoff builder refuses `127.0.0.1` / `localhost` by default.
 Use `--allow-local` only for local operator drills.
+
+Important: run the live handoff builder on the host that owns the live AFAL
+SQLite data directory, or point `--data-dir` at a shared database used by the
+deployed sandbox. Do not build a live handoff from a maintainer laptop temp
+directory while the public sandbox reads a different database.
 
 Send the external engineer either:
 
@@ -127,9 +133,9 @@ or, if they prefer the pieces separately:
 
 ---
 
-## Suggested Separate-Repo Flow
+## Run From Extracted Archive
 
-In a separate workspace:
+In a separate workspace outside the AFAL monorepo:
 
 1. extract the handoff package outside the AFAL monorepo
 2. `cd pilot`
@@ -140,6 +146,11 @@ npm install
 npx tsc --noEmit
 npm run preflight
 ```
+
+`npm run preflight` must pass both checks:
+
+- AFAL base URL is reachable
+- bundled external-client credentials are accepted by AFAL
 
 4. start the callback receiver:
 
@@ -155,8 +166,14 @@ npm run tunnel:start
 
 Preferred tunnel rule:
 
-- use `cloudflared` if available
+- use `cloudflared` as the primary path for anonymous HTTPS callback tunnels
 - if using `ngrok`, make sure the engineer already has a verified account and configured authtoken
+
+macOS install:
+
+```bash
+brew install cloudflared
+```
 
 6. update the callback URL values in `.env`
 

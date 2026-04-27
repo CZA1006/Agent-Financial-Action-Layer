@@ -71,6 +71,7 @@ export interface ExternalAgentProvisioningInput {
   tenantId: IdRef;
   agentId: IdRef;
   subjectDid: Did;
+  signingKey?: string;
   mandateRefs: IdRef[];
   monetaryBudgetRefs?: IdRef[];
   resourceBudgetRefs?: IdRef[];
@@ -129,7 +130,7 @@ export class ExternalAgentClientService {
     input: ExternalAgentProvisioningInput
   ): Promise<ExternalAgentClientRecord> {
     const timestamp = this.now().toISOString();
-    const signingKey = randomBytes(16).toString("hex");
+    const signingKey = input.signingKey ?? randomBytes(16).toString("hex");
     const client: ExternalAgentClientRecord = {
       clientId: input.clientId,
       tenantId: input.tenantId,

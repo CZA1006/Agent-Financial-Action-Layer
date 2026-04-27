@@ -14,6 +14,8 @@ RESOURCE_QUOTA_REFS="quota-001"
 PAYMENT_PAYEE_DID="did:afal:agent:fraud-service-01"
 RESOURCE_PROVIDER_DID="did:afal:institution:provider-openai"
 AFAL_BASE_URL="http://127.0.0.1:3213"
+DATA_DIR=""
+SIGNING_KEY=""
 
 while [ "$#" -gt 0 ]; do
   case "$1" in
@@ -69,6 +71,14 @@ while [ "$#" -gt 0 ]; do
       AFAL_BASE_URL="$2"
       shift 2
       ;;
+    --data-dir)
+      DATA_DIR="$(python3 -c 'import os,sys; print(os.path.abspath(sys.argv[1]))' "$2")"
+      shift 2
+      ;;
+    --signing-key)
+      SIGNING_KEY="$2"
+      shift 2
+      ;;
     *)
       echo "Unknown argument: $1" >&2
       exit 1
@@ -78,29 +88,37 @@ done
 
 mkdir -p "$OUTPUT_ROOT"
 
-TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/afal-external-handoff.XXXXXX")"
-trap 'rm -rf "$TMP_ROOT"' EXIT
-
-DATA_DIR="$TMP_ROOT/sqlite-data"
+TMP_ROOT=""
+if [ "$DATA_DIR" = "" ]; then
+  TMP_ROOT="$(mktemp -d "${TMPDIR:-/tmp}/afal-external-handoff.XXXXXX")"
+  trap 'rm -rf "$TMP_ROOT"' EXIT
+  DATA_DIR="$TMP_ROOT/sqlite-data"
+fi
 BUNDLE_PATH="$OUTPUT_ROOT/afal-external-bundle.json"
 HANDOFF_DIR="$OUTPUT_ROOT/$HANDOFF_NAME"
 ARCHIVE_PATH="$OUTPUT_ROOT/$HANDOFF_NAME.tar.gz"
 
 echo "[build:external-agent-pilot-handoff-artifact] provision sandbox bundle"
-npm run provision:external-agent-sandbox -- \
-  --data-dir "$DATA_DIR" \
-  --client-id "$CLIENT_ID" \
-  --tenant-id "$TENANT_ID" \
-  --agent-id "$AGENT_ID" \
-  --subject-did "$SUBJECT_DID" \
-  --mandate-refs "$MANDATE_REFS" \
-  --monetary-budget-refs "$MONETARY_BUDGET_REFS" \
-  --resource-budget-refs "$RESOURCE_BUDGET_REFS" \
-  --resource-quota-refs "$RESOURCE_QUOTA_REFS" \
-  --payment-payee-did "$PAYMENT_PAYEE_DID" \
-  --resource-provider-did "$RESOURCE_PROVIDER_DID" \
-  --afal-base-url "$AFAL_BASE_URL" \
+PROVISION_ARGS=(
+  --data-dir "$DATA_DIR"
+  --client-id "$CLIENT_ID"
+  --tenant-id "$TENANT_ID"
+  --agent-id "$AGENT_ID"
+  --subject-did "$SUBJECT_DID"
+  --mandate-refs "$MANDATE_REFS"
+  --monetary-budget-refs "$MONETARY_BUDGET_REFS"
+  --resource-budget-refs "$RESOURCE_BUDGET_REFS"
+  --resource-quota-refs "$RESOURCE_QUOTA_REFS"
+  --payment-payee-did "$PAYMENT_PAYEE_DID"
+  --resource-provider-did "$RESOURCE_PROVIDER_DID"
+  --afal-base-url "$AFAL_BASE_URL"
   --output "$BUNDLE_PATH"
+)
+if [ "$SIGNING_KEY" != "" ]; then
+  PROVISION_ARGS+=(--signing-key "$SIGNING_KEY")
+fi
+
+npm run provision:external-agent-sandbox -- "${PROVISION_ARGS[@]}"
 
 echo "[build:external-agent-pilot-handoff-artifact] package handoff directory"
 npm run package:external-agent-pilot-handoff -- \

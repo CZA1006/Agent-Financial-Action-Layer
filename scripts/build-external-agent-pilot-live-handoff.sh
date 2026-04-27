@@ -25,10 +25,14 @@ while [ "$#" -gt 0 ]; do
 Usage:
   scripts/build-external-agent-pilot-live-handoff.sh \
     --afal-base-url <reachable-public-afal-url> \
+    --data-dir <live-server-sqlite-data-dir> \
     [build-external-agent-pilot-handoff-artifact args...]
 
 This command refuses localhost URLs by default and verifies the AFAL base URL is
 reachable before it builds a credential-bearing external handoff package.
+
+For a live public sandbox, run this command on the host that owns the AFAL
+SQLite data directory, or pass a shared data directory used by that sandbox.
 
 Use --allow-local only for local operator drills.
 USAGE

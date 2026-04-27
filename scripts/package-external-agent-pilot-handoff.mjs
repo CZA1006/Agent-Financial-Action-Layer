@@ -81,6 +81,9 @@ async function main() {
   await rm(join(pilotRoot, "README.external.md"), { force: true });
 
   const bundle = JSON.parse(await readFile(bundlePath, "utf8"));
+  const packagedBundle = { ...bundle };
+  delete packagedBundle.dataDir;
+  delete packagedBundle.integrationDb;
   const envText = renderEnvText(bundle, {
     callbackUrl: getArg("--callback-url"),
     callbackHost: getArg("--callback-host"),
@@ -90,7 +93,11 @@ async function main() {
 
   await writeFile(join(outputRoot, ".env"), envText, "utf8");
   await writeFile(join(pilotRoot, ".env"), envText, "utf8");
-  await writeFile(join(outputRoot, "bundle.json"), `${JSON.stringify(bundle, null, 2)}\n`, "utf8");
+  await writeFile(
+    join(outputRoot, "bundle.json"),
+    `${JSON.stringify(packagedBundle, null, 2)}\n`,
+    "utf8"
+  );
 
   for (const relativePath of docsToCopy) {
     await copyFile(repoRoot, outputRoot, relativePath);
