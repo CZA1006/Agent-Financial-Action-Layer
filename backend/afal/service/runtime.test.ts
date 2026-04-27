@@ -8,6 +8,7 @@ import {
   HttpSettlementNotificationPort,
   SettlementNotificationOutboxWorker,
 } from "../notifications";
+import { AfalSettlementService } from "../settlement";
 import { AfalRuntimeService, createAfalRuntimeService } from "./runtime";
 
 test("AFAL runtime service executes both canonical flows through default orchestrators", async () => {
@@ -163,6 +164,79 @@ test("AFAL runtime service exposes module-service command entrypoints", async ()
     assert.fail("expected resumeApprovedAction to return a settled payment flow");
   }
   assert.equal(pendingExecution.status, "resumed");
+});
+
+test("AFAL runtime service carries external wallet settlement evidence into payment receipts", async () => {
+  const ports = createMockAfalPorts({
+    paymentSettlement: new AfalSettlementService({
+      paymentAdapter: {
+        async executePayment() {
+          return {
+            settlementId: "stl-wallet-payint-0001",
+            schemaVersion: "0.1",
+            settlementType: "onchain-transfer",
+            actionRef: paymentFlowFixtures.paymentIntentCreated.intentId,
+            decisionRef: paymentFlowFixtures.authorizationDecisionFinal.decisionId,
+            sourceAccountRef: paymentFlowFixtures.paymentIntentCreated.payer.accountId,
+            destination: {
+              payeeDid: paymentFlowFixtures.paymentIntentCreated.payee.payeeDid,
+              settlementAddress: "0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94",
+            },
+            asset: "USDC",
+            amount: "0.01",
+            chain: "base-sepolia",
+            txHash: "0xbb053d513054da80442c04a5b63277d269a3a108633141bf2ca5f7a3d9fc7170",
+            status: "settled",
+            executedAt: "2026-04-27T09:12:34.038Z",
+            settledAt: "2026-04-27T09:12:34.038Z",
+          };
+        },
+      },
+    }),
+  });
+  const service = new AfalRuntimeService({ ports });
+  const paymentPending = await service.requestPaymentApproval({
+    capability: "requestPaymentApproval",
+    requestRef: "req-runtime-wallet-payment-approval-001",
+    input: {
+      requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+      intent: paymentFlowFixtures.paymentIntentCreated,
+      monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+    },
+  });
+
+  await service.applyApprovalResult({
+    capability: "applyApprovalResult",
+    requestRef: "req-runtime-wallet-payment-apply-001",
+    input: {
+      approvalSessionRef: paymentPending.approvalSession.approvalSessionId,
+      result: paymentFlowFixtures.approvalResult,
+    },
+  });
+  const resumedExecution = await service.resumeApprovedAction({
+    capability: "resumeApprovedAction",
+    requestRef: "req-runtime-wallet-payment-resume-001",
+    input: {
+      approvalSessionRef: paymentPending.approvalSession.approvalSessionId,
+    },
+  });
+
+  if (!("paymentReceipt" in resumedExecution)) {
+    assert.fail("expected resumeApprovedAction to return a settled payment flow");
+  }
+
+  assert.equal(resumedExecution.settlement.amount, "0.01");
+  assert.equal(resumedExecution.settlement.chain, "base-sepolia");
+  assert.equal(
+    resumedExecution.settlement.txHash,
+    "0xbb053d513054da80442c04a5b63277d269a3a108633141bf2ca5f7a3d9fc7170"
+  );
+  assert.equal(resumedExecution.paymentReceipt.evidence.amount, "0.01");
+  assert.equal(resumedExecution.paymentReceipt.evidence.chain, "base-sepolia");
+  assert.equal(
+    resumedExecution.paymentReceipt.evidence.txHash,
+    "0xbb053d513054da80442c04a5b63277d269a3a108633141bf2ca5f7a3d9fc7170"
+  );
 });
 
 test("AFAL runtime service propagates rejected approval results into action status and releases reservations", async () => {

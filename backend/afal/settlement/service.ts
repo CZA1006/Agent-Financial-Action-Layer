@@ -80,15 +80,12 @@ export class AfalSettlementService
     intent: PaymentIntent,
     decision: AuthorizationDecision
   ): Promise<SettlementRecord> {
+    const adapterSettlement = await this.paymentAdapter.executePayment(intent, decision);
     const settlement = {
-      ...(await this.paymentAdapter.executePayment(intent, decision)),
+      ...adapterSettlement,
       actionRef: intent.intentId,
       decisionRef: decision.decisionId,
       sourceAccountRef: intent.payer.accountId,
-      destination: clone(intent.payee),
-      asset: intent.asset,
-      amount: intent.amount,
-      chain: intent.chain,
     };
 
     await this.store.putSettlement(settlement);

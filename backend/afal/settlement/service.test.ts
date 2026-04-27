@@ -52,6 +52,50 @@ test("seeded external settlement adapters return canonical payment and provider 
   assert.equal(resourceSettlement.settlementId, resourceFlowFixtures.settlementRecord.settlementId);
 });
 
+test("AFAL settlement service preserves external payment rail economic fields", async () => {
+  const service = new AfalSettlementService({
+    paymentAdapter: {
+      async executePayment() {
+        return {
+          settlementId: "stl-wallet-payint-0001",
+          schemaVersion: "0.1",
+          settlementType: "onchain-transfer",
+          actionRef: "adapter-action-ref",
+          decisionRef: "adapter-decision-ref",
+          sourceAccountRef: "adapter-source-account",
+          destination: {
+            payeeDid: paymentFlowFixtures.paymentIntentCreated.payee.payeeDid,
+            settlementAddress: "0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94",
+          },
+          asset: "USDC",
+          amount: "0.01",
+          chain: "base-sepolia",
+          txHash: "0xbb053d513054da80442c04a5b63277d269a3a108633141bf2ca5f7a3d9fc7170",
+          status: "settled",
+          executedAt: "2026-04-27T09:12:34.038Z",
+          settledAt: "2026-04-27T09:12:34.038Z",
+        };
+      },
+    },
+  });
+
+  const settlement = await service.executePayment(
+    paymentFlowFixtures.paymentIntentCreated,
+    paymentFlowFixtures.authorizationDecisionFinal
+  );
+
+  assert.equal(settlement.actionRef, paymentFlowFixtures.paymentIntentCreated.intentId);
+  assert.equal(settlement.decisionRef, paymentFlowFixtures.authorizationDecisionFinal.decisionId);
+  assert.equal(settlement.sourceAccountRef, paymentFlowFixtures.paymentIntentCreated.payer.accountId);
+  assert.equal(settlement.amount, "0.01");
+  assert.equal(settlement.chain, "base-sepolia");
+  assert.equal(settlement.txHash, "0xbb053d513054da80442c04a5b63277d269a3a108633141bf2ca5f7a3d9fc7170");
+  assert.deepEqual(settlement.destination, {
+    payeeDid: paymentFlowFixtures.paymentIntentCreated.payee.payeeDid,
+    settlementAddress: "0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94",
+  });
+});
+
 test("AFAL settlement service persists settlement and usage records through the injected store", async () => {
   const store = new InMemoryAfalSettlementStore();
   let paymentCalls = 0;
