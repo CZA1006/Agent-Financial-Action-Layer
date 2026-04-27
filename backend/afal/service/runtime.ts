@@ -907,13 +907,26 @@ export class AfalRuntimeService
       throw error;
     }
 
+    const paymentReceiptEvidence: Record<string, unknown> = {
+      payerAccountRef: settlement.sourceAccountRef,
+      payeeDid: "payeeDid" in settlement.destination
+        ? settlement.destination.payeeDid
+        : intent.payee.payeeDid,
+      asset: settlement.asset,
+      amount: settlement.amount,
+      chain: settlement.chain ?? intent.chain,
+    };
+    if (settlement.txHash) {
+      paymentReceiptEvidence.txHash = settlement.txHash;
+    }
+
     const paymentReceipt = await this.ports.receipts.createActionReceipt({
       receiptType: "payment",
       actionRef: intent.intentId,
       decisionRef: args.finalDecision.decisionId,
       settlementRef: settlement.settlementId,
       issuedAt: fixtures.paymentReceipt.issuedAt,
-      evidence: clone(fixtures.paymentReceipt.evidence),
+      evidence: paymentReceiptEvidence,
     });
     const settledIntent = await this.ports.intents.markPaymentSettlement({
       intentId: intent.intentId,
@@ -964,9 +977,9 @@ export class AfalRuntimeService
       intentStatus: settledIntent.status,
       settlementRef: settlement.settlementId,
       receiptRef: paymentReceipt.receiptId,
-      asset: settledIntent.asset,
-      amount: settledIntent.amount,
-      chain: settledIntent.chain,
+      asset: settlement.asset,
+      amount: settlement.amount,
+      chain: settlement.chain ?? settledIntent.chain,
       settledAt: settlement.settledAt ?? settlement.executedAt ?? paymentReceipt.issuedAt,
     });
 
