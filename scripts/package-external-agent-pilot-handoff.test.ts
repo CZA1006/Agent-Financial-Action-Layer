@@ -22,6 +22,8 @@ test("package-external-agent-pilot-handoff produces a single external handoff di
       `${JSON.stringify(
         {
           afalBaseUrl: "http://127.0.0.1:3213",
+          dataDir: "/Users/maintainer/tmp/afal/sqlite-data",
+          integrationDb: "/Users/maintainer/tmp/afal/sqlite-data/afal-integration.sqlite",
           clientId: "client-demo-001",
           subjectDid: "did:afal:agent:payment-agent-01",
           mandateRefs: ["mnd-0001", "mnd-0002"],
@@ -82,6 +84,11 @@ test("package-external-agent-pilot-handoff produces a single external handoff di
     const envText = await readFile(join(outputDir, ".env"), "utf8");
     assert.match(envText, /AFAL_CLIENT_ID=client-demo-001/);
     assert.match(envText, /AFAL_SIGNING_KEY=secret-demo-signing-key/);
+
+    const packagedBundle = await readFile(join(outputDir, "bundle.json"), "utf8");
+    assert.doesNotMatch(packagedBundle, /\/Users\/maintainer/);
+    assert.doesNotMatch(packagedBundle, /dataDir/);
+    assert.doesNotMatch(packagedBundle, /integrationDb/);
 
     const readme = await readFile(join(outputDir, "pilot", "README.md"), "utf8");
     assert.match(readme, /repo-external consumer skeleton/);

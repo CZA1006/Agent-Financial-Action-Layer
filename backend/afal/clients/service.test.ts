@@ -36,6 +36,23 @@ test("external agent client service provisions a client and builds signed header
   );
 });
 
+test("external agent client service can provision a fixed signing key", async () => {
+  const service = new ExternalAgentClientService({
+    now: () => new Date("2026-03-30T00:00:00Z"),
+  });
+
+  const client = await service.provisionClient({
+    clientId: "client-fixed-key",
+    tenantId: "tenant-fixed-key",
+    agentId: "agent-fixed-key",
+    subjectDid: "did:afal:agent:fixed-key",
+    signingKey: "fixed-signing-key",
+    mandateRefs: ["mnd-0001"],
+  });
+
+  assert.equal(client.auth.signingKey, "fixed-signing-key");
+});
+
 test("external agent client service authenticates signed requests and rejects replay", async () => {
   const store = new InMemoryExternalAgentClientStore({
     clients: [
