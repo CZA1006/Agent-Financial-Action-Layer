@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 
 import type { SettlementNotificationPort } from "../interfaces";
 import type { PaymentRailAdapter, ResourceProviderAdapter } from "../settlement";
+import { HttpPaymentRailAdapter } from "../settlement/http-adapters";
 import {
   SettlementNotificationOutboxWorker,
   type SettlementNotificationRedeliveryPort,
@@ -17,6 +18,49 @@ import {
 
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = 3213;
+
+function readOptionalPositiveInteger(value: string | undefined): number | undefined {
+  if (!value) {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined;
+}
+
+function createPaymentRailAdapterFromEnv(): PaymentRailAdapter | undefined {
+  const baseUrl = process.env.AFAL_PAYMENT_RAIL_BASE_URL;
+  if (!baseUrl) {
+    return undefined;
+  }
+
+  const token = process.env.AFAL_PAYMENT_RAIL_TOKEN;
+  const signingKey = process.env.AFAL_PAYMENT_RAIL_SIGNING_KEY;
+  const serviceId = process.env.AFAL_PAYMENT_RAIL_SERVICE_ID ?? "afal-runtime";
+  const maxAttempts = readOptionalPositiveInteger(
+    process.env.AFAL_PAYMENT_RAIL_RETRY_MAX_ATTEMPTS
+  );
+  const backoffMs = readOptionalPositiveInteger(process.env.AFAL_PAYMENT_RAIL_RETRY_BACKOFF_MS);
+
+  return new HttpPaymentRailAdapter({
+    baseUrl,
+    retry:
+      maxAttempts || backoffMs
+        ? {
+            maxAttempts,
+            backoffMs,
+          }
+        : undefined,
+    auth:
+      token && signingKey
+        ? {
+            token,
+            serviceId,
+            signingKey,
+          }
+        : undefined,
+  });
+}
 
 export interface AfalNodeHttpTransportRequest {
   method?: string;
@@ -375,11 +419,13 @@ async function main(): Promise<void> {
   const externalClientAuthMaxRequestAgeMs = process.env.AFAL_EXTERNAL_CLIENT_AUTH_MAX_REQUEST_AGE_MS
     ? Number(process.env.AFAL_EXTERNAL_CLIENT_AUTH_MAX_REQUEST_AGE_MS)
     : undefined;
+  const paymentAdapter = createPaymentRailAdapterFromEnv();
 
   const server = await startSeededSqliteAfalHttpServer({
     dataDir,
     host,
     port,
+    paymentAdapter,
     externalClientAuth: externalClientAuthEnabled
       ? {
           enabled: true,
@@ -405,6 +451,14 @@ async function main(): Promise<void> {
             externalClientAuthMaxRequestAgeMs !== undefined
               ? externalClientAuthMaxRequestAgeMs
               : null,
+        },
+        paymentRail: {
+          enabled: Boolean(paymentAdapter),
+          baseUrl: process.env.AFAL_PAYMENT_RAIL_BASE_URL ?? null,
+          authEnabled: Boolean(
+            process.env.AFAL_PAYMENT_RAIL_TOKEN &&
+              process.env.AFAL_PAYMENT_RAIL_SIGNING_KEY
+          ),
         },
       },
       null,

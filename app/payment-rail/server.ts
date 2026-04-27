@@ -11,6 +11,9 @@ const DEFAULT_PORT = 3412;
 export const PAYMENT_RAIL_SERVICE_ROUTES = {
   health: "/health",
   executePayment: "/payments/execute",
+  confirmWalletPayment: "/wallet-payments/confirm",
+  walletDemo: "/wallet-demo",
+  walletDemoScript: "/wallet-demo.js",
 } as const;
 
 interface PaymentRailRequestBody {
@@ -25,7 +28,10 @@ type PaymentRailResponseBody =
   | {
       ok: true;
       requestRef: string;
-      data: SettlementRecord | { status: "ok"; service: "payment-rail-stub" };
+      data:
+        | SettlementRecord
+        | { status: "ok"; service: "payment-rail-stub" }
+        | (WalletPaymentConfirmation & { status: "ok" });
     }
   | {
       ok: false;
@@ -40,10 +46,13 @@ type PaymentRailResponseBody =
 export interface PaymentRailServiceState {
   executePaymentAttempts: number;
   executePaymentFailuresRemaining: number;
+  requireWalletConfirmation: boolean;
+  walletConfirmations: Map<string, WalletPaymentConfirmation>;
 }
 
 export interface PaymentRailFailurePlan {
   executePaymentFailuresBeforeSuccess?: number;
+  requireWalletConfirmation?: boolean;
 }
 
 export interface PaymentRailServiceAuth {
@@ -53,6 +62,19 @@ export interface PaymentRailServiceAuth {
   requestTimestampHeaderName?: string;
   signatureHeaderName?: string;
   signingKey: string;
+}
+
+export interface WalletPaymentConfirmation {
+  actionRef: string;
+  txHash: string;
+  from: string;
+  to: string;
+  tokenAddress: string;
+  amount: string;
+  asset: string;
+  chain: string;
+  chainId: number;
+  confirmedAt: string;
 }
 
 export interface RunningPaymentRailStubServer {
@@ -70,6 +92,28 @@ function stringifyResponse(statusCode: number, body: PaymentRailResponseBody) {
     statusCode,
     headers: {
       "content-type": "application/json",
+      "content-length": Buffer.byteLength(bodyText, "utf8").toString(),
+    },
+    bodyText,
+  };
+}
+
+function stringifyHtmlResponse(statusCode: number, bodyText: string) {
+  return {
+    statusCode,
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "content-length": Buffer.byteLength(bodyText, "utf8").toString(),
+    },
+    bodyText,
+  };
+}
+
+function stringifyJavaScriptResponse(statusCode: number, bodyText: string) {
+  return {
+    statusCode,
+    headers: {
+      "content-type": "application/javascript; charset=utf-8",
       "content-length": Buffer.byteLength(bodyText, "utf8").toString(),
     },
     bodyText,
@@ -104,7 +148,180 @@ export function createPaymentRailServiceState(
   return {
     executePaymentAttempts: 0,
     executePaymentFailuresRemaining: Math.max(0, plan?.executePaymentFailuresBeforeSuccess ?? 0),
+    requireWalletConfirmation: plan?.requireWalletConfirmation ?? false,
+    walletConfirmations: new Map(),
   };
+}
+
+function isWalletPaymentConfirmationBody(body: unknown): body is {
+  requestRef: string;
+  input: Omit<WalletPaymentConfirmation, "confirmedAt"> & { confirmedAt?: string };
+} {
+  return Boolean(
+    body &&
+      typeof body === "object" &&
+      "requestRef" in body &&
+      typeof body.requestRef === "string" &&
+      "input" in body &&
+      body.input &&
+      typeof body.input === "object" &&
+      "actionRef" in body.input &&
+      typeof body.input.actionRef === "string" &&
+      "txHash" in body.input &&
+      typeof body.input.txHash === "string" &&
+      "from" in body.input &&
+      typeof body.input.from === "string" &&
+      "to" in body.input &&
+      typeof body.input.to === "string" &&
+      "tokenAddress" in body.input &&
+      typeof body.input.tokenAddress === "string" &&
+      "amount" in body.input &&
+      typeof body.input.amount === "string" &&
+      "asset" in body.input &&
+      typeof body.input.asset === "string" &&
+      "chain" in body.input &&
+      typeof body.input.chain === "string" &&
+      "chainId" in body.input &&
+      typeof body.input.chainId === "number"
+  );
+}
+
+function buildWalletSettlement(
+  intent: PaymentIntent,
+  decision: AuthorizationDecision,
+  confirmation: WalletPaymentConfirmation
+): SettlementRecord {
+  return {
+    settlementId: `stl-wallet-${intent.intentId}`,
+    schemaVersion: "0.1",
+    settlementType: "onchain-transfer",
+    actionRef: intent.intentId,
+    decisionRef: decision.decisionId,
+    sourceAccountRef: intent.payer.accountId,
+    destination: {
+      ...intent.payee,
+      settlementAddress: confirmation.to,
+    },
+    asset: confirmation.asset,
+    amount: confirmation.amount,
+    chain: confirmation.chain,
+    txHash: confirmation.txHash,
+    status: "settled",
+    executedAt: confirmation.confirmedAt,
+    settledAt: confirmation.confirmedAt,
+  };
+}
+
+function buildWalletDemoHtml(): string {
+  return `<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>AFAL MetaMask Payment Demo</title>
+  <style>
+    body { font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; margin: 0; background: #f7f3ea; color: #15201d; }
+    main { max-width: 860px; margin: 48px auto; padding: 32px; background: #fffaf0; border: 1px solid #d7c8aa; border-radius: 18px; box-shadow: 0 18px 60px rgba(38, 29, 12, 0.14); }
+    h1 { margin: 0 0 8px; font-size: 32px; }
+    p { color: #4d5a55; line-height: 1.55; }
+    label { display: grid; gap: 6px; margin-top: 16px; font-weight: 700; }
+    input { padding: 12px 14px; border: 1px solid #b8aa8d; border-radius: 10px; font: inherit; background: #fff; }
+    button { margin-top: 20px; padding: 12px 16px; border: 0; border-radius: 999px; background: #24483f; color: white; font-weight: 800; cursor: pointer; }
+    button + button { margin-left: 10px; background: #c47a24; }
+    pre { overflow: auto; padding: 16px; background: #15201d; color: #e5f4e8; border-radius: 12px; }
+    .warning { padding: 12px 14px; background: #fff1c2; border: 1px solid #e0bd54; border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>AFAL MetaMask Payment Demo</h1>
+    <p class="warning">Testnet-only default: Base Sepolia USDC. Do not use mainnet funds in this page.</p>
+    <p>This page sends an ERC-20 transfer with MetaMask, then registers the resulting txHash with the AFAL payment rail demo.</p>
+    <label>Action Ref <input id="actionRef" value="payint-0001" /></label>
+    <label>Payee Address <input id="to" placeholder="0x..." /></label>
+    <label>USDC Amount <input id="amount" value="0.01" /></label>
+    <label>Token Address <input id="tokenAddress" value="0x036CbD53842c5426634e7929541eC2318f3dCF7e" /></label>
+    <button id="connect">Connect Wallet</button>
+    <button id="pay">Send Testnet USDC + Register txHash</button>
+    <pre id="log">{}</pre>
+  </main>
+  <script src="/wallet-demo.js"></script>
+</body>
+</html>`;
+}
+
+function buildWalletDemoScript(): string {
+  return `
+const BASE_SEPOLIA_CHAIN_ID = "0x14a34";
+const BASE_SEPOLIA_PARAMS = {
+  chainId: BASE_SEPOLIA_CHAIN_ID,
+  chainName: "Base Sepolia",
+  nativeCurrency: { name: "Ether", symbol: "ETH", decimals: 18 },
+  rpcUrls: ["https://sepolia.base.org"],
+  blockExplorerUrls: ["https://sepolia-explorer.base.org"]
+};
+const log = (payload) => {
+  document.querySelector("#log").textContent = JSON.stringify(payload, null, 2);
+};
+const parseUnits = (value, decimals) => {
+  const [whole, fraction = ""] = value.trim().split(".");
+  const normalizedFraction = (fraction + "0".repeat(decimals)).slice(0, decimals);
+  return BigInt(whole || "0") * (10n ** BigInt(decimals)) + BigInt(normalizedFraction || "0");
+};
+const encodeErc20Transfer = (to, amount) => {
+  const selector = "a9059cbb";
+  const address = to.toLowerCase().replace(/^0x/, "").padStart(64, "0");
+  const value = amount.toString(16).padStart(64, "0");
+  return "0x" + selector + address + value;
+};
+async function ensureBaseSepolia() {
+  const currentChainId = await ethereum.request({ method: "eth_chainId" });
+  if (currentChainId === BASE_SEPOLIA_CHAIN_ID) return;
+  try {
+    await ethereum.request({ method: "wallet_switchEthereumChain", params: [{ chainId: BASE_SEPOLIA_CHAIN_ID }] });
+  } catch (error) {
+    if (error && error.code === 4902) {
+      await ethereum.request({ method: "wallet_addEthereumChain", params: [BASE_SEPOLIA_PARAMS] });
+      return;
+    }
+    throw error;
+  }
+}
+document.querySelector("#connect").addEventListener("click", async () => {
+  if (!window.ethereum) throw new Error("MetaMask-compatible wallet not found");
+  const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+  await ensureBaseSepolia();
+  log({ connected: true, account: accounts[0], chainId: await ethereum.request({ method: "eth_chainId" }) });
+});
+document.querySelector("#pay").addEventListener("click", async () => {
+  if (!window.ethereum) throw new Error("MetaMask-compatible wallet not found");
+  const accounts = await ethereum.request({ method: "eth_requestAccounts" });
+  await ensureBaseSepolia();
+  const from = accounts[0];
+  const actionRef = document.querySelector("#actionRef").value.trim();
+  const to = document.querySelector("#to").value.trim();
+  const tokenAddress = document.querySelector("#tokenAddress").value.trim();
+  const amount = document.querySelector("#amount").value.trim();
+  const txHash = await ethereum.request({
+    method: "eth_sendTransaction",
+    params: [{
+      from,
+      to: tokenAddress,
+      value: "0x0",
+      data: encodeErc20Transfer(to, parseUnits(amount, 6))
+    }]
+  });
+  const response = await fetch("/wallet-payments/confirm", {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      requestRef: "req-wallet-confirm-" + Date.now(),
+      input: { actionRef, txHash, from, to, tokenAddress, amount, asset: "USDC", chain: "base-sepolia", chainId: 84532 }
+    })
+  });
+  log({ txHash, confirmation: await response.json() });
+});
+`;
 }
 
 function isAuthorized(
@@ -204,6 +421,62 @@ export async function handlePaymentRailNodeHttpRequest(request: {
     });
   }
 
+  if (pathname === PAYMENT_RAIL_SERVICE_ROUTES.walletDemo) {
+    if (method !== "GET") {
+      return buildFailure("wallet-demo", 405, "method-not-allowed", "wallet demo only supports GET");
+    }
+    return stringifyHtmlResponse(200, buildWalletDemoHtml());
+  }
+
+  if (pathname === PAYMENT_RAIL_SERVICE_ROUTES.walletDemoScript) {
+    if (method !== "GET") {
+      return buildFailure("wallet-demo", 405, "method-not-allowed", "wallet demo script only supports GET");
+    }
+    return stringifyJavaScriptResponse(200, buildWalletDemoScript());
+  }
+
+  if (pathname === PAYMENT_RAIL_SERVICE_ROUTES.confirmWalletPayment) {
+    if (method !== "POST") {
+      return buildFailure(
+        "unknown",
+        405,
+        "method-not-allowed",
+        "wallet payment confirmation only supports POST"
+      );
+    }
+
+    let body: unknown;
+    try {
+      body = request.bodyText ? JSON.parse(request.bodyText) : undefined;
+    } catch {
+      return buildFailure("unknown", 400, "bad-request", "request body must be valid JSON");
+    }
+
+    if (!isWalletPaymentConfirmationBody(body)) {
+      return buildFailure(
+        "unknown",
+        400,
+        "bad-request",
+        "request body must include requestRef and wallet payment confirmation input"
+      );
+    }
+
+    const confirmation: WalletPaymentConfirmation = {
+      ...body.input,
+      confirmedAt: body.input.confirmedAt ?? new Date().toISOString(),
+    };
+    state.walletConfirmations.set(confirmation.actionRef, confirmation);
+
+    return stringifyResponse(200, {
+      ok: true,
+      requestRef: body.requestRef,
+      data: {
+        ...confirmation,
+        status: "ok",
+      },
+    });
+  }
+
   if (pathname === PAYMENT_RAIL_SERVICE_ROUTES.executePayment) {
     if (method !== "POST") {
       return buildFailure(
@@ -251,10 +524,21 @@ export async function handlePaymentRailNodeHttpRequest(request: {
           "payment rail stub is temporarily unavailable"
         );
       }
-      const data = await createSeededPaymentRailAdapter().executePayment(
-        body.input.intent,
-        body.input.decision
-      );
+      const confirmation = state.walletConfirmations.get(body.input.intent.intentId);
+      if (state.requireWalletConfirmation && !confirmation) {
+        return buildFailure(
+          body.requestRef,
+          409,
+          "wallet-transfer-not-confirmed",
+          `wallet transfer confirmation not found for action "${body.input.intent.intentId}"`
+        );
+      }
+      const data = confirmation
+        ? buildWalletSettlement(body.input.intent, body.input.decision, confirmation)
+        : await createSeededPaymentRailAdapter().executePayment(
+            body.input.intent,
+            body.input.decision
+          );
       return stringifyResponse(200, {
         ok: true,
         requestRef: body.requestRef,
@@ -353,9 +637,15 @@ async function main(): Promise<void> {
   const port = Number(process.argv[3] ?? DEFAULT_PORT);
   const token = process.env.PAYMENT_RAIL_TOKEN;
   const signingKey = process.env.PAYMENT_RAIL_SIGNING_KEY;
+  const requireWalletConfirmation =
+    process.env.PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION === "true" ||
+    process.env.PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION === "1";
   const server = await startPaymentRailStubServer({
     host,
     port,
+    failurePlan: {
+      requireWalletConfirmation,
+    },
     auth: token && signingKey
       ? {
           token,
@@ -363,7 +653,19 @@ async function main(): Promise<void> {
         }
       : undefined,
   });
-  console.log(JSON.stringify({ host: server.host, port: server.port, url: server.url }, null, 2));
+  console.log(
+    JSON.stringify(
+      {
+        host: server.host,
+        port: server.port,
+        url: server.url,
+        requireWalletConfirmation,
+        routes: PAYMENT_RAIL_SERVICE_ROUTES,
+      },
+      null,
+      2
+    )
+  );
 }
 
 const isDirectRun =
