@@ -122,6 +122,12 @@ Expected results:
 - payment request returns `pending-approval`
 - resource request returns `pending-approval`
 
+Re-run note:
+
+- `pending-approval` payment requests reserve `45.00 USDC` until the trusted-surface settlement step runs.
+- `pending-approval` resource requests reserve `100000` tokens until the trusted-surface settlement step runs.
+- If you reuse the same AFAL sandbox state for many pilot runs, reservations accumulate. Ask the AFAL team for a freshly provisioned client or reset sandbox if budget/quota exhaustion changes the result.
+
 ## Scripts
 
 - `npm run preflight`
