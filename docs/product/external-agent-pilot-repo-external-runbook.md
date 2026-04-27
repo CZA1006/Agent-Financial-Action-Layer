@@ -187,7 +187,20 @@ npm run payment
 npm run resource
 ```
 
-7. save:
+Expected outputs:
+
+- `callbacks:register`, `callbacks:get`, and `callbacks:list` return `ok: true`
+- `payment` returns `pending-approval` and reserves `45.00 USDC`
+- `resource` returns `pending-approval` and reserves `100000` tokens
+
+Re-run constraint:
+
+- this pilot intentionally stops at `pending-approval`; trusted-surface approval and settlement are outside this repo-external smoke path
+- pending payment/resource reservations remain in the shared sandbox state until a settlement or explicit sandbox reset occurs
+- repeated runs against the same shared budget/quota can accumulate reservations and eventually change later outputs
+- for clean repeated validation, provision a fresh client and prefer a fresh sandbox data directory or operator-reset state
+
+8. save:
 
 - callback registration output
 - callback readback output

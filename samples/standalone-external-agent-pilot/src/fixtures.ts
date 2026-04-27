@@ -59,10 +59,10 @@ export function createResourceRequestTemplate() {
         resource: {
           resourceClass: "inference",
           resourceUnit: "tokens",
-          quantity: 500000,
+          quantity: 100000,
         },
         pricing: {
-          maxSpend: "18.50",
+          maxSpend: "3.70",
           asset: "USDC",
         },
         budgetSource: {
