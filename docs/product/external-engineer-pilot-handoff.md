@@ -10,7 +10,7 @@ The goal is to answer a stricter question:
 
 - can an engineer who did not build the AFAL runtime consume it as an external integration surface
 
-That is the current gap between:
+That was the original gap between:
 
 - **internally validated external-agent sandbox**
 
@@ -18,20 +18,23 @@ and:
 
 - **externally validated external-agent sandbox**
 
+Round 003 has now passed that first gap. Keep this handoff because every new engineer, artifact, public URL, or provisioning bundle is still a fresh validation baseline.
+
 ---
 
 ## Current Stage
 
 AFAL has already reached:
 
-- **Late Phase 1 externally integrated runtime, locally accepted**
+- **Late Phase 1 externally validated sandbox**
 - **repeatable real external-agent sandbox acceptance inside the main repo**
 - **standalone external-agent pilot kit inside `samples/standalone-external-agent-pilot/`**
 
-What is still missing is one controlled validation step:
+What this handoff is still used for:
 
-- an engineer should use the standalone kit from a separate repo or separate workspace
+- another engineer should use the standalone kit from a separate repo or separate workspace
 - the engineer should rely only on public HTTP routes, onboarding docs, and the standalone sample code
+- AFAL should verify that packaging, provisioning, auth, callback registration, and basic payment/resource requests remain repeatable
 
 Before sending the handoff, the AFAL team should run:
 
@@ -43,8 +46,8 @@ That command is the internal smoke test for the exact command-line onboarding pa
 
 For the broader external-validation milestone definition and pass/fail criteria, use:
 
-- [external-agent-repo-external-validation-plan.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-repo-external-validation-plan.md)
-- [external-agent-validation-round-checklist.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md)
+- [external-agent-repo-external-validation-plan.md](docs/product/external-agent-repo-external-validation-plan.md)
+- [external-agent-validation-round-checklist.md](docs/product/external-agent-validation-round-checklist.md)
 
 ---
 

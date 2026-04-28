@@ -14,9 +14,9 @@ It is for operators who need to:
 
 This handbook is the operational companion to:
 
-- [docs/specs/receiver-settlement-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/receiver-settlement-callback-contract.md#L1)
-- [docs/specs/afal-http-openapi-draft.yaml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/afal-http-openapi-draft.yaml#L1)
-- [docs/product/notification-operator-playbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/notification-operator-playbook.md#L1)
+- [docs/specs/receiver-settlement-callback-contract.md](docs/specs/receiver-settlement-callback-contract.md#L1)
+- [docs/specs/afal-http-openapi-draft.yaml](docs/specs/afal-http-openapi-draft.yaml#L1)
+- [docs/product/notification-operator-playbook.md](docs/product/notification-operator-playbook.md#L1)
 
 ---
 

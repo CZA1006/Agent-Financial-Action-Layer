@@ -11,8 +11,8 @@ after an approved action has been resumed into settlement.
 
 This is the receiver-side companion to:
 
-- [docs/specs/trusted-surface-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/trusted-surface-callback-contract.md#L1)
-- [docs/product/notification-operator-handbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/notification-operator-handbook.md#L1)
+- [docs/specs/trusted-surface-callback-contract.md](docs/specs/trusted-surface-callback-contract.md#L1)
+- [docs/product/notification-operator-handbook.md](docs/product/notification-operator-handbook.md#L1)
 
 That trusted-surface contract covers:
 
@@ -217,7 +217,7 @@ This event means:
 
 Canonical example:
 
-- [docs/examples/callback/payment-settled.notification.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/callback/payment-settled.notification.sample.json#L1)
+- [docs/examples/callback/payment-settled.notification.sample.json](docs/examples/callback/payment-settled.notification.sample.json#L1)
 
 ---
 
@@ -261,7 +261,7 @@ This event means:
 
 Canonical example:
 
-- [docs/examples/callback/resource-settled.notification.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/callback/resource-settled.notification.sample.json#L1)
+- [docs/examples/callback/resource-settled.notification.sample.json](docs/examples/callback/resource-settled.notification.sample.json#L1)
 
 ---
 
@@ -326,8 +326,8 @@ The current bilateral harnesses exercise this contract through active receiver-s
 
 Related implementation and harness docs:
 
-- [agents/test-harness/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/agents/test-harness/README.md#L1)
-- [docs/examples/callback/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/callback/README.md#L1)
+- [agents/test-harness/README.md](agents/test-harness/README.md#L1)
+- [docs/examples/callback/README.md](docs/examples/callback/README.md#L1)
 
 ---
 

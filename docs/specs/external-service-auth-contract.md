@@ -9,8 +9,8 @@ This document defines the current Phase 1 auth and request-metadata contract bet
 
 This is the external-service companion to:
 
-- [docs/specs/trusted-surface-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/trusted-surface-callback-contract.md#L1)
-- [docs/specs/receiver-settlement-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/receiver-settlement-callback-contract.md#L1)
+- [docs/specs/trusted-surface-callback-contract.md](docs/specs/trusted-surface-callback-contract.md#L1)
+- [docs/specs/receiver-settlement-callback-contract.md](docs/specs/receiver-settlement-callback-contract.md#L1)
 
 Those documents cover:
 
@@ -222,8 +222,8 @@ This means auth failures on the external stub path are currently expected to fai
 
 Current canonical examples:
 
-- [docs/examples/external/payment-rail.execute-payment.request.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/external/payment-rail.execute-payment.request.sample.json#L1)
-- [docs/examples/external/provider-service.confirm-usage.request.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/external/provider-service.confirm-usage.request.sample.json#L1)
+- [docs/examples/external/payment-rail.execute-payment.request.sample.json](docs/examples/external/payment-rail.execute-payment.request.sample.json#L1)
+- [docs/examples/external/provider-service.confirm-usage.request.sample.json](docs/examples/external/provider-service.confirm-usage.request.sample.json#L1)
 
 These examples show:
 

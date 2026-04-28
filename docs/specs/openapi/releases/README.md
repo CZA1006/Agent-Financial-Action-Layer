@@ -28,7 +28,7 @@
 
 ## Release Notes
 
-- use [release-notes-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/openapi/releases/release-notes-template.md#L1) when documenting a published snapshot
+- use [release-notes-template.md](docs/specs/openapi/releases/release-notes-template.md#L1) when documenting a published snapshot
 - recommended path: `docs/specs/openapi/releases/vX.Y.Z/release-notes.md`
 - every release note should explicitly classify changes as `breaking`, `additive`, or `editorial`
 - use `<!-- release-notes-status: draft-stub -->` for generated placeholders and `<!-- release-notes-status: finalized -->` once the note is reviewed

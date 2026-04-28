@@ -34,9 +34,9 @@ Round 002 is meant to answer a narrower and more useful question:
 
 Reference:
 
-- [external-agent-validation-round-001.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-001.md)
-- [external-agent-repo-external-validation-plan.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-repo-external-validation-plan.md)
-- [external-agent-validation-round-checklist.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md)
+- [external-agent-validation-round-001.md](docs/product/external-agent-validation-round-001.md)
+- [external-agent-repo-external-validation-plan.md](docs/product/external-agent-repo-external-validation-plan.md)
+- [external-agent-validation-round-checklist.md](docs/product/external-agent-validation-round-checklist.md)
 
 ---
 
@@ -243,7 +243,7 @@ It is one operator action:
 After that:
 
 1. fill the remaining fields in
-   [external-agent-validation-round-checklist.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md)
+   [external-agent-validation-round-checklist.md](docs/product/external-agent-validation-round-checklist.md)
 2. send the artifact and stricter task message
 3. require the engineer to report:
    - exact artifact used

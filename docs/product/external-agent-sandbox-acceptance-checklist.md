@@ -12,6 +12,8 @@ Its purpose is to prove that a real LLM-backed external agent can:
 - survive key failure paths
 - recover receiver callback delivery through operator intervention
 
+This is different from the repo-external handoff validation. `accept:external-agent` proves the internal real-agent matrix. The external handoff rounds prove that another engineer can consume AFAL from outside the implementation repo. Both are required before treating AFAL as an infrastructure surface.
+
 ---
 
 ## Current Acceptance Command
@@ -73,6 +75,8 @@ It proves that AFAL's current onboarding docs and standalone pilot kit are inter
 
 It does not prove trusted-surface approval, settlement, callback delivery success, or callback recovery.
 Those remain covered by `accept:external-agent`.
+
+It also does not move testnet funds. For the wallet-confirmed Base Sepolia USDC demo, use [metamask-payment-demo.md](metamask-payment-demo.md).
 
 ---
 

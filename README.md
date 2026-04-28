@@ -14,7 +14,7 @@ Together, these modules form the substrate for agent financial actions across pa
 AFAL is no longer just a whitepaper or schema set.
 
 Current stage:
-- **Late Phase 1 externally integrated runtime, locally accepted**
+- **Late Phase 1 externally validated sandbox with wallet-confirmed testnet payment demo**
 - docs/specs/contracts are frozen enough to demo
 - AIP / ATS / AMN / AFAL runtime all run in seeded durable local mode
 - top-level approval requests, trusted-surface callback persistence, and post-approval resume-to-settlement are all wired end to end
@@ -26,6 +26,9 @@ Current stage:
 - an independent trusted-surface review service now drives approval callback and resume over HTTP
 - AFAL now calls independent payment-rail and provider-service stubs over explicit external adapter boundaries
 - the external payment/provider path now includes shared-token auth plus signed request metadata placeholders
+- a GCP staging sandbox has been used by an external engineer from outside the monorepo
+- the standalone external-agent handoff package passed Round 003 external validation
+- a prompt-driven payer-agent demo now reaches a real Base Sepolia USDC transfer through MetaMask, then finalizes AFAL settlement and receipt state for the payee agent
 
 The repo now includes:
 - frozen Phase 1 schemas and canonical examples
@@ -43,6 +46,8 @@ The repo now includes:
 - sandbox-facing external agent client registry, per-client auth, and provisioning bootstrap
 - an OpenRouter-backed real-agent payment pilot over the sandbox-facing AFAL public API
 - an OpenRouter-backed real-agent resource pilot over the sandbox-facing AFAL public API
+- a wallet-confirmed payment rail demo service for Base Sepolia USDC
+- a prompt-driven MetaMask agent payment demo that connects user prompt, payer agent, AFAL authorization, wallet transfer, trusted-surface resume, and payee-agent readback
 - OpenAPI draft, stable publish artifacts, snapshot releases, and preview UI
 - automated verification across runtime, API, HTTP, OpenAPI export, and durable persistence
 
@@ -52,10 +57,12 @@ Current validated state:
 - `npm run accept:external-onboarding` passes for the repo-contained second-engineer onboarding path
 - `npm run accept:sqlite` passes for the current externally integrated runtime slice
 - `npm run accept:external-agent` passes for the current internal real-agent sandbox matrix
+- external engineer Round 003 passed against a live GCP AFAL sandbox using only the extracted handoff archive
+- the prompt-driven MetaMask agent payment demo has completed a Base Sepolia USDC transfer and AFAL settlement/receipt flow against staging
 - GitHub Actions CI now runs `typecheck`, `test:mock`, and `accept:external-onboarding` on pull requests and pushes to `main`
-- branch protection and required-check guidance lives in [docs/product/ci-merge-gate.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/ci-merge-gate.md)
-- repo-admin setup can be scripted with [scripts/configure-branch-protection.sh](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/scripts/configure-branch-protection.sh)
-- stable external validation should use the staging sandbox operator flow in [docs/product/staging-sandbox-operator-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/staging-sandbox-operator-runbook.md)
+- branch protection and required-check guidance lives in [docs/product/ci-merge-gate.md](docs/product/ci-merge-gate.md)
+- repo-admin setup can be scripted with [scripts/configure-branch-protection.sh](scripts/configure-branch-protection.sh)
+- stable external validation should use the staging sandbox operator flow in [docs/product/staging-sandbox-operator-runbook.md](docs/product/staging-sandbox-operator-runbook.md)
 - both canonical flows run in:
   - seeded in-memory mode
   - seeded local durable mode
@@ -64,6 +71,7 @@ Current validated state:
   - SQLite-backed HTTP integration mode
   - runtime-agent harness modes over SQLite HTTP
   - external-adapter demo modes over the shared SQLite integration database
+  - live staging mode with a wallet-confirmed payment rail
 
 ## Quickstart
 
@@ -223,23 +231,26 @@ If you want to prepare a live handoff package for a remote external engineer, fi
 
 ```bash
 npm run build:external-agent-pilot-live-handoff -- \
-  --afal-base-url https://replace-with-reachable-afal-sandbox-url \
-  --output-root dist/round-002-live-handoff \
-  --client-id client-round-002-001 \
-  --tenant-id tenant-round-002-001 \
-  --agent-id agent-round-002-001
+  --afal-base-url http://34.44.95.42:3213 \
+  --data-dir /srv/afal/round-002/sqlite-data \
+  --output-root dist/round-003-live-handoff \
+  --client-id client-round-003-001 \
+  --tenant-id tenant-round-003-001 \
+  --agent-id agent-round-003-001
 ```
 
-Use [docs/product/staging-sandbox-operator-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/staging-sandbox-operator-runbook.md) before sending that package to another engineer.
+Run this on the staging host that owns the live SQLite data directory, not from a laptop temp directory. The generated client must be provisioned into the same database used by the public AFAL server.
+
+Use [docs/product/staging-sandbox-operator-runbook.md](docs/product/staging-sandbox-operator-runbook.md) before sending that package to another engineer.
 
 The repo also now includes a first external pilot kit under:
 
-- [samples/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/README.md)
-- [standalone-external-agent-pilot/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/standalone-external-agent-pilot/README.md)
-- [external-engineer-pilot-handoff.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-pilot-handoff.md)
-- [external-engineer-message-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-message-template.md)
-- [external-pilot-findings-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-pilot-findings-template.md)
-- [sdk-boundary-draft.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/sdk-boundary-draft.md)
+- [samples/README.md](samples/README.md)
+- [standalone-external-agent-pilot/README.md](samples/standalone-external-agent-pilot/README.md)
+- [external-engineer-pilot-handoff.md](docs/product/external-engineer-pilot-handoff.md)
+- [external-engineer-message-template.md](docs/product/external-engineer-message-template.md)
+- [external-pilot-findings-template.md](docs/product/external-pilot-findings-template.md)
+- [sdk-boundary-draft.md](docs/product/sdk-boundary-draft.md)
 
 You can now export the standalone pilot as a repo-external consumer skeleton with:
 
@@ -259,8 +270,8 @@ npm run validate:external-agent-pilot-export
 
 Reference:
 
-- [external-agent-pilot-export-validation.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-export-validation.md)
-- [external-agent-pilot-repo-external-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-repo-external-runbook.md)
+- [external-agent-pilot-export-validation.md](docs/product/external-agent-pilot-export-validation.md)
+- [external-agent-pilot-repo-external-runbook.md](docs/product/external-agent-pilot-repo-external-runbook.md)
 
 To convert a provisioning JSON bundle into `.env` text for the external skeleton:
 
@@ -300,7 +311,7 @@ Default release-artifact output:
 
 GitHub Actions also publishes this artifact automatically on pushes to `main` and on manual workflow dispatch through:
 
-- [external-agent-handoff-artifact.yml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-handoff-artifact.yml)
+- [external-agent-handoff-artifact.yml](.github/workflows/external-agent-handoff-artifact.yml)
 
 Important boundary:
 
@@ -334,9 +345,9 @@ This package does not include:
 
 GitHub can publish this release-safe package on tag pushes matching `external-agent-pilot-v*` through:
 
-- [external-agent-pilot-release.yml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-pilot-release.yml)
-- [external-agent-pilot-release-handbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-handbook.md)
-- [external-agent-pilot-release-quickstart.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-quickstart.md)
+- [external-agent-pilot-release.yml](.github/workflows/external-agent-pilot-release.yml)
+- [external-agent-pilot-release-handbook.md](docs/product/external-agent-pilot-release-handbook.md)
+- [external-agent-pilot-release-quickstart.md](docs/product/external-agent-pilot-release-quickstart.md)
 
 To validate that the internal handoff and public release surfaces stay correctly separated:
 
@@ -346,19 +357,13 @@ npm run validate:external-agent-pilot-release-surfaces
 
 Recommended next validation step:
 
-- hand the standalone pilot kit to a second engineer
-- require that they work from a separate repo or separate workspace
-- require that they use only AFAL public routes, provisioning output, and published docs
-- use [external-agent-repo-external-validation-plan.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-repo-external-validation-plan.md) as the pass/fail plan for that round
-- fill [external-agent-validation-round-checklist.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md) before sending the artifact
+- keep using the standalone pilot kit for additional external engineers or partners
+- require a separate repo or separate workspace
+- require only AFAL public routes, provisioning output, and published docs
+- use [external-agent-repo-external-validation-plan.md](docs/product/external-agent-repo-external-validation-plan.md) for the pass/fail plan
+- fill [external-agent-validation-round-checklist.md](docs/product/external-agent-validation-round-checklist.md) before sending every artifact
 
-That is the current gate between:
-
-- **internally accepted external-agent sandbox**
-
-and:
-
-- **externally validated external-agent sandbox**
+Round 003 has crossed the first external-validation gate. Future rounds should verify repeatability, new-client provisioning, packaging hygiene, and partner-specific friction.
 
 Important current behavior:
 
@@ -417,32 +422,37 @@ Phase 1 primary records still use the internal `did:afal:*` namespace, while the
 
 ## Distribution Outlook
 
-AFAL is now strong enough to justify thinking about a future package or hosted-consumer surface, but not yet strong enough to claim that surface is complete.
+AFAL is now strong enough to justify a real consumer-facing package and hosted sandbox workstream, but not yet strong enough to claim production readiness.
 
 The current correct position is:
 
-- the runtime and sandbox boundary are ready for external-engineer pilot validation
-- the project is **not yet** at a polished package-distribution or one-command hosted-product stage
+- the runtime and sandbox boundary have passed a real repo-external engineer validation round
+- live handoff packages can be generated for a named external engineer
+- public release-safe packages can be generated without live credentials
+- the project is **not yet** at a polished one-command hosted-product or production payment stage
 
-What still needs to happen before package-style distribution becomes credible:
+What still needs to happen before package-style distribution becomes credible for broader users:
 
-- one successful repo-external engineer pilot
-- friction fixes in onboarding, env setup, auth, and callback registration
-- a stable consumer-facing SDK or package surface
-- a clearer separation between implementation repo and consumer kit
+- repeat external validation with at least one more engineer or partner
+- a stable TypeScript client SDK for AFAL public routes
+- a callback receiver starter package
+- a hosted sandbox or managed onboarding flow
+- server-side onchain verification for wallet-confirmed payment rails
 
 The likely future product shapes are:
 
 1. a TypeScript client SDK / package for AFAL public routes
 2. a callback receiver starter package
-3. a hosted sandbox or managed onboarding flow for agent builders
+3. a wallet-confirmed payment rail starter for testnet demos
+4. a hosted sandbox or managed onboarding flow for agent builders
 
-That direction makes sense for AFAL as AI infrastructure. It is just one stage too early to present the current repo itself as the finished package surface.
+That direction makes sense for AFAL as AI infrastructure. The repo now proves the integration boundary; the next product step is packaging that boundary without leaking internal harness details.
 
-While waiting for the first repo-external engineer feedback, use:
+For packaging decisions, use:
 
 - [External Pilot Findings Template](docs/product/external-pilot-findings-template.md)
 - [SDK Boundary Draft](docs/product/sdk-boundary-draft.md)
+- [MetaMask Agent Payment Demo](docs/product/metamask-payment-demo.md)
 
 ## Architecture At A Glance
 
@@ -468,17 +478,38 @@ Canonical examples:
 - [docs/examples/mvp-agent-payment-flow.md](docs/examples/mvp-agent-payment-flow.md)
 - [docs/examples/mvp-resource-settlement-flow.md](docs/examples/mvp-resource-settlement-flow.md)
 
-## Demo Snapshots
+## Current Live Demo: Prompt-Driven Agent Payment
 
-These two prototype snapshots are useful for communicating the intended AFAL interaction model at a glance:
+The current demo is no longer a static prototype image. It is an executable agent-payment flow:
 
-- `demo1` shows the decentralized agent-to-agent DID handshake and identity verification path
-- `demo2` shows the higher-level agent-to-agent payment exchange flow built on signed messages and verified counterparties
+```text
+user prompt
+  -> payer agent parses amount, asset, chain, and payee address
+  -> payer agent signs an AFAL external-client request
+  -> AFAL checks mandate, policy, budget, and challenge rules
+  -> AFAL returns a pending approval session and reserves budget
+  -> payment rail opens a prefilled Base Sepolia USDC MetaMask transfer
+  -> trusted surface approves and resumes the action after wallet confirmation
+  -> AFAL records settlement and receipt
+  -> payee agent reads AFAL and verifies it was paid
+```
 
-<p align="center">
-  <img src="docs/images/demo1.PNG" alt="AFAL prototype demo: decentralized agent DID handshake" width="48%" />
-  <img src="docs/images/demo2.PNG" alt="AFAL prototype demo: agent-to-agent payment exchange" width="48%" />
-</p>
+Runbook:
+
+- [docs/product/metamask-payment-demo.md](docs/product/metamask-payment-demo.md)
+
+Current staging command shape:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<provisioned-signing-key> \
+npm run demo:metamask-agent-payment -- \
+  --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+```
+
+This sends real Base Sepolia testnet USDC through MetaMask. It is not a mainnet or autonomous-custody demo.
 
 ## What Exists Today
 
@@ -490,6 +521,8 @@ These two prototype snapshots are useful for communicating the intended AFAL int
 | AMN | storage-backed skeleton, API adapter, JSON durable store, SQLite store, approval-session persistence and recovery |
 | AFAL runtime | seeded runtime, durable runtime, SQLite integration runtime, intent state, settlement, outputs, payment/resource runtime-agent harnesses, receiver callback outbox and worker control |
 | HTTP surface | framework-free router, durable HTTP wiring, SQLite HTTP wiring, thin Node server shells |
+| External sandbox | provisioned client registry, signed external-client auth, callback registration, standalone handoff package, public release-safe package |
+| Payment rail | mock payment rail, wallet-confirmed Base Sepolia MetaMask rail, prompt-driven agent payment demo |
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
 
@@ -512,10 +545,16 @@ Already real in local development terms:
 - network-shaped mock payment-rail and provider service stubs that AFAL can call over HTTP
 - shared-token auth plus signed request metadata placeholders between AFAL HTTP adapters and the external payment/provider stubs
 - bounded retry plus failure classification for transient-vs-terminal external adapter failures
+- externally validated handoff package consumed outside the monorepo
+- wallet-confirmed Base Sepolia USDC transfer demo through MetaMask
+- AFAL settlement and receipt finalization against a wallet-provided `txHash`
+- payee-agent readback of settled status, settlement record, and payment receipt
 
 Still intentionally not production-real:
-- real database backend
-- real stablecoin settlement integration
+- production database backend
+- production stablecoin settlement integration
+- server-side RPC verification of wallet-submitted `txHash`
+- autonomous custody, MPC, or smart-account signing
 - real provider usage and billing integration
 - real trusted-surface callback handling across independent deployed services beyond the current local stub
 - real chain contracts and anchoring
@@ -568,6 +607,32 @@ What these do:
 - `demo:external-adapters` runs AFAL against independent payment-rail and provider-service stubs over HTTP while persisting integration state in a shared SQLite database
 - `demo:external-adapters-retry` runs the same external service path but injects transient upstream failures and proves the HTTP adapters can recover through bounded retries
 - `demo:http-resource` starts the durable HTTP server, sends the canonical resource request, compares the response with the sample file, and prints the response
+
+### Run The Prompt-Driven MetaMask Agent Payment Demo
+
+This demo requires a running AFAL staging sandbox, the wallet-confirmed payment rail, and a Base Sepolia-funded MetaMask wallet.
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<provisioned-signing-key> \
+npm run demo:metamask-agent-payment -- \
+  --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+```
+
+What it proves:
+
+- the user can give a natural-language payment instruction to a payer agent
+- the payer agent can sign and submit a governed AFAL payment request
+- AFAL can create an approval session, reserve budget, and expose human-readable approval context
+- MetaMask can execute the actual Base Sepolia USDC transfer
+- AFAL can resume the approved action, record wallet-backed settlement, issue a payment receipt, and release the reservation
+- the payee agent can verify settlement through AFAL instead of trusting the payer's chat output
+
+Reference:
+
+- [docs/product/metamask-payment-demo.md](docs/product/metamask-payment-demo.md)
 
 Trusted-surface stub:
 
@@ -663,7 +728,7 @@ This covers:
 - OpenAPI export, preview, and snapshot checks
 
 Current validated result:
-- `133` tests passing
+- the mock suite is expected to pass as a required CI check
 
 ### 3. Demo-Level Runtime Checks
 
@@ -856,8 +921,10 @@ npm run accept:sqlite
 
 - [docs/whitepaper/afal-whitepaper-v6.md](docs/whitepaper/afal-whitepaper-v6.md)
 - [docs/product/mvp-scope.md](docs/product/mvp-scope.md)
+- [docs/product/current-project-status.md](docs/product/current-project-status.md)
 - [docs/product/implementation-roadmap-next-stage.md](docs/product/implementation-roadmap-next-stage.md)
 - [docs/product/next-stage-integration-plan.md](docs/product/next-stage-integration-plan.md)
+- [docs/product/metamask-payment-demo.md](docs/product/metamask-payment-demo.md)
 - [docs/product/notification-operator-handbook.md](docs/product/notification-operator-handbook.md)
 - [docs/product/notification-operator-playbook.md](docs/product/notification-operator-playbook.md)
 - [tasks/milestone-mvp.md](tasks/milestone-mvp.md)
@@ -891,13 +958,18 @@ AFAL currently demonstrates:
 - persistent approval callback and resume semantics
 - bilateral runtime-agent orchestration paths over the real HTTP contract
 - receiver callback delivery with operator-visible outbox, worker, and admin-audit controls
+- externally validated standalone handoff packaging
+- prompt-driven agent payment with Base Sepolia testnet USDC through MetaMask
+- payee-agent settlement and receipt verification through AFAL readback
 - versioned OpenAPI publication
 
 AFAL does not yet claim:
 - production settlement
 - production-grade trusted-surface callbacks
+- server-side onchain verification of wallet-submitted transactions
+- autonomous custody or smart-account wallet management
 - full operator control plane or hosted dashboards
 - chain-native enforcement
 - market venue execution
 
-That means the repo has moved beyond the original seeded durable runtime milestone and now sits in a late Phase 1 integration-and-operations slice, still short of production deployment.
+That means the repo has moved beyond the original seeded durable runtime milestone and now sits in a late Phase 1 externally validated sandbox slice, still short of production deployment.

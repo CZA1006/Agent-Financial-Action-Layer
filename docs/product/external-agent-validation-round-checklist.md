@@ -60,6 +60,7 @@ npm run accept:external-onboarding
 npm run validate:external-agent-pilot-release-surfaces
 npm run build:external-agent-pilot-live-handoff -- \
   --afal-base-url <reachable-afal-base-url> \
+  --data-dir <live-sandbox-data-dir> \
   --output-root <handoff-output-root> \
   --client-id <client-id> \
   --tenant-id <tenant-id> \
@@ -79,6 +80,8 @@ That is the closest internal smoke test to the exact command-line path the exter
 
 Do not skip the live handoff builder for remote engineer rounds.
 It is the liveness check that prevents sending a package pinned to an offline or local-only AFAL URL.
+
+For live rounds, run the builder on the host that owns the AFAL SQLite data directory or point `--data-dir` at the same database used by the public AFAL server. A package generated from a different local database is invalid even if `AFAL_BASE_URL` is reachable.
 
 ---
 
@@ -229,7 +232,7 @@ The goal is to separate:
 
 ## Exit Rule
 
-Do not claim AFAL has completed repo-external validation just because one engineer tried once.
+Do not claim a new baseline has completed repo-external validation just because one engineer tried once.
 
 Only upgrade the stage when:
 
@@ -238,10 +241,12 @@ Only upgrade the stage when:
 3. no critical blocker remained on that baseline
 4. the external engineer completed the intended flow without hidden internal context
 
-Until then, AFAL remains:
+Until a baseline satisfies those conditions, that baseline remains:
 
 - locally accepted external-agent sandbox
 
 not yet:
 
 - externally validated external-agent sandbox
+
+Round 003 crossed this gate for the first project-level external validation. Keep using this checklist anyway: every new engineer, package, URL, or client is a new validation baseline and should be pinned before execution.

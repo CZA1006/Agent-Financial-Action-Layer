@@ -18,7 +18,7 @@ Its purpose is to ensure that when external pilot feedback arrives, AFAL already
 
 AFAL is currently at:
 
-- **Late Phase 1 externally integrated runtime, locally accepted**
+- **Late Phase 1 externally validated sandbox with wallet-confirmed testnet payment demo**
 
 It also has:
 
@@ -28,13 +28,17 @@ It also has:
 - a repo-contained validation command for that exported skeleton
 - public external-client auth
 - public callback registration routes
+- a successful Round 003 external engineer run from an extracted handoff archive
+- a prompt-driven MetaMask agent payment demo over the same AFAL external-client boundary
 
-The missing proof point is:
+The remaining proof points are:
 
-- repo-external validation by a second engineer
+- repeatability with another external engineer or partner
+- a stable SDK surface that does not import monorepo harness internals
+- production-grade payment rail verification for wallet-backed settlements
 
-So this draft is intentionally pre-SDK.
-It should guide decisions, not force early publishing.
+So this draft is now the bridge from validated pilot surface to first SDK implementation.
+It should guide the first package boundary, not overreach into custody or wallet management.
 
 ---
 
@@ -47,6 +51,7 @@ The first AFAL consumer SDK should make it easy for an external agent developer 
 3. submit payment and resource approval requests
 4. read action status
 5. interpret common AFAL success and failure responses
+6. poll or read settlement/receipt state from the payee side
 
 It should remove repetitive integration work without hiding the AFAL contract completely.
 

@@ -16,7 +16,7 @@ This document answers:
 
 Receiver-facing settlement delivery is documented separately in:
 
-- [docs/specs/receiver-settlement-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/receiver-settlement-callback-contract.md#L1)
+- [docs/specs/receiver-settlement-callback-contract.md](docs/specs/receiver-settlement-callback-contract.md#L1)
 
 This contract is aligned to the currently implemented AFAL HTTP routes and durable runtime behavior.
 
@@ -214,8 +214,8 @@ The output is a top-level AFAL success envelope whose `data` contains:
 
 Current canonical example:
 
-- [request-payment-approval.request.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/request-payment-approval.request.json#L1)
-- [request-payment-approval.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/request-payment-approval.response.sample.json#L1)
+- [request-payment-approval.request.json](docs/examples/http/request-payment-approval.request.json#L1)
+- [request-payment-approval.response.sample.json](docs/examples/http/request-payment-approval.response.sample.json#L1)
 
 ### 2. Read Approval Session
 
@@ -328,10 +328,10 @@ Purpose:
 
 Canonical examples:
 
-- [resume-approved-action.request.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/resume-approved-action.request.json#L1)
-- [resume-approved-action.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/resume-approved-action.response.sample.json#L1)
-- [resume-approved-action.authorization-expired.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/resume-approved-action.authorization-expired.response.sample.json#L1)
-- [resume-approved-action.authorization-rejected.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/resume-approved-action.authorization-rejected.response.sample.json#L1)
+- [resume-approved-action.request.json](docs/examples/http/resume-approved-action.request.json#L1)
+- [resume-approved-action.response.sample.json](docs/examples/http/resume-approved-action.response.sample.json#L1)
+- [resume-approved-action.authorization-expired.response.sample.json](docs/examples/http/resume-approved-action.authorization-expired.response.sample.json#L1)
+- [resume-approved-action.authorization-rejected.response.sample.json](docs/examples/http/resume-approved-action.authorization-rejected.response.sample.json#L1)
 
 ### 6. Read Final Action Status
 
@@ -358,10 +358,10 @@ Purpose:
 
 Canonical examples:
 
-- [get-action-status.payment.request.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/get-action-status.payment.request.json#L1)
-- [get-action-status.payment.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/get-action-status.payment.response.sample.json#L1)
-- [get-action-status.resource.request.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/get-action-status.resource.request.json#L1)
-- [get-action-status.resource.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/get-action-status.resource.response.sample.json#L1)
+- [get-action-status.payment.request.json](docs/examples/http/get-action-status.payment.request.json#L1)
+- [get-action-status.payment.response.sample.json](docs/examples/http/get-action-status.payment.response.sample.json#L1)
+- [get-action-status.resource.request.json](docs/examples/http/get-action-status.resource.request.json#L1)
+- [get-action-status.resource.response.sample.json](docs/examples/http/get-action-status.resource.response.sample.json#L1)
 
 ---
 
@@ -467,9 +467,9 @@ Important error classes:
 
 Current error examples:
 
-- [execute-payment.bad-request.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/execute-payment.bad-request.response.sample.json#L1)
-- [resume-approved-action.authorization-expired.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/resume-approved-action.authorization-expired.response.sample.json#L1)
-- [resume-approved-action.authorization-rejected.response.sample.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/http/resume-approved-action.authorization-rejected.response.sample.json#L1)
+- [execute-payment.bad-request.response.sample.json](docs/examples/http/execute-payment.bad-request.response.sample.json#L1)
+- [resume-approved-action.authorization-expired.response.sample.json](docs/examples/http/resume-approved-action.authorization-expired.response.sample.json#L1)
+- [resume-approved-action.authorization-rejected.response.sample.json](docs/examples/http/resume-approved-action.authorization-rejected.response.sample.json#L1)
 
 ---
 

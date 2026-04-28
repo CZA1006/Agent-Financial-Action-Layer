@@ -79,6 +79,8 @@ AFAL has already completed the following foundation work:
 - sandbox-facing external client provisioning, per-client auth, callback registration APIs, and standalone consumer samples now exist
 - internal real-agent sandbox acceptance now exists across payment, resource, rejection, retry, and callback-recovery scenarios
 - a standalone external-agent pilot kit now exists for repo-external validation
+- a live GCP staging sandbox has passed external engineer Round 003 from an extracted handoff archive
+- a prompt-driven MetaMask agent payment demo now connects user prompt, payer agent, AFAL authorization, Base Sepolia USDC transfer, trusted-surface resume, and payee-agent readback
 
 What does **not** exist yet:
 
@@ -86,12 +88,14 @@ What does **not** exist yet:
 - durable ATS persistence beyond the current seeded slices
 - durable AMN persistence beyond the current seeded slices
 - full trusted-surface approval handling across independently deployed services
-- real stablecoin settlement integration
+- production stablecoin settlement integration
+- server-side onchain verification for wallet-confirmed `txHash` values
+- autonomous custody, MPC, or smart-account signing
 - real provider billing / usage confirmation integration
 - real on-chain interfaces beyond documentation
 
 So the next stage is no longer another schema pass, and it is no longer only about proving one execution path.
-The next stage is validating whether the current AFAL boundary is consumable from outside the implementation repo and then using that feedback to shape the eventual SDK/package surface.
+The repo-external boundary has now been validated once. The next stage is repeatability, SDK/package shape, hosted sandbox ergonomics, and production-grade verification beneath the existing contract.
 
 ---
 
@@ -99,16 +103,16 @@ The next stage is validating whether the current AFAL boundary is consumable fro
 
 Recommended module order:
 
-1. repo-external consumer validation
-2. onboarding and auth friction fixes
-3. consumer-facing SDK / package boundary
-4. stronger external adapters underneath the existing contract
+1. repeat repo-external consumer validation with fresh clients and artifacts
+2. consumer-facing SDK / package boundary
+3. hosted sandbox onboarding and operator automation
+4. stronger external adapters underneath the existing contract, starting with payment rail onchain verification
 
 Why this order:
 
 - the main remaining uncertainty is no longer whether AFAL can run internally
-- the main remaining uncertainty is whether another engineer can consume the current surface without hidden repo context
-- the SDK or package boundary should be shaped by that consumer validation, not by internal assumptions
+- the main remaining uncertainty is how repeatable and ergonomic the validated surface is for more than one engineer
+- the SDK or package boundary should be shaped by the completed external validation and the next partner validation
 - stronger adapters should continue underneath a contract that has already been externally exercised
 
 This order is intentionally not:
@@ -127,9 +131,9 @@ Those would add surface area before the consumer boundary has been validated.
 
 The immediate next deliverable is:
 
-- one successful repo-external pilot run by a second engineer using the standalone external-agent pilot kit
+- server-side onchain verification for the wallet-confirmed payment rail, plus a cleaner demo transcript mode
 
-That pilot should use:
+The already-passed repo-external pilot used:
 
 - public AFAL routes only
 - provisioning output only
@@ -144,6 +148,8 @@ It should not rely on:
 If that pilot succeeds, the next implementation unit should be:
 
 - a consumer-facing TypeScript SDK / package boundary for AFAL public routes
+
+That condition is now satisfied for the first pass. The SDK boundary should move from draft to implementation after the payment rail verification gap is closed.
 
 ---
 

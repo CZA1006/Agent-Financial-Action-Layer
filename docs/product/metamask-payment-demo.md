@@ -4,6 +4,15 @@ This demo connects AFAL to a real wallet-confirmed token transfer without using 
 
 The demo is framed as an agent-payment flow: a user sends a payment instruction to a payer agent, the payer agent asks AFAL to authorize and reserve the action, a trusted-surface approval resumes the action, a wallet-backed payment rail supplies the onchain `txHash`, and a payee-side agent reads AFAL to confirm that it was paid.
 
+Current validated staging result:
+
+- payer agent accepted a natural-language payment prompt
+- AFAL created `payint-0001`, reserved `0.01 USDC`, and returned `aps-chall-0001`
+- MetaMask sent a real Base Sepolia USDC transfer to the payee address
+- AFAL resumed the approved action and marked the intent `settled`
+- AFAL issued settlement `stl-wallet-payint-0001` and receipt `rcpt-pay-0001`
+- payee agent read AFAL and verified the settled intent, settlement record, receipt, amount, chain, address, and `txHash`
+
 ## Current Demo Boundary
 
 The demo proves:
@@ -15,6 +24,8 @@ The demo proves:
 - When the trusted-surface approval resumes the action, AFAL can settle against the externally confirmed `txHash`.
 
 The demo does not yet prove production-grade custody or settlement verification. The current payment rail records a browser-submitted `txHash`; a production rail must verify chain, token, sender, recipient, amount, and finality from an RPC provider before returning settlement.
+
+The important product point is that AFAL is not "the user manually paid in a browser." AFAL is the layer that constrains, authorizes, records, and exposes the agent payment action. MetaMask is only the current safe signing surface for the testnet rail.
 
 ## Prerequisites
 
@@ -63,6 +74,10 @@ http://127.0.0.1:3412/wallet-demo
 For a clean staging run, reset the demo DB on the VM and provision a fresh external client before the presentation:
 
 ```sh
+cd /opt/afal
+git pull origin main
+npm ci
+sudo systemctl daemon-reload
 sudo systemctl stop afal-staging
 rm -rf /srv/afal/metamask-demo-001/sqlite-data
 mkdir -p /srv/afal/metamask-demo-001/sqlite-data
@@ -83,6 +98,7 @@ npm run provision:external-agent-sandbox -- \
   --output /tmp/afal-metamask-demo-client.json
 
 sudo systemctl start afal-staging
+sudo systemctl restart afal-payment-rail
 cat /tmp/afal-metamask-demo-client.json
 ```
 
@@ -109,6 +125,20 @@ The command prints a timeline with these actors:
 - `payee-agent`: reads AFAL action status and confirms settlement/receipt.
 
 Current mock-runtime caveat: the seeded payment runtime accepts only `payint-0001`, so a full settled demo is one-shot per clean SQLite data directory. Reset the demo DB before recording or repeating the presentation.
+
+The expected terminal summary after a successful run includes:
+
+```json
+{
+  "summary": {
+    "actionRef": "payint-0001",
+    "approvalSessionRef": "aps-chall-0001",
+    "finalIntentStatus": "settled",
+    "settlementRef": "stl-wallet-payint-0001",
+    "receiptRef": "rcpt-pay-0001"
+  }
+}
+```
 
 Detailed steps:
 
@@ -151,6 +181,13 @@ This is still not "the LLM holds a private key." The payer agent is responsible 
 
 In the current testnet demo, MetaMask is the signing surface for the actual ERC-20 transfer. That is intentional for safety. A production agent-wallet integration would replace the browser confirmation page with a custodial/MPC/session-key wallet adapter, but AFAL's role remains the same: authorize, constrain, audit, settle, and receipt agent-initiated financial actions.
 
+The payee side is also part of the demo. The payee agent does not trust a screenshot or chat message from the payer. It calls AFAL to read the action state and confirms:
+
+- `intent.status` is `settled`
+- the settlement record has the expected payee DID, settlement address, asset, amount, chain, and `txHash`
+- the payment receipt is final and references the same settlement
+- the budget reservation has been released and consumed amount updated
+
 ## Mainnet Readiness Gap
 
 Do not use this page for mainnet funds yet. Before a mainnet demo, add:
@@ -160,3 +197,5 @@ Do not use this page for mainnet funds yet. Before a mainnet demo, add:
 - Small hard caps enforced by AFAL policy and rail verification.
 - Chain finality handling and replay protection for reused `txHash` values.
 - A dedicated demo wallet with limited funds, not a personal MetaMask wallet.
+
+The most important next engineering step is server-side onchain verification in the payment rail. The rail should reject a `txHash` unless an RPC provider confirms the ERC-20 transfer log matches the AFAL action exactly.

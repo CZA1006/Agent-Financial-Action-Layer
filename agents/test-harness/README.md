@@ -15,6 +15,7 @@
 - `payer-agent.ts`
   - submits the canonical payment approval request
   - returns the persisted `approvalSessionRef`
+  - can sign external-client AFAL requests when `AFAL_CLIENT_ID` and `AFAL_SIGNING_KEY` are provided
 - `resource-requester-agent.ts`
   - submits the canonical resource approval request
   - returns the persisted `approvalSessionRef`
@@ -25,6 +26,7 @@
 - `payee-agent.ts`
   - reads settled payment action status over HTTP
   - confirms the final payment settlement and receipt from the receiver side
+  - supports payee-side verification for the prompt-driven MetaMask demo
 - `provider-agent.ts`
   - reads settled resource action status over HTTP
   - confirms the final usage receipt and provider settlement from the receiver side
@@ -56,6 +58,13 @@
 - `resource-bilateral-harness.ts`
   - orchestrates requester, approval, and provider-side callback receiver agents
   - closes the loop from request initiation to provider-side callback confirmation
+- `metamask-agent-payment-demo.ts`
+  - accepts a prompt-style payment message
+  - parses amount, asset, chain, and payee address into a payment instruction
+  - submits the signed payer-agent request to AFAL
+  - prints a prefilled MetaMask wallet URL for Base Sepolia USDC
+  - waits for wallet confirmation, then resumes the AFAL approval session
+  - asks the payee agent to read AFAL and verify the final settlement and receipt
 
 ## Notes
 
@@ -67,3 +76,5 @@
 - `notification-admin-demo.ts` keeps the worker stopped initially so operator-driven recovery routes can be demonstrated deterministically
 - `payment-bilateral-harness.ts` and `resource-bilateral-harness.ts` both support failure injection flags so callback retries can be exercised end to end
 - spawned harness summaries now include `trustedSurfaceUrl` so the process boundary is visible in demo output
+- the MetaMask demo is intentionally human-in-the-loop for wallet signing; AFAL is proving governed agent payment orchestration, not autonomous custody
+- the payee-side readback proves the receiver can verify payment through AFAL instead of trusting the payer agent's local output

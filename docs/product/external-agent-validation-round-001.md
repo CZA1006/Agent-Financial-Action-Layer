@@ -6,8 +6,8 @@ This document records the first blocked repo-external validation round and turns
 
 It should be read together with:
 
-- [external-agent-repo-external-validation-plan.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-repo-external-validation-plan.md)
-- [external-pilot-findings-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-pilot-findings-template.md)
+- [external-agent-repo-external-validation-plan.md](docs/product/external-agent-repo-external-validation-plan.md)
+- [external-pilot-findings-template.md](docs/product/external-pilot-findings-template.md)
 
 ---
 
@@ -86,8 +86,8 @@ Assessment:
 
 AFAL evidence:
 
-- [package.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/package.json)
-- [sqlite-server.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/backend/afal/http/sqlite-server.ts)
+- [package.json](package.json)
+- [sqlite-server.ts](backend/afal/http/sqlite-server.ts)
 
 AFAL action:
 
@@ -107,7 +107,7 @@ Assessment:
 
 AFAL evidence:
 
-- [fixtures.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/standalone-external-agent-pilot/src/fixtures.ts)
+- [fixtures.ts](samples/standalone-external-agent-pilot/src/fixtures.ts)
 
 ### F3
 
@@ -122,7 +122,7 @@ Assessment:
 
 AFAL evidence:
 
-- [fixtures.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/samples/standalone-external-agent-pilot/src/fixtures.ts)
+- [fixtures.ts](samples/standalone-external-agent-pilot/src/fixtures.ts)
 
 ### F4
 
@@ -140,7 +140,7 @@ Assessment:
 
 AFAL evidence:
 
-- [README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/README.md)
+- [README.md](README.md)
 
 ### F5
 
@@ -174,8 +174,8 @@ Assessment:
 
 AFAL evidence:
 
-- [sqlite-server.test.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/backend/afal/http/sqlite-server.test.ts)
-- [router.test.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/backend/afal/http/router.test.ts)
+- [sqlite-server.test.ts](backend/afal/http/sqlite-server.test.ts)
+- [router.test.ts](backend/afal/http/router.test.ts)
 
 ---
 

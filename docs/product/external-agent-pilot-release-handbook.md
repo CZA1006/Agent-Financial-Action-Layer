@@ -40,7 +40,7 @@ Primary outputs:
 
 Workflow:
 
-- [external-agent-handoff-artifact.yml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-handoff-artifact.yml)
+- [external-agent-handoff-artifact.yml](.github/workflows/external-agent-handoff-artifact.yml)
 
 Security posture:
 
@@ -70,7 +70,7 @@ Primary outputs:
 
 Workflow:
 
-- [external-agent-pilot-release.yml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-pilot-release.yml)
+- [external-agent-pilot-release.yml](.github/workflows/external-agent-pilot-release.yml)
 
 Security posture:
 
@@ -149,7 +149,7 @@ git push origin external-agent-pilot-v0.1.0
 
 That tag pattern triggers:
 
-- [external-agent-pilot-release.yml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-pilot-release.yml)
+- [external-agent-pilot-release.yml](.github/workflows/external-agent-pilot-release.yml)
 
 Expected result:
 
@@ -237,18 +237,18 @@ If a public release ever contains a live signing key, treat it as a credential l
 
 Use this handbook together with:
 
-- [staging-sandbox-operator-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/staging-sandbox-operator-runbook.md)
-- [external-agent-pilot-repo-external-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-repo-external-runbook.md)
-- [external-engineer-pilot-handoff.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-pilot-handoff.md)
-- [external-agent-sandbox-onboarding.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-sandbox-onboarding.md)
-- [ci-merge-gate.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/ci-merge-gate.md)
+- [staging-sandbox-operator-runbook.md](docs/product/staging-sandbox-operator-runbook.md)
+- [external-agent-pilot-repo-external-runbook.md](docs/product/external-agent-pilot-repo-external-runbook.md)
+- [external-engineer-pilot-handoff.md](docs/product/external-engineer-pilot-handoff.md)
+- [external-agent-sandbox-onboarding.md](docs/product/external-agent-sandbox-onboarding.md)
+- [ci-merge-gate.md](docs/product/ci-merge-gate.md)
 
 Role split:
 
 - this handbook is for AFAL operators and maintainers
 - the onboarding docs are for external engineers consuming AFAL
 - the quickstart is the shortest day-to-day operator entrypoint:
-  [external-agent-pilot-release-quickstart.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-quickstart.md)
+  [external-agent-pilot-release-quickstart.md](docs/product/external-agent-pilot-release-quickstart.md)
 
 ---
 

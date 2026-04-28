@@ -23,7 +23,7 @@ This is especially important now that AFAL has:
 
 The current GitHub Actions workflow lives at:
 
-- [`.github/workflows/ci.yml`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/ci.yml)
+- [`.github/workflows/ci.yml`](.github/workflows/ci.yml)
 
 The checks that should be marked as **required** in branch protection are:
 
@@ -142,7 +142,7 @@ You should run this only after the workflow has executed at least once on GitHub
 
 This repo also includes a one-shot helper script:
 
-- [`scripts/configure-branch-protection.sh`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/scripts/configure-branch-protection.sh)
+- [`scripts/configure-branch-protection.sh`](scripts/configure-branch-protection.sh)
 
 Usage:
 
