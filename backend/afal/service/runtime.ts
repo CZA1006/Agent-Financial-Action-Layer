@@ -114,6 +114,36 @@ function getResourceFixtures(intentOrRef: ResourceIntent | IdRef): ResourceFlowF
   return resourceFlowFixtures;
 }
 
+function describePaymentPayee(intent: PaymentIntent): string {
+  return intent.payee.payeeDid.split(":").at(-1) ?? intent.payee.payeeDid;
+}
+
+function buildPaymentApprovalContextOverride(intent: PaymentIntent): {
+  headline: string;
+  summary: string;
+  humanVisibleFields: Record<string, unknown>;
+} {
+  const purposeDescription =
+    intent.purpose.description || intent.purpose.referenceId || intent.purpose.category;
+
+  return {
+    headline: `Approve payment to ${describePaymentPayee(intent)}`,
+    summary: `${intent.amount} ${intent.asset} on ${intent.chain} for ${purposeDescription}`,
+    humanVisibleFields: {
+      payerAccountRef: intent.payer.accountId,
+      payeeDid: intent.payee.payeeDid,
+      settlementAddress: intent.payee.settlementAddress,
+      asset: intent.asset,
+      amount: intent.amount,
+      chain: intent.chain,
+      purpose: purposeDescription,
+      mandateRef: intent.mandateRef,
+      policyRef: intent.policyRef,
+      riskSignals: ["new-counterparty"],
+    },
+  };
+}
+
 function canReserveMonetaryBudget(
   port: AfalOrchestrationPorts["ats"]
 ): port is AfalOrchestrationPorts["ats"] &
@@ -320,7 +350,9 @@ export class AfalRuntimeService
       `AFAL approval request requires an authorization result of "challenge-required", got "${initialDecision.result}"`
     );
 
-    const approvalRequest = await this.ports.amn.createApprovalRequest(initialDecision);
+    const approvalRequest = await this.ports.amn.createApprovalRequest(initialDecision, {
+      approvalContext: buildPaymentApprovalContextOverride(intentState),
+    });
     await this.ports.intents.createPendingExecution({
       approvalSessionRef: approvalRequest.approvalSession.approvalSessionId,
       actionRef: intentState.intentId,
