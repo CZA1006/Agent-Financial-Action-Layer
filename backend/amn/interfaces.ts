@@ -47,9 +47,19 @@ export interface AmnAdminPort
     accountRef: IdRef;
   }): Promise<AuthorizationDecision>;
   createChallengeRecord(decision: AuthorizationDecision): Promise<ChallengeRecord>;
-  buildApprovalContext(challenge: ChallengeRecord): Promise<ApprovalContext>;
+  buildApprovalContext(
+    challenge: ChallengeRecord,
+    overrides?: Partial<Pick<ApprovalContext, "headline" | "summary" | "humanVisibleFields">>
+  ): Promise<ApprovalContext>;
   recordApprovalResult(result: ApprovalResult): Promise<ApprovalResult>;
-  createApprovalRequest(priorDecision: AuthorizationDecision): Promise<{
+  createApprovalRequest(
+    priorDecision: AuthorizationDecision,
+    args?: {
+      approvalContext?: Partial<
+        Pick<ApprovalContext, "headline" | "summary" | "humanVisibleFields">
+      >;
+    }
+  ): Promise<{
     challenge: ChallengeRecord;
     approvalContext: ApprovalContext;
     approvalSession: ApprovalSession;

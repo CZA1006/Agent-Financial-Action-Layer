@@ -182,13 +182,17 @@ export class InMemoryAmnService implements AmnPort, AmnAdminPort {
     return challenge;
   }
 
-  async buildApprovalContext(challenge: ChallengeRecord): Promise<ApprovalContext> {
+  async buildApprovalContext(
+    challenge: ChallengeRecord,
+    overrides?: Partial<Pick<ApprovalContext, "headline" | "summary" | "humanVisibleFields">>
+  ): Promise<ApprovalContext> {
     const template = assertFound(
       this.approvalContextTemplates[challenge.actionRef],
       `Unknown actionRef "${challenge.actionRef}" for AMN approval context`
     );
     const context: ApprovalContext = {
       ...clone(template),
+      ...clone(overrides ?? {}),
       challengeRef: challenge.challengeId,
       actionRef: challenge.actionRef,
     };
@@ -208,13 +212,23 @@ export class InMemoryAmnService implements AmnPort, AmnAdminPort {
     return approvalResult;
   }
 
-  async createApprovalRequest(priorDecision: AuthorizationDecision): Promise<{
+  async createApprovalRequest(
+    priorDecision: AuthorizationDecision,
+    args?: {
+      approvalContext?: Partial<
+        Pick<ApprovalContext, "headline" | "summary" | "humanVisibleFields">
+      >;
+    }
+  ): Promise<{
     challenge: ChallengeRecord;
     approvalContext: ApprovalContext;
     approvalSession: ApprovalSession;
   }> {
     const createdChallenge = await this.createChallengeRecord(priorDecision);
-    const approvalContext = await this.buildApprovalContext(createdChallenge);
+    const approvalContext = await this.buildApprovalContext(
+      createdChallenge,
+      args?.approvalContext
+    );
     const challenge: ChallengeRecord = {
       ...createdChallenge,
       state: "pending-approval",

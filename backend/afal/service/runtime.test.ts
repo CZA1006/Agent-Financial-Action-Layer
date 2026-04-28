@@ -78,6 +78,46 @@ test("AFAL runtime service keeps a shared seeded port bundle when one is provide
   assert.equal(resource.finalDecision.result, "approved");
 });
 
+test("AFAL runtime service builds payment approval context from the submitted intent", async () => {
+  const service = createAfalRuntimeService();
+  const intent = {
+    ...paymentFlowFixtures.paymentIntentCreated,
+    payee: {
+      ...paymentFlowFixtures.paymentIntentCreated.payee,
+      settlementAddress: "0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94",
+    },
+    amount: "0.01",
+    chain: "base-sepolia",
+    purpose: {
+      category: "service-payment",
+      description:
+        "Agent prompt payment: Pay 0.01 USDC to payee agent for fraud detection service",
+      referenceId: "agent-prompt-payment-demo",
+    },
+  };
+
+  const paymentPending = await service.requestPaymentApproval({
+    capability: "requestPaymentApproval",
+    requestRef: "req-runtime-dynamic-approval-context-001",
+    input: {
+      requestRef: "req-runtime-dynamic-approval-context-001",
+      intent,
+      monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+    },
+  });
+
+  assert.equal(
+    paymentPending.approvalContext.summary,
+    "0.01 USDC on base-sepolia for Agent prompt payment: Pay 0.01 USDC to payee agent for fraud detection service"
+  );
+  assert.equal(paymentPending.approvalContext.humanVisibleFields.amount, "0.01");
+  assert.equal(paymentPending.approvalContext.humanVisibleFields.chain, "base-sepolia");
+  assert.equal(
+    paymentPending.approvalContext.humanVisibleFields.settlementAddress,
+    "0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94"
+  );
+});
+
 test("AFAL runtime service exposes module-service command entrypoints", async () => {
   const service = createAfalRuntimeService();
   const paymentPending = await service.requestPaymentApproval({
