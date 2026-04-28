@@ -13,6 +13,7 @@ The goal is simple:
 - provision one scoped external client for the target engineer
 - generate one live handoff artifact only after the public AFAL URL passes preflight
 - record enough metadata to interpret the engineer's findings later
+- optionally run the wallet-confirmed payment rail for the MetaMask agent payment demo
 
 ---
 
@@ -33,7 +34,7 @@ Do not use this runbook for:
 
 For public release assets, use:
 
-- [external-agent-pilot-release-handbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-handbook.md)
+- [external-agent-pilot-release-handbook.md](docs/product/external-agent-pilot-release-handbook.md)
 
 ---
 
@@ -47,6 +48,15 @@ Minimum host requirements:
 - one reachable inbound HTTP or HTTPS endpoint
 - a persistent working directory for SQLite sandbox state
 - a process supervisor or terminal session that stays alive for the validation window
+
+Current GCP staging baseline:
+
+- VM: `afal-staging-sandbox`
+- AFAL base URL: `http://34.44.95.42:3213`
+- payment rail wallet URL: `http://34.44.95.42:3412/wallet-demo`
+- AFAL systemd unit: `afal-staging.service`
+- payment rail systemd unit: `afal-payment-rail.service`
+- MetaMask demo data directory: `/srv/afal/metamask-demo-001/sqlite-data`
 
 Recommended network shape:
 
@@ -95,6 +105,24 @@ For an operator-only local drill:
 npm run serve:sqlite-http -- ./.afal-staging-drill-data 127.0.0.1 3213
 ```
 
+For a long-running VM, use systemd rather than an SSH-attached terminal. The staging VM currently uses:
+
+```text
+afal-staging.service
+  -> npm run serve:sqlite-http -- /srv/afal/metamask-demo-001/sqlite-data 0.0.0.0 3213
+
+afal-payment-rail.service
+  -> npm run serve:payment-rail -- 0.0.0.0 3412
+```
+
+AFAL must be started with the payment rail adapter env when running the MetaMask demo:
+
+```text
+AFAL_PAYMENT_RAIL_BASE_URL=http://127.0.0.1:3412
+AFAL_PAYMENT_RAIL_TOKEN=payment-rail-secret
+AFAL_PAYMENT_RAIL_SIGNING_KEY=payment-rail-signing-secret
+```
+
 ---
 
 ## Verify Liveness
@@ -131,6 +159,7 @@ Only after liveness passes, build the live handoff package:
 ```bash
 npm run build:external-agent-pilot-live-handoff -- \
   --afal-base-url "$AFAL_BASE_URL" \
+  --data-dir /srv/afal/round-002/sqlite-data \
   --output-root dist/round-002-live-handoff \
   --client-id client-round-002-001 \
   --tenant-id tenant-round-002-001 \
@@ -140,9 +169,12 @@ npm run build:external-agent-pilot-live-handoff -- \
 The live handoff builder:
 
 - requires `--afal-base-url`
+- should be pointed at the same `--data-dir` used by the live AFAL server
 - refuses `127.0.0.1` / `localhost` unless `--allow-local` is passed
 - performs a liveness preflight before packaging
 - delegates provisioning and packaging to the standard internal handoff builder
+
+Important: build live handoff packages on the VM or another host with access to the live SQLite database. If you provision into a laptop temp directory while the public AFAL server reads a different database, the external engineer will receive credentials that the live server does not recognize.
 
 Expected outputs:
 
@@ -201,7 +233,7 @@ Before the round starts, record these values in the round checklist:
 
 Use:
 
-- [external-agent-validation-round-checklist.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md)
+- [external-agent-validation-round-checklist.md](docs/product/external-agent-validation-round-checklist.md)
 
 ---
 
@@ -262,3 +294,52 @@ The staging sandbox is ready for external validation only when:
 - engineer has the actual artifact in a known local path
 - callback tunnel plan is explicit
 - round checklist is filled before the engineer starts
+
+## MetaMask Agent Payment Demo Operation
+
+Use this section when the goal is to demo AFAL as an agent payment infra layer, not just external callback registration.
+
+Before every clean recording, reset and reprovision the demo data directory:
+
+```bash
+cd /opt/afal
+git pull origin main
+npm ci
+sudo systemctl daemon-reload
+sudo systemctl stop afal-staging
+
+rm -rf /srv/afal/metamask-demo-001/sqlite-data
+mkdir -p /srv/afal/metamask-demo-001/sqlite-data
+
+npm run provision:external-agent-sandbox -- \
+  --data-dir /srv/afal/metamask-demo-001/sqlite-data \
+  --client-id client-metamask-demo-001 \
+  --tenant-id tenant-metamask-demo-001 \
+  --agent-id agent-metamask-demo-001 \
+  --subject-did did:afal:agent:payment-agent-01 \
+  --mandate-refs mnd-0001,mnd-0002 \
+  --monetary-budget-refs budg-money-001 \
+  --resource-budget-refs budg-res-001 \
+  --resource-quota-refs quota-001 \
+  --payment-payee-did did:afal:agent:fraud-service-01 \
+  --resource-provider-did did:afal:institution:provider-openai \
+  --afal-base-url http://34.44.95.42:3213 \
+  --output /tmp/afal-metamask-demo-client.json
+
+sudo systemctl start afal-staging
+sudo systemctl restart afal-payment-rail
+cat /tmp/afal-metamask-demo-client.json
+```
+
+The local presenter should use the generated `auth.signingKey` with:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<provisioned-signing-key> \
+npm run demo:metamask-agent-payment -- \
+  --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+```
+
+This demo is intentionally one-shot per clean SQLite data directory because the seeded runtime uses `payint-0001`.

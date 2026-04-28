@@ -4,7 +4,7 @@
 
 This playbook is the incident and recovery companion to:
 
-- [docs/product/notification-operator-handbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/notification-operator-handbook.md#L1)
+- [docs/product/notification-operator-handbook.md](docs/product/notification-operator-handbook.md#L1)
 
 The handbook explains the surface.
 

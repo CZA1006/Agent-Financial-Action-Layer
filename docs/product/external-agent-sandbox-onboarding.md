@@ -6,13 +6,13 @@ This document defines the current minimum onboarding path for one real external 
 
 This is the first practical bridge between:
 
-- AFAL's locally accepted externally integrated runtime
+- AFAL's externally validated sandbox runtime
 
 and:
 
-- a real external agent integration pilot
+- repeatable external agent integration pilots and future SDK/package work
 
-This onboarding doc is now also the base document for a **second-engineer external validation pass** using the standalone pilot kit.
+This onboarding doc is now also the base document for external validation passes using the standalone pilot kit. Round 003 passed from an extracted handoff archive outside the AFAL monorepo, so new rounds should focus on repeatability and partner-specific friction rather than proving the basic boundary for the first time.
 
 ---
 

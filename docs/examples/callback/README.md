@@ -24,4 +24,4 @@ These files are intended for:
 
 Related contract:
 
-- [docs/specs/receiver-settlement-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/receiver-settlement-callback-contract.md#L1)
+- [docs/specs/receiver-settlement-callback-contract.md](docs/specs/receiver-settlement-callback-contract.md#L1)

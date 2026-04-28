@@ -12,6 +12,13 @@ Use this after:
 
 This runbook is stricter than the in-repo smoke tests because it removes the monorepo as hidden support infrastructure.
 
+Current validation status:
+
+- Round 003 passed from an extracted handoff archive outside the AFAL monorepo.
+- `npm run preflight` now checks both AFAL reachability and signed external-client auth acceptance.
+- `bundle.json` in the handoff package is sanitized and does not expose server-side local database paths.
+- `cloudflared` is the preferred anonymous HTTPS callback tunnel for external engineers.
+
 ---
 
 ## AFAL Team Preparation
@@ -69,12 +76,12 @@ It verifies the public AFAL base URL before creating the credential-bearing pack
 
 ```bash
 npm run build:external-agent-pilot-live-handoff -- \
-  --afal-base-url https://replace-with-reachable-afal-sandbox-url \
+  --afal-base-url http://34.44.95.42:3213 \
   --data-dir /srv/afal/round-002/sqlite-data \
-  --output-root dist/round-002-live-handoff \
-  --client-id client-round-002-001 \
-  --tenant-id tenant-round-002-001 \
-  --agent-id agent-round-002-001
+  --output-root dist/round-003-live-handoff \
+  --client-id client-round-003-001 \
+  --tenant-id tenant-round-003-001 \
+  --agent-id agent-round-003-001
 ```
 
 The live handoff builder refuses `127.0.0.1` / `localhost` by default.
@@ -89,18 +96,18 @@ Send the external engineer either:
 
 - `dist/external-agent-pilot-handoff/`
 - `dist/external-agent-pilot-release/external-agent-pilot-handoff/`
-- `dist/round-002-live-handoff/external-agent-pilot-handoff/`
+- `dist/round-003-live-handoff/external-agent-pilot-handoff/`
 
 CI-style artifact output:
 
 - `dist/external-agent-pilot-release/external-agent-pilot-handoff/`
 - `dist/external-agent-pilot-release/afal-external-bundle.json`
 - `dist/external-agent-pilot-release/external-agent-pilot-handoff.tar.gz`
-- `dist/round-002-live-handoff/external-agent-pilot-handoff.tar.gz`
+- `dist/round-003-live-handoff/external-agent-pilot-handoff.tar.gz`
 
 GitHub Actions also uploads this artifact on `main` through:
 
-- [`external-agent-handoff-artifact.yml`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-handoff-artifact.yml)
+- [`external-agent-handoff-artifact.yml`](.github/workflows/external-agent-handoff-artifact.yml)
 
 Important boundary:
 
@@ -121,8 +128,8 @@ Public release output:
 
 GitHub can publish that release-safe tarball on tags matching `external-agent-pilot-v*` through:
 
-- [`external-agent-pilot-release.yml`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-pilot-release.yml)
-- [`external-agent-pilot-release-handbook.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-handbook.md)
+- [`external-agent-pilot-release.yml`](.github/workflows/external-agent-pilot-release.yml)
+- [`external-agent-pilot-release-handbook.md`](docs/product/external-agent-pilot-release-handbook.md)
 
 or, if they prefer the pieces separately:
 
@@ -214,13 +221,13 @@ Re-run constraint:
 
 The external engineer should receive these docs with the skeleton:
 
-- [`docs/product/external-engineer-pilot-handoff.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-pilot-handoff.md)
-- [`docs/product/external-engineer-message-template.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-message-template.md)
-- [`docs/product/external-agent-repo-external-validation-plan.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-repo-external-validation-plan.md)
-- [`docs/product/external-agent-validation-round-checklist.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md)
-- [`docs/product/external-pilot-findings-template.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-pilot-findings-template.md)
-- [`docs/specs/external-agent-auth-contract.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/external-agent-auth-contract.md)
-- [`docs/specs/receiver-settlement-callback-contract.md`](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/receiver-settlement-callback-contract.md)
+- [`docs/product/external-engineer-pilot-handoff.md`](docs/product/external-engineer-pilot-handoff.md)
+- [`docs/product/external-engineer-message-template.md`](docs/product/external-engineer-message-template.md)
+- [`docs/product/external-agent-repo-external-validation-plan.md`](docs/product/external-agent-repo-external-validation-plan.md)
+- [`docs/product/external-agent-validation-round-checklist.md`](docs/product/external-agent-validation-round-checklist.md)
+- [`docs/product/external-pilot-findings-template.md`](docs/product/external-pilot-findings-template.md)
+- [`docs/specs/external-agent-auth-contract.md`](docs/specs/external-agent-auth-contract.md)
+- [`docs/specs/receiver-settlement-callback-contract.md`](docs/specs/receiver-settlement-callback-contract.md)
 
 ---
 

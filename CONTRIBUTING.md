@@ -82,7 +82,7 @@ A good PR should state:
 
 The current repo merge gate is documented in:
 
-- [docs/product/ci-merge-gate.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/ci-merge-gate.md)
+- [docs/product/ci-merge-gate.md](docs/product/ci-merge-gate.md)
 
 Current required CI checks for `main` should be:
 

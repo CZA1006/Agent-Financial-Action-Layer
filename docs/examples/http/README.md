@@ -147,4 +147,4 @@ npm run trusted-surface:stub -- --base-url http://127.0.0.1:3212 --approval-sess
 
 Receiver-side settlement callback payload samples live under:
 
-- [docs/examples/callback/README.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/examples/callback/README.md#L1)
+- [docs/examples/callback/README.md](docs/examples/callback/README.md#L1)

@@ -4,13 +4,15 @@
 
 This document defines the next validation stage after AFAL's packaging and release surfaces are in place.
 
-The goal is to move from:
+The original goal was to move from:
 
 - internally accepted external-agent sandbox
 
 to:
 
 - externally validated external-agent sandbox
+
+Current status: the first successful repo-external pass has completed. Round 003 validated that an external engineer could extract the handoff archive outside the AFAL monorepo, install the pilot, pass signed preflight, register/read callbacks, submit payment/resource requests, and classify the result as passed. Keep this plan for repeatability checks and future partner rounds.
 
 This is not another internal demo.
 It is a controlled validation pass where someone outside the AFAL implementation loop consumes AFAL with only the published external surface.
@@ -40,6 +42,8 @@ It does not test:
 - production deployment
 - multi-tenant production operations
 
+For the separate wallet-confirmed testnet payment demo, use [metamask-payment-demo.md](metamask-payment-demo.md). That demo does move Base Sepolia testnet USDC, but it is not part of this repo-external callback pilot acceptance plan.
+
 ---
 
 ## Stage Entry Criteria
@@ -52,6 +56,7 @@ Do not start the repo-external validation round until all of these are true:
 4. the standalone pilot kit and handoff docs are up to date
 5. one specific validation owner on the AFAL side is assigned
 6. one specific external engineer or partner contact is assigned
+7. the live handoff package is generated against the same database used by the public sandbox
 
 Recommended preflight:
 
@@ -82,7 +87,7 @@ Use artifact:
 
 Reference:
 
-- [external-agent-pilot-release-quickstart.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-quickstart.md)
+- [external-agent-pilot-release-quickstart.md](docs/product/external-agent-pilot-release-quickstart.md)
 
 ### Mode B: Public Release-Safe Consumption
 
@@ -98,10 +103,12 @@ Use artifact:
 
 Reference:
 
-- [external-agent-pilot-release-handbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-handbook.md)
+- [external-agent-pilot-release-handbook.md](docs/product/external-agent-pilot-release-handbook.md)
 
 Mode A is the recommended first pass.
 Mode B becomes more important once AFAL starts using GitHub Releases as a real external distribution channel.
+
+Round 003 used Mode A and passed. Future validation can either repeat Mode A with a new client or exercise Mode B to test public release-safe package distribution separately from live credential delivery.
 
 ---
 
@@ -130,7 +137,7 @@ If they need those, the stage has not passed.
 
 Before starting any round, fill:
 
-- [external-agent-validation-round-checklist.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md)
+- [external-agent-validation-round-checklist.md](docs/product/external-agent-validation-round-checklist.md)
 
 ### Phase 1. Distribution
 
@@ -143,11 +150,11 @@ AFAL team sends:
 
 Recommended docs to include:
 
-- [external-engineer-message-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-message-template.md)
-- [external-engineer-pilot-handoff.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-pilot-handoff.md)
-- [external-agent-sandbox-onboarding.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-sandbox-onboarding.md)
-- [external-agent-validation-round-checklist.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-validation-round-checklist.md)
-- [external-pilot-findings-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-pilot-findings-template.md)
+- [external-engineer-message-template.md](docs/product/external-engineer-message-template.md)
+- [external-engineer-pilot-handoff.md](docs/product/external-engineer-pilot-handoff.md)
+- [external-agent-sandbox-onboarding.md](docs/product/external-agent-sandbox-onboarding.md)
+- [external-agent-validation-round-checklist.md](docs/product/external-agent-validation-round-checklist.md)
+- [external-pilot-findings-template.md](docs/product/external-pilot-findings-template.md)
 
 ### Phase 2. External Execution
 
@@ -177,7 +184,7 @@ AFAL team should collect:
 
 Use:
 
-- [external-pilot-findings-template.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-pilot-findings-template.md)
+- [external-pilot-findings-template.md](docs/product/external-pilot-findings-template.md)
 
 ### Phase 4. Triage
 

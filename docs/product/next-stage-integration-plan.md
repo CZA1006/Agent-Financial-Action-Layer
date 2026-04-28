@@ -28,7 +28,7 @@ It assumes the current repo already has:
 
 AFAL's current stage is:
 
-- **Late Phase 1 externally integrated runtime, locally accepted**
+- **Late Phase 1 externally validated sandbox with wallet-confirmed testnet payment demo**
 
 What that means in practical terms:
 
@@ -50,24 +50,26 @@ What that means in practical terms:
 - the external payment/provider path now carries shared-token auth plus signed request metadata placeholders
 - sandbox-facing external client provisioning, per-client auth, callback registration APIs, and standalone consumer samples now exist
 - internal real-agent sandbox acceptance and standalone extractable pilot kit now both exist
+- a GCP staging sandbox has supported a successful repo-external Round 003 validation run
+- a prompt-driven MetaMask demo now settles Base Sepolia testnet USDC through AFAL's payment rail boundary and lets the payee agent verify settlement/receipt state
 
 What this stage still is **not**:
 
 - a production backend
 - a real trusted-surface integration
-- a real database-backed runtime
-- a real settlement or provider integration
-- an externally validated consumer sandbox
+- a production database-backed runtime
+- a production settlement or provider integration
+- an autonomous-custody wallet system
 
 ---
 
 ## Stage Definition
 
-The current target stage has been reached internally.
+The previous target stage has now been reached externally once.
 
 The next target stage is:
 
-- **external-agent validated sandbox**
+- **repeatable consumer package and SDK boundary**
 
 AFAL is no longer just a local durable demo system, but a runtime that can be cleanly integrated with:
 
@@ -81,7 +83,8 @@ AFAL is no longer just a local durable demo system, but a runtime that can be cl
 In short:
 
 - previous stage = internally accepted externally integrated runtime
-- next stage = repo-external engineer can consume AFAL as a sandbox product surface
+- current stage = repo-external engineer can consume AFAL as a sandbox product surface
+- next stage = make that surface repeatable enough for SDK/package distribution and hosted sandbox onboarding
 
 ---
 
@@ -89,7 +92,7 @@ In short:
 
 The next goal is no longer to prove another internal execution path.
 
-The next goal is to prove that AFAL can be consumed by a second engineer from outside the implementation loop.
+The first outside-the-implementation-loop proof has passed. The next goal is to turn that validated surface into repeatable packaging and SDK ergonomics.
 
 That means the system should support:
 
@@ -115,13 +118,14 @@ At the end of this stage, AFAL should have these outcomes:
 
 ### 1. Repo-External Consumer Validation
 
-AFAL should be usable by an engineer who is not working inside the implementation repo.
+AFAL should be repeatedly usable by engineers who are not working inside the implementation repo.
 
 Target outcome:
 
 - a second engineer can use the standalone pilot kit from a separate repo
 - the engineer can register callbacks and submit payment/resource requests
 - the engineer can document friction without relying on internal implementation context
+- at least one follow-up engineer or partner can repeat the path with a fresh client and handoff package
 
 ### 2. Trusted-Surface Integration Boundary
 

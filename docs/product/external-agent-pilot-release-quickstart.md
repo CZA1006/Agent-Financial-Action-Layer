@@ -12,8 +12,8 @@ Use it when you already understand the repo and just need the exact commands for
 
 If you need the full policy and safety rationale, read:
 
-- [external-agent-pilot-release-handbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-handbook.md)
-- [staging-sandbox-operator-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/staging-sandbox-operator-runbook.md)
+- [external-agent-pilot-release-handbook.md](docs/product/external-agent-pilot-release-handbook.md)
+- [staging-sandbox-operator-runbook.md](docs/product/staging-sandbox-operator-runbook.md)
 
 ---
 
@@ -33,11 +33,12 @@ npm run test:mock
 npm run accept:external-onboarding
 npm run validate:external-agent-pilot-release-surfaces
 npm run build:external-agent-pilot-live-handoff -- \
-  --afal-base-url https://replace-with-reachable-afal-sandbox-url \
-  --output-root dist/round-002-live-handoff \
-  --client-id client-round-002-001 \
-  --tenant-id tenant-round-002-001 \
-  --agent-id agent-round-002-001
+  --afal-base-url http://34.44.95.42:3213 \
+  --data-dir /srv/afal/round-002/sqlite-data \
+  --output-root dist/round-003-live-handoff \
+  --client-id client-round-003-001 \
+  --tenant-id tenant-round-003-001 \
+  --agent-id agent-round-003-001
 ```
 
 Deliver:
@@ -45,8 +46,15 @@ Deliver:
 - `dist/round-002-live-handoff/external-agent-pilot-handoff/`
 - or `dist/round-002-live-handoff/external-agent-pilot-handoff.tar.gz`
 
+Use the actual output root from the command. The Round 003 staging run used:
+
+- `dist/round-003-live-handoff/external-agent-pilot-handoff/`
+- `dist/round-003-live-handoff/external-agent-pilot-handoff.tar.gz`
+
 The live handoff command refuses `127.0.0.1` / `localhost` by default and pings the AFAL base URL before packaging.
 Use `--allow-local` only for local operator drills, not for external validation.
+
+Run Path 1 on the staging host or against the same database used by the public sandbox. The provisioned client must exist in the live server's external-client store before the package is sent.
 
 Do not:
 
@@ -119,7 +127,7 @@ Tag rule:
 
 Workflow:
 
-- [external-agent-pilot-release.yml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/.github/workflows/external-agent-pilot-release.yml)
+- [external-agent-pilot-release.yml](.github/workflows/external-agent-pilot-release.yml)
 
 Expected result:
 
@@ -158,7 +166,7 @@ That command proves:
 
 ## Related Docs
 
-- [external-agent-pilot-release-handbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-release-handbook.md)
-- [external-agent-pilot-repo-external-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-agent-pilot-repo-external-runbook.md)
-- [external-engineer-pilot-handoff.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/external-engineer-pilot-handoff.md)
-- [staging-sandbox-operator-runbook.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/product/staging-sandbox-operator-runbook.md)
+- [external-agent-pilot-release-handbook.md](docs/product/external-agent-pilot-release-handbook.md)
+- [external-agent-pilot-repo-external-runbook.md](docs/product/external-agent-pilot-repo-external-runbook.md)
+- [external-engineer-pilot-handoff.md](docs/product/external-engineer-pilot-handoff.md)
+- [staging-sandbox-operator-runbook.md](docs/product/staging-sandbox-operator-runbook.md)

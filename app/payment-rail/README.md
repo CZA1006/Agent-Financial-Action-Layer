@@ -1,6 +1,11 @@
 # AFAL Payment Rail Stub
 
-This service is the external payment rail boundary used by AFAL demos. By default it returns seeded mock settlements. It can also run in wallet-confirmed mode for a MetaMask/Base Sepolia demo.
+This service is the external payment rail boundary used by AFAL demos. By default it returns seeded mock settlements. It can also run in wallet-confirmed mode for the prompt-driven MetaMask/Base Sepolia agent payment demo.
+
+In wallet-confirmed mode, the service has two jobs:
+
+- serve `/wallet-demo`, a small browser page that asks MetaMask to send a Base Sepolia ERC-20 transfer
+- expose `/wallet-payments/confirm`, which records the returned `txHash` so AFAL can later settle the matching payment intent through `/payments/execute`
 
 ## Wallet-Confirmed Demo Mode
 
@@ -37,6 +42,24 @@ token: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
 
 Use a testnet-funded MetaMask account only. The demo sends an ERC-20 transfer, registers the returned `txHash` with `/wallet-payments/confirm`, and then AFAL can settle the matching payment intent through `/payments/execute`.
 
+The page also accepts query parameters so a payer agent can hand the user a prefilled approval URL:
+
+```text
+http://127.0.0.1:3412/wallet-demo?actionRef=payint-0001&to=0x...&amount=0.01&tokenAddress=0x036CbD53842c5426634e7929541eC2318f3dCF7e
+```
+
+The staging demo uses this from:
+
+```bash
+npm run demo:metamask-agent-payment
+```
+
+That command shows the full path:
+
+```text
+user prompt -> payer agent -> AFAL approval/session/budget -> wallet rail -> trusted-surface resume -> AFAL settlement/receipt -> payee agent readback
+```
+
 ## Demo Limitations
 
 This is a testnet bridge from AFAL to a human-confirmed wallet transaction. It is not yet a production payment rail:
@@ -44,3 +67,4 @@ This is a testnet bridge from AFAL to a human-confirmed wallet transaction. It i
 - No on-chain receipt verification is performed yet.
 - The browser registers the `txHash`; production must verify sender, recipient, token, amount, chain, and finality server-side.
 - MetaMask approval is human-in-the-loop. A fully autonomous agent wallet requires a separate custody or smart-account boundary.
+- The seeded demo runtime uses `payint-0001`, so reset the SQLite demo data directory before recording repeated full-settlement runs.

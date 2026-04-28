@@ -97,7 +97,7 @@ Phase 1 local runtime now persists this state in an AMN approval session so the 
 
 The concrete integration contract for this flow now lives in:
 
-- [docs/specs/trusted-surface-callback-contract.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/trusted-surface-callback-contract.md#L1)
+- [docs/specs/trusted-surface-callback-contract.md](docs/specs/trusted-surface-callback-contract.md#L1)
 
 After approval and resume, downstream receiver-side agents can independently confirm the final settled action through AFAL's read-side route:
 
@@ -134,8 +134,8 @@ Phase 1 work in this folder should produce:
 
 A minimal stub now exists at:
 
-- [stub.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/app/trusted-surface/stub.ts#L1)
-- [server.ts](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/app/trusted-surface/server.ts#L1)
+- [stub.ts](app/trusted-surface/stub.ts#L1)
+- [server.ts](app/trusted-surface/server.ts#L1)
 
 `stub.ts` is a small integration helper, not a UI.
 

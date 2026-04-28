@@ -111,10 +111,10 @@ npm run snapshot:openapi -- 0.1.0
 
 ## Published Artifacts
 
-- [openapi.yaml](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/openapi/releases/v0.1.0/openapi.yaml)
-- [openapi.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/openapi/releases/v0.1.0/openapi.json)
-- [manifest.json](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/openapi/releases/v0.1.0/manifest.json)
-- [release-notes.md](/Users/caizhuoang/Desktop/Dabanc/agent-financial-action-layer/docs/specs/openapi/releases/v0.1.0/release-notes.md#L1)
+- [openapi.yaml](docs/specs/openapi/releases/v0.1.0/openapi.yaml)
+- [openapi.json](docs/specs/openapi/releases/v0.1.0/openapi.json)
+- [manifest.json](docs/specs/openapi/releases/v0.1.0/manifest.json)
+- [release-notes.md](docs/specs/openapi/releases/v0.1.0/release-notes.md#L1)
 
 ## Migration Notes
 
