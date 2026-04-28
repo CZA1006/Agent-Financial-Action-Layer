@@ -1,0 +1,422 @@
+import { createHash } from "node:crypto";
+import { createInterface } from "node:readline/promises";
+import { stdin as input, stdout as output } from "node:process";
+import { pathToFileURL } from "node:url";
+
+import type { PaymentApprovalRequestOutput } from "../../backend/afal/interfaces";
+import type { AfalApiFailure, AfalApiSuccess } from "../../backend/afal/api/types";
+import { AFAL_HTTP_ROUTES } from "../../backend/afal/http/types";
+import { paymentFlowFixtures } from "../../sdk/fixtures";
+import type { PaymentIntent } from "../../sdk/types";
+import { runApprovalAgent, type ApprovalAgentResult } from "./approval-agent";
+import { createAfalHttpClient } from "./http-client";
+import { runPayeeAgent, type PayeeAgentResult } from "./payee-agent";
+
+const DEFAULT_WALLET_DEMO_URL = "http://34.44.95.42:3412/wallet-demo";
+const DEFAULT_TOKEN_ADDRESS = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
+const DEFAULT_PAYEE_ADDRESS = "0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94";
+const DEFAULT_AMOUNT = "0.01";
+
+interface DemoArgs {
+  baseUrl: string;
+  clientId: string;
+  signingKey: string;
+  message: string;
+  walletDemoUrl: string;
+  payeeAddress: string;
+  amount: string;
+  tokenAddress: string;
+  autoApprove: boolean;
+  assumeWalletConfirmed: boolean;
+}
+
+interface PaymentInstruction {
+  rawMessage: string;
+  payerAgentId: string;
+  payeeAgentId: string;
+  payeeAddress: string;
+  amount: string;
+  asset: "USDC";
+  chain: "base-sepolia";
+  tokenAddress: string;
+}
+
+interface DemoTimelineEvent {
+  actor: string;
+  event: string;
+  detail: Record<string, unknown>;
+}
+
+function required(name: string, value: string | undefined): string {
+  if (!value) {
+    throw new Error(`${name} must be set`);
+  }
+  return value;
+}
+
+function sha256(value: string): string {
+  return createHash("sha256").update(value).digest("hex");
+}
+
+function clone<T>(value: T): T {
+  return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function getArgValue(argv: string[], index: number): string {
+  const value = argv[index + 1];
+  if (!value) {
+    throw new Error(`${argv[index]} requires a value`);
+  }
+  return value;
+}
+
+function parseArgs(argv: string[]): DemoArgs {
+  const result: Partial<DemoArgs> = {
+    baseUrl: process.env.AFAL_BASE_URL,
+    clientId: process.env.AFAL_CLIENT_ID,
+    signingKey: process.env.AFAL_SIGNING_KEY,
+    message: process.env.AFAL_AGENT_PAYMENT_MESSAGE,
+    walletDemoUrl: process.env.AFAL_WALLET_DEMO_URL ?? DEFAULT_WALLET_DEMO_URL,
+    payeeAddress: process.env.AFAL_DEMO_PAYEE_ADDRESS ?? DEFAULT_PAYEE_ADDRESS,
+    amount: process.env.AFAL_DEMO_PAYMENT_AMOUNT ?? DEFAULT_AMOUNT,
+    tokenAddress: process.env.AFAL_DEMO_TOKEN_ADDRESS ?? DEFAULT_TOKEN_ADDRESS,
+    autoApprove: process.env.AFAL_DEMO_AUTO_APPROVE !== "false",
+    assumeWalletConfirmed: process.env.AFAL_DEMO_ASSUME_WALLET_CONFIRMED === "true",
+  };
+
+  for (let index = 0; index < argv.length; index += 1) {
+    const arg = argv[index];
+    if (arg === "--base-url") {
+      result.baseUrl = getArgValue(argv, index);
+      index += 1;
+      continue;
+    }
+    if (arg === "--client-id") {
+      result.clientId = getArgValue(argv, index);
+      index += 1;
+      continue;
+    }
+    if (arg === "--signing-key") {
+      result.signingKey = getArgValue(argv, index);
+      index += 1;
+      continue;
+    }
+    if (arg === "--message") {
+      result.message = getArgValue(argv, index);
+      index += 1;
+      continue;
+    }
+    if (arg === "--wallet-demo-url") {
+      result.walletDemoUrl = getArgValue(argv, index);
+      index += 1;
+      continue;
+    }
+    if (arg === "--payee-address") {
+      result.payeeAddress = getArgValue(argv, index);
+      index += 1;
+      continue;
+    }
+    if (arg === "--amount") {
+      result.amount = getArgValue(argv, index);
+      index += 1;
+      continue;
+    }
+    if (arg === "--token-address") {
+      result.tokenAddress = getArgValue(argv, index);
+      index += 1;
+      continue;
+    }
+    if (arg === "--auto-approve") {
+      result.autoApprove = true;
+      continue;
+    }
+    if (arg === "--no-auto-approve") {
+      result.autoApprove = false;
+      continue;
+    }
+    if (arg === "--assume-wallet-confirmed") {
+      result.assumeWalletConfirmed = true;
+    }
+  }
+
+  return {
+    baseUrl: required("AFAL_BASE_URL or --base-url", result.baseUrl),
+    clientId: required("AFAL_CLIENT_ID or --client-id", result.clientId),
+    signingKey: required("AFAL_SIGNING_KEY or --signing-key", result.signingKey),
+    message: required("AFAL_AGENT_PAYMENT_MESSAGE or --message", result.message),
+    walletDemoUrl: required("AFAL_WALLET_DEMO_URL or --wallet-demo-url", result.walletDemoUrl),
+    payeeAddress: required("AFAL_DEMO_PAYEE_ADDRESS or --payee-address", result.payeeAddress),
+    amount: required("AFAL_DEMO_PAYMENT_AMOUNT or --amount", result.amount),
+    tokenAddress: required("AFAL_DEMO_TOKEN_ADDRESS or --token-address", result.tokenAddress),
+    autoApprove: Boolean(result.autoApprove),
+    assumeWalletConfirmed: Boolean(result.assumeWalletConfirmed),
+  };
+}
+
+function parsePaymentInstruction(args: DemoArgs): PaymentInstruction {
+  const amountMatch = args.message.match(/(\d+(?:\.\d+)?)\s*USDC/iu);
+  const addressMatch = args.message.match(/0x[a-fA-F0-9]{40}/u);
+
+  return {
+    rawMessage: args.message,
+    payerAgentId: paymentFlowFixtures.paymentIntentCreated.payer.agentDid,
+    payeeAgentId: paymentFlowFixtures.paymentIntentCreated.payee.payeeDid,
+    payeeAddress: addressMatch?.[0] ?? args.payeeAddress,
+    amount: amountMatch?.[1] ?? args.amount,
+    asset: "USDC",
+    chain: "base-sepolia",
+    tokenAddress: args.tokenAddress,
+  };
+}
+
+function createSignedHeaders(args: {
+  clientId: string;
+  signingKey: string;
+  requestRef: string;
+}): Record<string, string> {
+  const timestamp = new Date().toISOString();
+  return {
+    "content-type": "application/json",
+    "x-afal-client-id": args.clientId,
+    "x-afal-request-timestamp": timestamp,
+    "x-afal-request-signature": sha256(
+      `${args.clientId}:${args.requestRef}:${timestamp}:${args.signingKey}`
+    ),
+  };
+}
+
+async function postJson<T>(args: {
+  url: string;
+  requestRef: string;
+  clientId: string;
+  signingKey: string;
+  body: unknown;
+}): Promise<T> {
+  const response = await fetch(args.url, {
+    method: "POST",
+    headers: createSignedHeaders({
+      clientId: args.clientId,
+      signingKey: args.signingKey,
+      requestRef: args.requestRef,
+    }),
+    body: JSON.stringify(args.body),
+  });
+  const body = (await response.json()) as T | AfalApiFailure;
+  if (
+    typeof body === "object" &&
+    body !== null &&
+    "ok" in body &&
+    body.ok === false
+  ) {
+    throw new Error(
+      `AFAL request failed: ${body.capability} [${body.statusCode} ${body.error.code}] ${body.error.message}`
+    );
+  }
+  return body as T;
+}
+
+function buildPromptPaymentIntent(instruction: PaymentInstruction): PaymentIntent {
+  return {
+    ...clone(paymentFlowFixtures.paymentIntentCreated),
+    payee: {
+      ...paymentFlowFixtures.paymentIntentCreated.payee,
+      settlementAddress: instruction.payeeAddress,
+    },
+    amount: instruction.amount,
+    chain: instruction.chain,
+    purpose: {
+      category: "service-payment",
+      description: `Agent prompt payment: ${instruction.rawMessage}`,
+      referenceId: "agent-prompt-payment-demo",
+    },
+  };
+}
+
+async function requestPaymentApproval(args: {
+  baseUrl: string;
+  clientId: string;
+  signingKey: string;
+  instruction: PaymentInstruction;
+}): Promise<PaymentApprovalRequestOutput> {
+  const requestRef = `req-agent-prompt-payment-${Date.now()}`;
+  const intent = buildPromptPaymentIntent(args.instruction);
+  const body = {
+    requestRef,
+    input: {
+      requestRef,
+      intent,
+      monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+    },
+  };
+  const response = await postJson<AfalApiSuccess<PaymentApprovalRequestOutput>>({
+    url: `${args.baseUrl.replace(/\/+$/, "")}${AFAL_HTTP_ROUTES.requestPaymentApproval}`,
+    requestRef,
+    clientId: args.clientId,
+    signingKey: args.signingKey,
+    body,
+  });
+  return response.data;
+}
+
+function buildWalletDemoUrl(args: {
+  walletDemoUrl: string;
+  actionRef: string;
+  instruction: PaymentInstruction;
+}): string {
+  const url = new URL(args.walletDemoUrl);
+  url.searchParams.set("actionRef", args.actionRef);
+  url.searchParams.set("to", args.instruction.payeeAddress);
+  url.searchParams.set("amount", args.instruction.amount);
+  url.searchParams.set("tokenAddress", args.instruction.tokenAddress);
+  return url.toString();
+}
+
+async function waitForWalletConfirmation(prompt: string): Promise<void> {
+  const rl = createInterface({ input, output });
+  try {
+    await rl.question(prompt);
+  } finally {
+    rl.close();
+  }
+}
+
+async function main(): Promise<void> {
+  const args = parseArgs(process.argv.slice(2));
+  const instruction = parsePaymentInstruction(args);
+  const timeline: DemoTimelineEvent[] = [
+    {
+      actor: "user",
+      event: "message_to_payer_agent",
+      detail: {
+        message: instruction.rawMessage,
+      },
+    },
+    {
+      actor: "payer-agent",
+      event: "parsed_payment_instruction",
+      detail: {
+        payeeAgentId: instruction.payeeAgentId,
+        payeeAddress: instruction.payeeAddress,
+        amount: instruction.amount,
+        asset: instruction.asset,
+        chain: instruction.chain,
+      },
+    },
+  ];
+
+  const payer = await requestPaymentApproval({
+    baseUrl: args.baseUrl,
+    clientId: args.clientId,
+    signingKey: args.signingKey,
+    instruction,
+  });
+  timeline.push({
+    actor: "afal",
+    event: "payment_intent_pending_approval",
+    detail: {
+      actionRef: payer.intent.intentId,
+      approvalSessionRef: payer.approvalSession.approvalSessionId,
+      decisionRef: payer.initialDecision.decisionId,
+      challengeRef: payer.challenge.challengeId,
+      reservedAmount: payer.updatedBudget?.reservedAmount,
+      availableAmount: payer.updatedBudget?.availableAmount,
+    },
+  });
+
+  const walletUrl = buildWalletDemoUrl({
+    walletDemoUrl: args.walletDemoUrl,
+    actionRef: payer.intent.intentId,
+    instruction,
+  });
+  timeline.push({
+    actor: "payment-rail",
+    event: "wallet_transfer_required",
+    detail: {
+      walletUrl,
+      tokenAddress: instruction.tokenAddress,
+      amount: instruction.amount,
+      payeeAddress: instruction.payeeAddress,
+    },
+  });
+
+  process.stdout.write(`${JSON.stringify({ timeline }, null, 2)}\n`);
+
+  if (!args.assumeWalletConfirmed) {
+    await waitForWalletConfirmation(
+      `Open this wallet demo URL, send the Base Sepolia USDC transfer, then press Enter after confirmation.ok=true:\n${walletUrl}\n`
+    );
+  }
+
+  let approval: ApprovalAgentResult | undefined;
+  if (args.autoApprove) {
+    const approvalClient = createAfalHttpClient(args.baseUrl);
+    approval = await runApprovalAgent(approvalClient, {
+      approvalSessionRef: payer.approvalSession.approvalSessionId,
+      comment: "Approved in prompt-driven MetaMask agent payment demo",
+    });
+    timeline.push({
+      actor: "trusted-surface",
+      event: "approved_and_resumed",
+      detail: {
+        approvalSessionRef: approval.summary.approvalSessionRef,
+        result: approval.summary.result,
+        finalIntentStatus: approval.summary.finalIntentStatus,
+        settlementRef: approval.summary.settlementRef,
+        receiptRef: approval.summary.receiptRef,
+      },
+    });
+  }
+
+  const payeeClient = createAfalHttpClient(args.baseUrl, {
+    externalClientAuth: {
+      clientId: args.clientId,
+      signingKey: args.signingKey,
+    },
+  });
+  const payee: PayeeAgentResult = await runPayeeAgent(payeeClient, {
+    actionRef: payer.intent.intentId,
+  });
+  timeline.push({
+    actor: "payee-agent",
+    event: "read_afal_action_status",
+    detail: {
+      actionRef: payee.summary.actionRef,
+      intentStatus: payee.summary.intentStatus,
+      settlementRef: payee.summary.settlementRef,
+      receiptRef: payee.summary.receiptRef,
+      settlement: payee.response.settlement,
+      paymentReceipt: payee.response.paymentReceipt,
+    },
+  });
+
+  process.stdout.write(
+    `${JSON.stringify(
+      {
+        summary: {
+          actionRef: payer.intent.intentId,
+          approvalSessionRef: payer.approvalSession.approvalSessionId,
+          walletUrl,
+          finalIntentStatus: payee.summary.intentStatus,
+          settlementRef: payee.summary.settlementRef,
+          receiptRef: payee.summary.receiptRef,
+        },
+        instruction,
+        payer,
+        approval,
+        payee,
+        timeline,
+      },
+      null,
+      2
+    )}\n`
+  );
+}
+
+const isDirectRun =
+  typeof process !== "undefined" &&
+  Boolean(process.argv[1]) &&
+  import.meta.url === pathToFileURL(process.argv[1]).href;
+
+if (isDirectRun) {
+  void main();
+}
