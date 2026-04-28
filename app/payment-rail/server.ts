@@ -263,6 +263,16 @@ const BASE_SEPOLIA_PARAMS = {
 const log = (payload) => {
   document.querySelector("#log").textContent = JSON.stringify(payload, null, 2);
 };
+const params = new URLSearchParams(window.location.search);
+for (const [param, selector] of [
+  ["actionRef", "#actionRef"],
+  ["to", "#to"],
+  ["amount", "#amount"],
+  ["tokenAddress", "#tokenAddress"]
+]) {
+  const value = params.get(param);
+  if (value) document.querySelector(selector).value = value;
+}
 const parseUnits = (value, decimals) => {
   const [whole, fraction = ""] = value.trim().split(".");
   const normalizedFraction = (fraction + "0".repeat(decimals)).slice(0, decimals);

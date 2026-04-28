@@ -1,7 +1,11 @@
 import { pathToFileURL } from "node:url";
 
 import type { ResourceApprovalRequestOutput } from "../../backend/afal/interfaces";
-import { createAfalHttpClient, type AgentHarnessClient } from "./http-client";
+import {
+  createAfalHttpClient,
+  type AgentHarnessClient,
+  type AgentHarnessClientOptions,
+} from "./http-client";
 
 export interface ResourceRequesterAgentSummary {
   agentId: string;
@@ -40,9 +44,15 @@ export async function runResourceRequesterAgent(
   };
 }
 
-function parseArgs(argv: string[]): { baseUrl: string; requestRef?: string } {
+function parseArgs(argv: string[]): {
+  baseUrl: string;
+  requestRef?: string;
+  externalClientAuth?: NonNullable<AgentHarnessClientOptions["externalClientAuth"]>;
+} {
   let baseUrl = "";
   let requestRef: string | undefined;
+  let clientId = process.env.AFAL_CLIENT_ID;
+  let signingKey = process.env.AFAL_SIGNING_KEY;
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
@@ -54,6 +64,16 @@ function parseArgs(argv: string[]): { baseUrl: string; requestRef?: string } {
     if (arg === "--request-ref") {
       requestRef = argv[index + 1];
       index += 1;
+      continue;
+    }
+    if (arg === "--client-id") {
+      clientId = argv[index + 1];
+      index += 1;
+      continue;
+    }
+    if (arg === "--signing-key") {
+      signingKey = argv[index + 1];
+      index += 1;
     }
   }
 
@@ -64,14 +84,26 @@ function parseArgs(argv: string[]): { baseUrl: string; requestRef?: string } {
   return {
     baseUrl,
     requestRef,
+    externalClientAuth:
+      clientId && signingKey
+        ? {
+            clientId,
+            signingKey,
+          }
+        : undefined,
   };
 }
 
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
-  const result = await runResourceRequesterAgent(createAfalHttpClient(args.baseUrl), {
-    requestRef: args.requestRef,
-  });
+  const result = await runResourceRequesterAgent(
+    createAfalHttpClient(args.baseUrl, {
+      externalClientAuth: args.externalClientAuth,
+    }),
+    {
+      requestRef: args.requestRef,
+    }
+  );
   console.log(JSON.stringify(result, null, 2));
 }
 
