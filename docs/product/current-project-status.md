@@ -93,11 +93,20 @@ AFAL does not yet provide:
 - production observability and operator control plane
 - mainnet payment readiness
 
+## Phase 2 Started
+
+Phase 2 now has the first SDK/tool boundary:
+
+- `sdk/client/createAfalClient` signs external-client AFAL requests and wraps payment/resource approval plus action readback.
+- `sdk/client/createAfalClient().waitForPaymentReceipt` provides the first receipt polling helper.
+- `sdk/client/agent-payment` converts a prompt-style USDC payment instruction into an AFAL payment intent and wallet rail URL.
+- `samples/agent-payment-tool` exposes this as `npm run tool:afal-payment`, which is the first Claude Code/OpenRouter-style tool wrapper.
+
 ## Next Engineering Priorities
 
-1. Use `--transcript` for demo recordings so presentations show wallet-confirmation readback, onchain verification evidence, AFAL settlement, receipt evidence, and payee-agent readback without scrolling through full JSON.
-2. Start the first TypeScript SDK boundary around auth, callbacks, payment/resource requests, and action readback.
-3. Build the OpenRouter/Claude Code agent example on top of the SDK instead of monorepo harness internals.
+1. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
+2. Build the OpenRouter/Claude Code agent example on top of `samples/agent-payment-tool` instead of monorepo harness internals.
+3. Add payee/provider service gating: do not deliver service unless AFAL action readback has a final receipt.
 4. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.
 5. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
 

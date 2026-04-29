@@ -9,20 +9,25 @@ Its primary role is to establish a stable, schema-aligned object model across AI
 
 ---
 
-## Phase 1 Role
+## Current Role
 
-The first priority of `sdk/` is to provide:
+The first priority of `sdk/` was to provide:
 
 - shared type definitions
 - schema-aligned interfaces
 - reusable request / response objects
 - stable object naming across modules
 
-This means the earliest implementation work in `sdk/` should focus on:
-- `sdk/types/`
-- `sdk/fixtures/`
-- common interfaces
-- object consistency across docs and code
+Phase 2 has started the first lightweight client boundary:
+
+- `sdk/client/createAfalClient` signs external-client AFAL HTTP requests.
+- `sdk/client/createAfalClient().requestPaymentApproval` starts a governed payment.
+- `sdk/client/createAfalClient().requestResourceApproval` starts a governed resource action.
+- `sdk/client/createAfalClient().getActionStatus` reads payer/payee-verifiable AFAL state.
+- `sdk/client/createAfalClient().waitForPaymentReceipt` polls until AFAL has a final payment receipt.
+- `sdk/client/agent-payment` provides prompt-style payment helpers for simple agent examples.
+
+This is intentionally small. It is the integration boundary for Claude Code/OpenRouter samples, not a production package yet.
 
 ---
 
@@ -55,7 +60,6 @@ Suggested subfolders:
 
 The following should **not** be the focus of `sdk/` in Phase 1:
 
-- large client SDK packaging work
 - production-ready language bindings
 - multi-language SDK generation
 - wallet integrations
@@ -76,9 +80,17 @@ It should not invent new object models independently.
 
 ---
 
-## Immediate Next Step
+## Minimal Agent Tool Shape
 
-Phase 1 should start by implementing:
-- shared types under `sdk/types/`
-- stable naming for AIP / AMN / ATS / AFAL objects
-- minimal interface contracts for future backend and contract integration
+The current Phase 2 sample is:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<provisioned-signing-key> \
+npm run tool:afal-payment -- \
+  --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+```
+
+The command returns a JSON object with `actionRef`, `approvalSessionRef`, and a downstream wallet rail URL. An agent runtime can require this tool before any paid downstream action.
