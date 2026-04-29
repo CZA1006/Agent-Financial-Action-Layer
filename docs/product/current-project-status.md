@@ -60,10 +60,13 @@ Validated output includes:
 
 - `actionRef`: `payint-0001`
 - `approvalSessionRef`: `aps-chall-0001`
+- clean budget state: `reserved 0.01 USDC`, `available 999.99`
 - final intent status: `settled`
 - settlement ref: `stl-wallet-payint-0001`
 - receipt ref: `rcpt-pay-0001`
-- latest verified staging tx hash: `0x16d906dd16a67ef91abb384bc68b1ee3a6ec4f8166ead96cc1c4cdfeb73b55fd`
+- latest clean verified staging tx hash: `0xa01b5bc37b7591f9563bb73adf541e466a957798dcd8342e9c11ada81f73a0bf`
+- payment rail readback: `wallet confirmation ok`
+- onchain verification readback: `ok`, `chainId=84532`, `logIndex=0`
 - dynamic approval context matching the actual prompt amount, chain, payee DID, settlement address, and purpose
 
 ## What This Proves

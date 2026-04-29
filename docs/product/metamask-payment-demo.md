@@ -8,7 +8,10 @@ Current validated staging result:
 
 - payer agent accepted a natural-language payment prompt
 - AFAL created `payint-0001`, reserved `0.01 USDC`, and returned `aps-chall-0001`
+- the clean staging budget line was `reserved 0.01 USDC, available 999.99`
 - MetaMask sent a real Base Sepolia USDC transfer to the payee address
+- payment rail read back `wallet confirmation ok`
+- payment rail read back onchain verification `ok`, `chainId=84532`, `logIndex=0`
 - AFAL resumed the approved action and marked the intent `settled`
 - AFAL issued settlement `stl-wallet-payint-0001` and receipt `rcpt-pay-0001`
 - payee agent read AFAL and verified the settled intent, settlement record, receipt, amount, chain, address, and `txHash`
@@ -17,7 +20,7 @@ Current validated staging result:
 Latest verified staging transaction:
 
 ```text
-0x16d906dd16a67ef91abb384bc68b1ee3a6ec4f8166ead96cc1c4cdfeb73b55fd
+0xa01b5bc37b7591f9563bb73adf541e466a957798dcd8342e9c11ada81f73a0bf
 ```
 
 ## Current Demo Boundary
