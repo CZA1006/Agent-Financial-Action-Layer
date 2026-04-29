@@ -21,7 +21,27 @@ These items are related to the current phase, but do not need to block the initi
 
 ---
 
-# Phase 2 Candidates
+# Phase 2 Active: Agent Payment Control Plane
+
+These items are now the immediate next stage after the externally validated Phase 1 sandbox.
+
+- TypeScript AFAL client SDK for public routes
+- Claude Code tool wrapper that forces payment requests through AFAL before downstream payment execution
+- OpenRouter simple agent example using the AFAL SDK
+- server-side onchain verification for wallet-confirmed `txHash` values
+- payment rail adapter interface
+- Coinbase x402 pilot adapter behind AFAL approval
+- payee/provider verification flow through AFAL settlement and receipt readback
+- concise demo transcript mode for `demo:metamask-agent-payment`
+- stable HTTPS staging endpoint for repeatable demos
+
+Reference:
+
+- `docs/product/phase-2-agent-payment-control-plane.md`
+
+---
+
+# Phase 2 Later
 
 These items are reasonable next steps after the initial MVP foundation.
 

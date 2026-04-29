@@ -94,3 +94,6 @@ AFAL does not yet provide:
 4. Start the first TypeScript SDK boundary around auth, callbacks, payment/resource requests, and action readback.
 5. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
 
+Phase 2 plan:
+
+- [Phase 2: Agent Payment Control Plane](phase-2-agent-payment-control-plane.md)
