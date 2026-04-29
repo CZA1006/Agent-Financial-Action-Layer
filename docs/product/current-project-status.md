@@ -10,6 +10,7 @@ AFAL is currently a late Phase 1 externally validated sandbox. It is not product
 - A live handoff archive passed Round 003 external validation against the GCP staging sandbox.
 - A prompt-driven payer-agent demo can create an AFAL-governed payment action and settle it through a real Base Sepolia USDC MetaMask transfer.
 - A payee agent can verify settlement and receipt state by reading AFAL, not by trusting the payer agent's local output.
+- The wallet-confirmed payment rail has optional server-side JSON-RPC receipt verification for Base Sepolia USDC `txHash` submissions.
 
 ## What Is Working
 
@@ -47,7 +48,7 @@ user prompt
   -> payer agent
   -> AFAL external-client auth, mandate, policy, budget, challenge
   -> MetaMask Base Sepolia USDC transfer
-  -> payment rail txHash registration
+  -> payment rail txHash registration and optional RPC receipt verification
   -> trusted-surface approval and resume
   -> AFAL settlement and receipt
   -> payee-agent AFAL readback
@@ -80,7 +81,7 @@ AFAL does not yet provide:
 
 - production auth
 - production database deployment
-- server-side onchain verification of wallet-submitted `txHash`
+- production-grade onchain finality policy or configurable asset registry
 - autonomous custody, MPC, or smart-account signing
 - production trusted-surface UI
 - production observability and operator control plane
@@ -88,10 +89,10 @@ AFAL does not yet provide:
 
 ## Next Engineering Priorities
 
-1. Add server-side onchain verification to the payment rail.
+1. Enable `PAYMENT_RAIL_VERIFY_ONCHAIN=true` on staging with a Base Sepolia RPC provider and rerun the MetaMask demo.
 2. Add a cleaner demo transcript mode so presentations do not need to scroll through full JSON.
-3. Repeat external validation with a fresh client or partner engineer.
-4. Start the first TypeScript SDK boundary around auth, callbacks, payment/resource requests, and action readback.
+3. Start the first TypeScript SDK boundary around auth, callbacks, payment/resource requests, and action readback.
+4. Build the OpenRouter/Claude Code agent example on top of the SDK instead of monorepo harness internals.
 5. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
 
 Phase 2 plan:

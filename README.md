@@ -437,7 +437,7 @@ What still needs to happen before package-style distribution becomes credible fo
 - a stable TypeScript client SDK for AFAL public routes
 - a callback receiver starter package
 - a hosted sandbox or managed onboarding flow
-- server-side onchain verification for wallet-confirmed payment rails
+- production-ready onchain verification policy for wallet-confirmed payment rails
 
 The likely future product shapes are:
 
@@ -489,6 +489,7 @@ user prompt
   -> AFAL checks mandate, policy, budget, and challenge rules
   -> AFAL returns a pending approval session and reserves budget
   -> payment rail opens a prefilled Base Sepolia USDC MetaMask transfer
+  -> payment rail can verify the txHash through Base Sepolia JSON-RPC
   -> trusted surface approves and resumes the action after wallet confirmation
   -> AFAL records settlement and receipt
   -> payee agent reads AFAL and verifies it was paid
@@ -522,7 +523,7 @@ This sends real Base Sepolia testnet USDC through MetaMask. It is not a mainnet 
 | AFAL runtime | seeded runtime, durable runtime, SQLite integration runtime, intent state, settlement, outputs, payment/resource runtime-agent harnesses, receiver callback outbox and worker control |
 | HTTP surface | framework-free router, durable HTTP wiring, SQLite HTTP wiring, thin Node server shells |
 | External sandbox | provisioned client registry, signed external-client auth, callback registration, standalone handoff package, public release-safe package |
-| Payment rail | mock payment rail, wallet-confirmed Base Sepolia MetaMask rail, prompt-driven agent payment demo |
+| Payment rail | mock payment rail, wallet-confirmed Base Sepolia MetaMask rail, optional JSON-RPC receipt verification, prompt-driven agent payment demo |
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
 
@@ -548,12 +549,13 @@ Already real in local development terms:
 - externally validated handoff package consumed outside the monorepo
 - wallet-confirmed Base Sepolia USDC transfer demo through MetaMask
 - AFAL settlement and receipt finalization against a wallet-provided `txHash`
+- optional payment-rail JSON-RPC receipt verification for Base Sepolia USDC `Transfer` logs and replay protection
 - payee-agent readback of settled status, settlement record, and payment receipt
 
 Still intentionally not production-real:
 - production database backend
 - production stablecoin settlement integration
-- server-side RPC verification of wallet-submitted `txHash`
+- production-grade asset registry, chain finality policy, and RPC provider strategy
 - autonomous custody, MPC, or smart-account signing
 - real provider usage and billing integration
 - real trusted-surface callback handling across independent deployed services beyond the current local stub
@@ -627,6 +629,7 @@ What it proves:
 - the payer agent can sign and submit a governed AFAL payment request
 - AFAL can create an approval session, reserve budget, and expose human-readable approval context
 - MetaMask can execute the actual Base Sepolia USDC transfer
+- the payment rail can optionally verify the submitted `txHash` against an RPC receipt before AFAL settles
 - AFAL can resume the approved action, record wallet-backed settlement, issue a payment receipt, and release the reservation
 - the payee agent can verify settlement through AFAL instead of trusting the payer's chat output
 
@@ -962,12 +965,13 @@ AFAL currently demonstrates:
 - externally validated standalone handoff packaging
 - prompt-driven agent payment with Base Sepolia testnet USDC through MetaMask
 - payee-agent settlement and receipt verification through AFAL readback
+- optional server-side JSON-RPC verification of wallet-submitted Base Sepolia USDC transactions
 - versioned OpenAPI publication
 
 AFAL does not yet claim:
 - production settlement
 - production-grade trusted-surface callbacks
-- server-side onchain verification of wallet-submitted transactions
+- production-grade wallet custody, asset registry, finality policy, or RPC operations
 - autonomous custody or smart-account wallet management
 - full operator control plane or hosted dashboards
 - chain-native enforcement

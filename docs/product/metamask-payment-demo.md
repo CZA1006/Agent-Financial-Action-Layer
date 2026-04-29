@@ -12,6 +12,7 @@ Current validated staging result:
 - AFAL resumed the approved action and marked the intent `settled`
 - AFAL issued settlement `stl-wallet-payint-0001` and receipt `rcpt-pay-0001`
 - payee agent read AFAL and verified the settled intent, settlement record, receipt, amount, chain, address, and `txHash`
+- payment rail now has an optional server-side JSON-RPC verifier for Base Sepolia USDC receipts
 
 ## Current Demo Boundary
 
@@ -21,9 +22,10 @@ The demo proves:
 - AFAL can hold the action at trusted-surface approval.
 - A payer can send a real ERC-20 transfer from MetaMask on Base Sepolia.
 - The payment rail can register the wallet `txHash` for the AFAL action.
+- The payment rail can reject a submitted `txHash` unless an RPC receipt contains the expected ERC-20 `Transfer` log.
 - When the trusted-surface approval resumes the action, AFAL can settle against the externally confirmed `txHash`.
 
-The demo does not yet prove production-grade custody or settlement verification. The current payment rail records a browser-submitted `txHash`; a production rail must verify chain, token, sender, recipient, amount, and finality from an RPC provider before returning settlement.
+The demo still does not prove production-grade custody. MetaMask remains the signing surface. The payment rail can now verify chain, token, sender, recipient, amount, transaction success, and replay protection through an RPC provider when `PAYMENT_RAIL_VERIFY_ONCHAIN=true`. Production still needs configurable asset/rail policy, finality thresholds, production RPC reliability, key/custody design, and stronger operator controls.
 
 The important product point is that AFAL is not "the user manually paid in a browser." AFAL is the layer that constrains, authorizes, records, and exposes the agent payment action. MetaMask is only the current safe signing surface for the testnet rail.
 
@@ -52,6 +54,13 @@ PAYMENT_RAIL_TOKEN=payment-rail-secret \
 PAYMENT_RAIL_SIGNING_KEY=payment-rail-signing-secret \
 PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION=true \
 npm run serve:payment-rail -- 0.0.0.0 3412
+```
+
+For server-side Base Sepolia receipt verification, add:
+
+```sh
+PAYMENT_RAIL_VERIFY_ONCHAIN=true \
+PAYMENT_RAIL_RPC_URL=https://<base-sepolia-rpc-provider>
 ```
 
 Start AFAL with the external payment rail adapter:
@@ -104,6 +113,15 @@ cat /tmp/afal-metamask-demo-client.json
 
 Use the generated `auth.signingKey` as `AFAL_SIGNING_KEY` in the local demo command.
 
+If you want this staging run to reject spoofed wallet confirmations, configure `afal-payment-rail.service` with:
+
+```ini
+Environment=PAYMENT_RAIL_VERIFY_ONCHAIN=true
+Environment=PAYMENT_RAIL_RPC_URL=https://<base-sepolia-rpc-provider>
+```
+
+Then run `sudo systemctl daemon-reload && sudo systemctl restart afal-payment-rail`.
+
 The prompt-driven demo command is:
 
 ```sh
@@ -147,10 +165,11 @@ Detailed steps:
 3. Open the prefilled wallet URL printed by the command.
 4. Connect MetaMask and submit the Base Sepolia USDC transfer.
 5. The wallet page registers the returned `txHash` with `/wallet-payments/confirm`.
-6. Return to the terminal and press Enter.
-7. The trusted-surface approval agent approves and resumes the AFAL action.
-8. AFAL calls the payment rail, receives the wallet-backed settlement, finalizes the receipt, and releases the reservation.
-9. The payee-side agent reads `/actions/get` through AFAL and prints the final `settlementRef`, `receiptRef`, amount, chain, payee address, and `txHash`.
+6. If onchain verification is enabled, the payment rail checks the RPC receipt before accepting the confirmation.
+7. Return to the terminal and press Enter.
+8. The trusted-surface approval agent approves and resumes the AFAL action.
+9. AFAL calls the payment rail, receives the wallet-backed settlement, finalizes the receipt, and releases the reservation.
+10. The payee-side agent reads `/actions/get` through AFAL and prints the final `settlementRef`, `receiptRef`, amount, chain, payee address, and `txHash`.
 
 For a two-step manual demo, disable automatic approval:
 
@@ -192,10 +211,8 @@ The payee side is also part of the demo. The payee agent does not trust a screen
 
 Do not use this page for mainnet funds yet. Before a mainnet demo, add:
 
-- Server-side RPC verification of the ERC-20 transfer.
 - Address allowlisting for payer and payee.
 - Small hard caps enforced by AFAL policy and rail verification.
-- Chain finality handling and replay protection for reused `txHash` values.
+- Chain finality handling beyond a single successful receipt.
+- Configurable token/asset registry instead of hardcoding the Base Sepolia USDC demo assumptions.
 - A dedicated demo wallet with limited funds, not a personal MetaMask wallet.
-
-The most important next engineering step is server-side onchain verification in the payment rail. The rail should reject a `txHash` unless an RPC provider confirms the ERC-20 transfer log matches the AFAL action exactly.

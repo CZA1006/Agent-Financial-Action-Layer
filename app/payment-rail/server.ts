@@ -4,6 +4,12 @@ import { pathToFileURL } from "node:url";
 
 import type { AuthorizationDecision, PaymentIntent, SettlementRecord } from "../../sdk/types";
 import { createSeededPaymentRailAdapter } from "../../backend/afal/settlement";
+import {
+  JsonRpcWalletPaymentVerifier,
+  decimalToUnits,
+  type WalletPaymentVerification,
+  type WalletPaymentVerifier,
+} from "./onchain-verifier";
 
 const DEFAULT_HOST = "127.0.0.1";
 const DEFAULT_PORT = 3412;
@@ -48,11 +54,14 @@ export interface PaymentRailServiceState {
   executePaymentFailuresRemaining: number;
   requireWalletConfirmation: boolean;
   walletConfirmations: Map<string, WalletPaymentConfirmation>;
+  walletTxHashes: Map<string, string>;
+  walletVerifier?: WalletPaymentVerifier;
 }
 
 export interface PaymentRailFailurePlan {
   executePaymentFailuresBeforeSuccess?: number;
   requireWalletConfirmation?: boolean;
+  walletVerifier?: WalletPaymentVerifier;
 }
 
 export interface PaymentRailServiceAuth {
@@ -75,6 +84,7 @@ export interface WalletPaymentConfirmation {
   chain: string;
   chainId: number;
   confirmedAt: string;
+  verification?: WalletPaymentVerification;
 }
 
 export interface RunningPaymentRailStubServer {
@@ -150,7 +160,56 @@ export function createPaymentRailServiceState(
     executePaymentFailuresRemaining: Math.max(0, plan?.executePaymentFailuresBeforeSuccess ?? 0),
     requireWalletConfirmation: plan?.requireWalletConfirmation ?? false,
     walletConfirmations: new Map(),
+    walletTxHashes: new Map(),
+    walletVerifier: plan?.walletVerifier,
   };
+}
+
+function normalizeAddress(value: string): string {
+  return value.toLowerCase();
+}
+
+function getIntentSettlementAddress(intent: PaymentIntent): string | undefined {
+  return "settlementAddress" in intent.payee &&
+    typeof intent.payee.settlementAddress === "string"
+    ? intent.payee.settlementAddress
+    : undefined;
+}
+
+function assertWalletConfirmationMatchesIntent(
+  confirmation: WalletPaymentConfirmation,
+  intent: PaymentIntent
+): void {
+  if (confirmation.actionRef !== intent.intentId) {
+    throw new Error(
+      `wallet confirmation actionRef "${confirmation.actionRef}" does not match intent "${intent.intentId}"`
+    );
+  }
+  if (confirmation.asset !== intent.asset) {
+    throw new Error(
+      `wallet confirmation asset "${confirmation.asset}" does not match intent asset "${intent.asset}"`
+    );
+  }
+  if (confirmation.chain !== intent.chain) {
+    throw new Error(
+      `wallet confirmation chain "${confirmation.chain}" does not match intent chain "${intent.chain}"`
+    );
+  }
+  if (decimalToUnits(confirmation.amount) !== decimalToUnits(intent.amount)) {
+    throw new Error(
+      `wallet confirmation amount "${confirmation.amount}" does not match intent amount "${intent.amount}"`
+    );
+  }
+
+  const settlementAddress = getIntentSettlementAddress(intent);
+  if (
+    settlementAddress &&
+    normalizeAddress(confirmation.to) !== normalizeAddress(settlementAddress)
+  ) {
+    throw new Error(
+      `wallet confirmation recipient "${confirmation.to}" does not match intent settlement address "${settlementAddress}"`
+    );
+  }
 }
 
 function isWalletPaymentConfirmationBody(body: unknown): body is {
@@ -471,11 +530,36 @@ export async function handlePaymentRailNodeHttpRequest(request: {
       );
     }
 
+    const existingActionForTx = state.walletTxHashes.get(body.input.txHash.toLowerCase());
+    if (existingActionForTx && existingActionForTx !== body.input.actionRef) {
+      return buildFailure(
+        body.requestRef,
+        409,
+        "wallet-transfer-replay",
+        `wallet txHash "${body.input.txHash}" is already registered for action "${existingActionForTx}"`
+      );
+    }
+
     const confirmation: WalletPaymentConfirmation = {
       ...body.input,
       confirmedAt: body.input.confirmedAt ?? new Date().toISOString(),
     };
+
+    if (state.walletVerifier) {
+      try {
+        confirmation.verification = await state.walletVerifier.verify(confirmation);
+      } catch (error) {
+        return buildFailure(
+          body.requestRef,
+          422,
+          "wallet-transfer-verification-failed",
+          error instanceof Error ? error.message : "wallet transfer verification failed"
+        );
+      }
+    }
+
     state.walletConfirmations.set(confirmation.actionRef, confirmation);
+    state.walletTxHashes.set(confirmation.txHash.toLowerCase(), confirmation.actionRef);
 
     return stringifyResponse(200, {
       ok: true,
@@ -542,6 +626,9 @@ export async function handlePaymentRailNodeHttpRequest(request: {
           "wallet-transfer-not-confirmed",
           `wallet transfer confirmation not found for action "${body.input.intent.intentId}"`
         );
+      }
+      if (confirmation) {
+        assertWalletConfirmationMatchesIntent(confirmation, body.input.intent);
       }
       const data = confirmation
         ? buildWalletSettlement(body.input.intent, body.input.decision, confirmation)
@@ -650,11 +737,21 @@ async function main(): Promise<void> {
   const requireWalletConfirmation =
     process.env.PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION === "true" ||
     process.env.PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION === "1";
+  const verifyOnchain =
+    process.env.PAYMENT_RAIL_VERIFY_ONCHAIN === "true" ||
+    process.env.PAYMENT_RAIL_VERIFY_ONCHAIN === "1";
+  const rpcUrl = process.env.PAYMENT_RAIL_RPC_URL;
+  if (verifyOnchain && !rpcUrl) {
+    throw new Error("PAYMENT_RAIL_RPC_URL is required when PAYMENT_RAIL_VERIFY_ONCHAIN is enabled");
+  }
   const server = await startPaymentRailStubServer({
     host,
     port,
     failurePlan: {
       requireWalletConfirmation,
+      walletVerifier: verifyOnchain && rpcUrl
+        ? new JsonRpcWalletPaymentVerifier({ rpcUrl })
+        : undefined,
     },
     auth: token && signingKey
       ? {
@@ -670,6 +767,8 @@ async function main(): Promise<void> {
         port: server.port,
         url: server.url,
         requireWalletConfirmation,
+        verifyOnchain,
+        rpcUrl: verifyOnchain ? rpcUrl : null,
         routes: PAYMENT_RAIL_SERVICE_ROUTES,
       },
       null,

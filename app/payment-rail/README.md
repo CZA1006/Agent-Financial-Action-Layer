@@ -6,6 +6,7 @@ In wallet-confirmed mode, the service has two jobs:
 
 - serve `/wallet-demo`, a small browser page that asks MetaMask to send a Base Sepolia ERC-20 transfer
 - expose `/wallet-payments/confirm`, which records the returned `txHash` so AFAL can later settle the matching payment intent through `/payments/execute`
+- optionally verify the submitted `txHash` against an EVM JSON-RPC receipt before accepting it
 
 ## Wallet-Confirmed Demo Mode
 
@@ -60,11 +61,35 @@ That command shows the full path:
 user prompt -> payer agent -> AFAL approval/session/budget -> wallet rail -> trusted-surface resume -> AFAL settlement/receipt -> payee agent readback
 ```
 
+## Optional Onchain Verification
+
+For a stronger staging run, enable server-side receipt verification:
+
+```sh
+PAYMENT_RAIL_TOKEN=payment-rail-secret \
+PAYMENT_RAIL_SIGNING_KEY=payment-rail-signing-secret \
+PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION=true \
+PAYMENT_RAIL_VERIFY_ONCHAIN=true \
+PAYMENT_RAIL_RPC_URL=https://<base-sepolia-rpc-provider> \
+npm run serve:payment-rail -- 0.0.0.0 3412
+```
+
+When enabled, `/wallet-payments/confirm` rejects the confirmation unless the RPC receipt proves:
+
+- chain ID equals the browser-declared chain ID
+- transaction succeeded and is included in a block
+- transaction hash matches the submitted `txHash`
+- receipt contains an ERC-20 `Transfer` log for the submitted token contract
+- indexed `from` and `to` addresses match the wallet confirmation
+- transfer amount matches the submitted amount using USDC-style 6 decimal units
+- the same `txHash` has not already been registered for a different AFAL action
+
+`/payments/execute` also checks that the accepted wallet confirmation matches the AFAL intent's `actionRef`, asset, amount, chain, and settlement address before returning settlement evidence.
+
 ## Demo Limitations
 
 This is a testnet bridge from AFAL to a human-confirmed wallet transaction. It is not yet a production payment rail:
 
-- No on-chain receipt verification is performed yet.
-- The browser registers the `txHash`; production must verify sender, recipient, token, amount, chain, and finality server-side.
+- Server-side receipt verification is available when `PAYMENT_RAIL_VERIFY_ONCHAIN=true`, but it currently targets the Base Sepolia USDC demo shape and does not yet implement a configurable asset registry or finality threshold.
 - MetaMask approval is human-in-the-loop. A fully autonomous agent wallet requires a separate custody or smart-account boundary.
 - The seeded demo runtime uses `payint-0001`, so reset the SQLite demo data directory before recording repeated full-settlement runs.
