@@ -35,6 +35,7 @@ Phase 1 has produced:
 - Successful Round 003 external engineer validation.
 - Prompt-driven MetaMask/Base Sepolia payment demo.
 - Payer-agent request, trusted-surface approval, wallet transfer, AFAL settlement/receipt, and payee-agent readback.
+- Optional JSON-RPC receipt verification for wallet-submitted Base Sepolia USDC `txHash` values.
 
 Phase 1 proves the boundary works.
 
@@ -199,6 +200,14 @@ Acceptance:
 - verified tx creates settlement evidence that AFAL can receipt
 - MetaMask demo remains usable on Base Sepolia
 
+Current implementation status:
+
+- `app/payment-rail` can enable verification with `PAYMENT_RAIL_VERIFY_ONCHAIN=true`.
+- The verifier checks `eth_chainId` and `eth_getTransactionReceipt`.
+- It validates transaction success, block inclusion, transaction hash, ERC-20 `Transfer` log, token, sender, recipient, and USDC-style 6-decimal amount.
+- It rejects replayed `txHash` values for different AFAL actions.
+- Remaining production work: configurable asset registry, finality threshold, production RPC provider strategy, and stronger payer/payee allowlists.
+
 ### 5. Coinbase x402 Pilot
 
 Goal:
@@ -255,9 +264,8 @@ Phase 2 is complete when:
 
 ## Immediate Next Steps
 
-1. Implement server-side onchain verification for the wallet-confirmed payment rail.
+1. Enable onchain verification on the GCP staging payment rail and rerun the MetaMask demo against a real Base Sepolia RPC provider.
 2. Add a concise transcript mode for `demo:metamask-agent-payment`.
 3. Start `@afal/client` or equivalent TypeScript SDK inside this repo.
 4. Build one minimal OpenRouter agent example on top of the SDK.
 5. Design the x402/Coinbase pilot adapter and decide the first paid resource/API scenario.
-

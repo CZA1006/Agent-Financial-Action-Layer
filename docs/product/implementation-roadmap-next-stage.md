@@ -89,7 +89,7 @@ What does **not** exist yet:
 - durable AMN persistence beyond the current seeded slices
 - full trusted-surface approval handling across independently deployed services
 - production stablecoin settlement integration
-- server-side onchain verification for wallet-confirmed `txHash` values
+- production-grade onchain finality policy and configurable asset registry for wallet-confirmed rails
 - autonomous custody, MPC, or smart-account signing
 - real provider billing / usage confirmation integration
 - real on-chain interfaces beyond documentation
@@ -106,7 +106,7 @@ Recommended module order:
 1. repeat repo-external consumer validation with fresh clients and artifacts
 2. consumer-facing SDK / package boundary
 3. hosted sandbox onboarding and operator automation
-4. stronger external adapters underneath the existing contract, starting with payment rail onchain verification
+4. stronger external adapters underneath the existing contract, starting with production hardening around payment rail onchain verification
 
 Why this order:
 
@@ -131,7 +131,7 @@ Those would add surface area before the consumer boundary has been validated.
 
 The immediate next deliverable is:
 
-- server-side onchain verification for the wallet-confirmed payment rail, plus a cleaner demo transcript mode
+- enabling the wallet-confirmed payment rail's server-side onchain verifier on staging, plus a cleaner demo transcript mode
 
 The already-passed repo-external pilot used:
 
