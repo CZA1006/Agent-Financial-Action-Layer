@@ -79,7 +79,7 @@ The agent should not need to know how to manually create AFAL auth headers, call
 - Claude Code style tool wrapper around the SDK.
 - OpenRouter simple agent example using the SDK.
 - Payment rail adapter interface.
-- Server-side onchain verification for wallet-submitted `txHash` values.
+- Server-side onchain verification for wallet-submitted `txHash` values, plus a wallet-confirmation readback that lets agent demos show `verification.ok`, verified chain ID, log index, and tx hash.
 - Coinbase x402 pilot behind AFAL approval.
 - Payee/provider verification flow through AFAL readback or callbacks.
 - Hosted/staging sandbox operator path for demos.
@@ -265,7 +265,7 @@ Phase 2 is complete when:
 
 ## Immediate Next Steps
 
-1. Use the new `--transcript` demo mode for presentation recordings and external walkthroughs.
+1. Use the `--transcript` demo mode for presentation recordings and external walkthroughs, including the payment rail wallet-confirmation readback and onchain verification evidence.
 2. Start `@afal/client` or equivalent TypeScript SDK inside this repo.
 3. Build one minimal OpenRouter agent example on top of the SDK.
 4. Design the x402/Coinbase pilot adapter and decide the first paid resource/API scenario.

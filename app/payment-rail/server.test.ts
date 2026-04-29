@@ -202,6 +202,28 @@ test("payment rail service records a wallet confirmation and settles with its tx
 
   assert.equal(confirmation.statusCode, 200);
 
+  const readback = await handlePaymentRailNodeHttpRequest(
+    {
+      method: "GET",
+      url: `${PAYMENT_RAIL_SERVICE_ROUTES.getWalletPaymentConfirmation}/${walletPaymentIntent.intentId}`,
+    },
+    state
+  );
+  const parsedReadback = JSON.parse(readback.bodyText) as {
+    ok: true;
+    data: {
+      actionRef: string;
+      txHash: string;
+      status: "ok";
+    };
+  };
+
+  assert.equal(readback.statusCode, 200);
+  assert.equal(parsedReadback.ok, true);
+  assert.equal(parsedReadback.data.actionRef, walletPaymentIntent.intentId);
+  assert.equal(parsedReadback.data.txHash, "0xwalletconfirmed");
+  assert.equal(parsedReadback.data.status, "ok");
+
   const settled = await handlePaymentRailNodeHttpRequest(
     {
       method: "POST",

@@ -148,6 +148,7 @@ The command prints a timeline with these actors:
 - `payer-agent`: parses amount, payee address, asset, and chain, then signs an external-client AFAL request.
 - `afal`: creates the payment intent, checks identity/mandate/policy/budget, reserves budget, and returns an approval session.
 - `payment-rail`: gives the user a prefilled MetaMask URL for Base Sepolia USDC.
+- `payment-rail`: after the wallet page posts the `txHash`, exposes a readback record at `/wallet-payments/confirmations/:actionRef` so the CLI can show `verification.ok`, `chainId`, `logIndex`, and the verified `txHash`.
 - `trusted-surface`: approves the challenge and resumes the AFAL action after wallet confirmation.
 - `payee-agent`: reads AFAL action status and confirms settlement/receipt.
 
@@ -162,6 +163,9 @@ approvalSessionRef: aps-chall-0001
 finalIntentStatus: settled
 settlementRef: stl-wallet-payint-0001
 receiptRef: rcpt-pay-0001
+onchainVerification: ok
+verifiedChainId: 84532
+verifiedLogIndex: 0
 txHash: 0x...
 ```
 
@@ -174,9 +178,10 @@ Detailed steps:
 5. The wallet page registers the returned `txHash` with `/wallet-payments/confirm`.
 6. If onchain verification is enabled, the payment rail checks the RPC receipt before accepting the confirmation.
 7. Return to the terminal and press Enter.
-8. The trusted-surface approval agent approves and resumes the AFAL action.
-9. AFAL calls the payment rail, receives the wallet-backed settlement, finalizes the receipt, and releases the reservation.
-10. The payee-side agent reads `/actions/get` through AFAL and prints the final `settlementRef`, `receiptRef`, amount, chain, payee address, and `txHash`.
+8. The CLI reads `/wallet-payments/confirmations/:actionRef` and prints the payment rail's wallet confirmation plus onchain verification evidence.
+9. The trusted-surface approval agent approves and resumes the AFAL action.
+10. AFAL calls the payment rail, receives the wallet-backed settlement, finalizes the receipt, and releases the reservation.
+11. The payee-side agent reads `/actions/get` through AFAL and prints the final `settlementRef`, `receiptRef`, amount, chain, payee address, and `txHash`.
 
 For a two-step manual demo, disable automatic approval:
 

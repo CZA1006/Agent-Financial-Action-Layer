@@ -18,6 +18,7 @@ export const PAYMENT_RAIL_SERVICE_ROUTES = {
   health: "/health",
   executePayment: "/payments/execute",
   confirmWalletPayment: "/wallet-payments/confirm",
+  getWalletPaymentConfirmation: "/wallet-payments/confirmations",
   walletDemo: "/wallet-demo",
   walletDemoScript: "/wallet-demo.js",
 } as const;
@@ -519,6 +520,37 @@ export async function handlePaymentRailNodeHttpRequest(request: {
       return buildFailure("wallet-demo", 405, "method-not-allowed", "wallet demo script only supports GET");
     }
     return stringifyJavaScriptResponse(200, buildWalletDemoScript());
+  }
+
+  if (pathname.startsWith(`${PAYMENT_RAIL_SERVICE_ROUTES.getWalletPaymentConfirmation}/`)) {
+    if (method !== "GET") {
+      return buildFailure(
+        "wallet-confirmation",
+        405,
+        "method-not-allowed",
+        "wallet payment confirmation readback only supports GET"
+      );
+    }
+    const actionRef = decodeURIComponent(
+      pathname.slice(PAYMENT_RAIL_SERVICE_ROUTES.getWalletPaymentConfirmation.length + 1)
+    );
+    const confirmation = state.walletConfirmations.get(actionRef);
+    if (!confirmation) {
+      return buildFailure(
+        "wallet-confirmation",
+        404,
+        "wallet-confirmation-not-found",
+        `No wallet payment confirmation found for action "${actionRef}"`
+      );
+    }
+    return stringifyResponse(200, {
+      ok: true,
+      requestRef: `wallet-confirmation-${actionRef}`,
+      data: {
+        ...confirmation,
+        status: "ok",
+      },
+    });
   }
 
   if (pathname === PAYMENT_RAIL_SERVICE_ROUTES.confirmWalletPayment) {
