@@ -127,6 +127,12 @@ Acceptance:
 - Claude/OpenRouter examples import the SDK instead of monorepo harness internals
 - raw HTTP remains documented and usable
 
+Current implementation:
+
+- `sdk/client/createAfalClient` signs external-client requests and wraps payment approval, resource approval, action readback, and payment receipt polling.
+- `sdk/client/agent-payment` parses a simple prompt-style USDC payment instruction and builds the AFAL payment intent plus wallet rail URL.
+- `samples/agent-payment-tool` exposes the first Claude/OpenRouter-style CLI tool via `npm run tool:afal-payment`.
+
 ### 2. Agent Examples
 
 Goal:
@@ -144,6 +150,12 @@ Acceptance:
 - one prompt can trigger an AFAL-governed payment request
 - the agent cannot complete payment by bypassing AFAL in the demo flow
 - payee/provider side can verify the action through AFAL
+
+Current implementation:
+
+- `npm run tool:afal-payment` accepts a natural-language payment message and returns `pending_approval`, `actionRef`, `approvalSessionRef`, budget reservation fields, and a wallet rail URL.
+- The tool is suitable as a required Claude Code/OpenRouter function before any paid downstream action.
+- The existing MetaMask transcript demo remains the full end-to-end presentation path with wallet confirmation, onchain verification, AFAL settlement, receipt evidence, and payee-agent readback.
 
 ### 3. Payment Rail Adapter Interface
 

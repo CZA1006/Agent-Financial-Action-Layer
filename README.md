@@ -515,6 +515,19 @@ This sends real Base Sepolia testnet USDC through MetaMask. It is not a mainnet 
 Use `--json` instead of `--transcript` when debugging the full AFAL response objects.
 In transcript mode, the CLI also reads the payment rail's wallet-confirmation endpoint after you press Enter, so the demo output includes `onchainVerification: ok`, `verifiedChainId: 84532`, `verifiedLogIndex`, and the verified `txHash`.
 
+Phase 2 now has a smaller agent-tool boundary for Claude Code/OpenRouter style integrations:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<provisioned-signing-key> \
+npm run tool:afal-payment -- \
+  --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+```
+
+This command uses `sdk/client` instead of the monorepo test harness. It returns a JSON tool result with `actionRef`, `approvalSessionRef`, budget reservation fields, and the wallet rail URL that the trusted surface must complete before the payee agent should deliver service.
+
 ## What Exists Today
 
 | Area | Current State |
@@ -527,6 +540,7 @@ In transcript mode, the CLI also reads the payment rail's wallet-confirmation en
 | HTTP surface | framework-free router, durable HTTP wiring, SQLite HTTP wiring, thin Node server shells |
 | External sandbox | provisioned client registry, signed external-client auth, callback registration, standalone handoff package, public release-safe package |
 | Payment rail | mock payment rail, wallet-confirmed Base Sepolia MetaMask rail, optional JSON-RPC receipt verification, prompt-driven agent payment demo |
+| SDK / agent tool | lightweight signed AFAL TypeScript client, payment/resource request wrappers, action readback, payment receipt polling, prompt-payment helper, Claude/OpenRouter-style CLI tool |
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
 
