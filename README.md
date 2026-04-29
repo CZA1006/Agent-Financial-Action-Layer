@@ -507,10 +507,12 @@ AFAL_CLIENT_ID=client-metamask-demo-001 \
 AFAL_SIGNING_KEY=<provisioned-signing-key> \
 npm run demo:metamask-agent-payment -- \
   --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
-  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo \
+  --transcript
 ```
 
 This sends real Base Sepolia testnet USDC through MetaMask. It is not a mainnet or autonomous-custody demo.
+Use `--json` instead of `--transcript` when debugging the full AFAL response objects.
 
 ## What Exists Today
 
@@ -549,7 +551,7 @@ Already real in local development terms:
 - externally validated handoff package consumed outside the monorepo
 - wallet-confirmed Base Sepolia USDC transfer demo through MetaMask
 - AFAL settlement and receipt finalization against a wallet-provided `txHash`
-- optional payment-rail JSON-RPC receipt verification for Base Sepolia USDC `Transfer` logs and replay protection
+- staging-validated payment-rail JSON-RPC receipt verification for Base Sepolia USDC `Transfer` logs and replay protection
 - payee-agent readback of settled status, settlement record, and payment receipt
 
 Still intentionally not production-real:
@@ -620,7 +622,8 @@ AFAL_CLIENT_ID=client-metamask-demo-001 \
 AFAL_SIGNING_KEY=<provisioned-signing-key> \
 npm run demo:metamask-agent-payment -- \
   --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
-  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo \
+  --transcript
 ```
 
 What it proves:
@@ -629,7 +632,7 @@ What it proves:
 - the payer agent can sign and submit a governed AFAL payment request
 - AFAL can create an approval session, reserve budget, and expose human-readable approval context
 - MetaMask can execute the actual Base Sepolia USDC transfer
-- the payment rail can optionally verify the submitted `txHash` against an RPC receipt before AFAL settles
+- the staging payment rail verifies the submitted `txHash` against a Base Sepolia RPC receipt before AFAL settles
 - AFAL can resume the approved action, record wallet-backed settlement, issue a payment receipt, and release the reservation
 - the payee agent can verify settlement through AFAL instead of trusting the payer's chat output
 

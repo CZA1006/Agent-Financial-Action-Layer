@@ -131,7 +131,7 @@ Those would add surface area before the consumer boundary has been validated.
 
 The immediate next deliverable is:
 
-- enabling the wallet-confirmed payment rail's server-side onchain verifier on staging, plus a cleaner demo transcript mode
+- using the verified wallet-confirmed payment rail in presentation-friendly transcript mode, then starting the SDK boundary
 
 The already-passed repo-external pilot used:
 
