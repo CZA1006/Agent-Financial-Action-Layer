@@ -50,7 +50,7 @@ user prompt
   -> payer agent
   -> AFAL external-client auth, mandate, policy, budget, challenge
   -> MetaMask Base Sepolia USDC transfer
-  -> payment rail txHash registration and RPC receipt verification
+  -> payment rail txHash registration, RPC receipt verification, and wallet-confirmation readback
   -> trusted-surface approval and resume
   -> AFAL settlement and receipt
   -> payee-agent AFAL readback
@@ -92,7 +92,7 @@ AFAL does not yet provide:
 
 ## Next Engineering Priorities
 
-1. Use `--transcript` for demo recordings so presentations do not need to scroll through full JSON.
+1. Use `--transcript` for demo recordings so presentations show wallet-confirmation readback, onchain verification evidence, AFAL settlement, receipt evidence, and payee-agent readback without scrolling through full JSON.
 2. Start the first TypeScript SDK boundary around auth, callbacks, payment/resource requests, and action readback.
 3. Build the OpenRouter/Claude Code agent example on top of the SDK instead of monorepo harness internals.
 4. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.

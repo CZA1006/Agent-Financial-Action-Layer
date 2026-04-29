@@ -513,6 +513,7 @@ npm run demo:metamask-agent-payment -- \
 
 This sends real Base Sepolia testnet USDC through MetaMask. It is not a mainnet or autonomous-custody demo.
 Use `--json` instead of `--transcript` when debugging the full AFAL response objects.
+In transcript mode, the CLI also reads the payment rail's wallet-confirmation endpoint after you press Enter, so the demo output includes `onchainVerification: ok`, `verifiedChainId: 84532`, `verifiedLogIndex`, and the verified `txHash`.
 
 ## What Exists Today
 
@@ -632,7 +633,7 @@ What it proves:
 - the payer agent can sign and submit a governed AFAL payment request
 - AFAL can create an approval session, reserve budget, and expose human-readable approval context
 - MetaMask can execute the actual Base Sepolia USDC transfer
-- the staging payment rail verifies the submitted `txHash` against a Base Sepolia RPC receipt before AFAL settles
+- the staging payment rail verifies the submitted `txHash` against a Base Sepolia RPC receipt before AFAL settles, then exposes the verification readback to the CLI transcript
 - AFAL can resume the approved action, record wallet-backed settlement, issue a payment receipt, and release the reservation
 - the payee agent can verify settlement through AFAL instead of trusting the payer's chat output
 

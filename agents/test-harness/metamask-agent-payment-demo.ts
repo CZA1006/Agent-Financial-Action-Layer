@@ -48,6 +48,27 @@ interface DemoTimelineEvent {
   detail: Record<string, unknown>;
 }
 
+interface WalletPaymentConfirmationReadback {
+  actionRef: string;
+  txHash: string;
+  from: string;
+  to: string;
+  tokenAddress: string;
+  amount: string;
+  asset: string;
+  chain: string;
+  chainId: number;
+  confirmedAt: string;
+  verification?: {
+    ok: true;
+    verifiedAt: string;
+    chainId: number;
+    txHash: string;
+    logIndex: number;
+  };
+  status: "ok";
+}
+
 function required(name: string, value: string | undefined): string {
   if (!value) {
     throw new Error(`${name} must be set`);
@@ -291,6 +312,24 @@ async function waitForWalletConfirmation(prompt: string): Promise<void> {
   }
 }
 
+async function readWalletPaymentConfirmation(args: {
+  walletDemoUrl: string;
+  actionRef: string;
+}): Promise<WalletPaymentConfirmationReadback | undefined> {
+  const url = new URL(args.walletDemoUrl);
+  url.pathname = `/wallet-payments/confirmations/${encodeURIComponent(args.actionRef)}`;
+  url.search = "";
+  const response = await fetch(url);
+  if (!response.ok) {
+    return undefined;
+  }
+  const body = (await response.json()) as {
+    ok?: boolean;
+    data?: WalletPaymentConfirmationReadback;
+  };
+  return body.ok === true ? body.data : undefined;
+}
+
 function writePreWalletTranscript(args: {
   instruction: PaymentInstruction;
   payer: PaymentApprovalRequestOutput;
@@ -317,19 +356,24 @@ function writeFinalTranscript(args: {
   approval?: ApprovalAgentResult;
   payee: PayeeAgentResult;
   walletUrl: string;
+  walletConfirmation?: WalletPaymentConfirmationReadback;
 }): void {
   const settlement = args.payee.response.settlement;
   const receipt = args.payee.response.paymentReceipt;
+  const verification = args.walletConfirmation?.verification;
+  const receiptEvidence = receipt?.evidence as Record<string, unknown> | undefined;
   process.stdout.write(
     [
       "",
       "AFAL Settlement Result",
       "",
       `6. trusted-surface -> AFAL: ${args.approval?.summary.result ?? "not-auto-approved"} ${args.approval?.summary.approvalSessionRef ?? args.payer.approvalSession.approvalSessionId}`,
-      `7. AFAL -> payment-rail: execute approved action ${args.payer.intent.intentId}`,
-      `8. payment-rail -> AFAL: settled txHash=${settlement?.txHash ?? "n/a"}`,
-      `9. AFAL -> payer/payee agents: receipt=${receipt?.receiptId ?? args.payee.summary.receiptRef ?? "n/a"}, status=${args.payee.summary.intentStatus}`,
-      `10. payee-agent -> AFAL: verified amount=${settlement?.amount ?? args.instruction.amount} ${settlement?.asset ?? args.instruction.asset}, chain=${settlement?.chain ?? args.instruction.chain}, settlement=${args.payee.summary.settlementRef ?? "n/a"}`,
+      `7. payment-rail -> AFAL: wallet confirmation ${args.walletConfirmation?.status ?? "n/a"} txHash=${args.walletConfirmation?.txHash ?? settlement?.txHash ?? "n/a"}`,
+      `8. payment-rail onchain verification: ${verification?.ok ? "ok" : "n/a"}, chainId=${verification?.chainId ?? args.walletConfirmation?.chainId ?? "n/a"}, logIndex=${verification?.logIndex ?? "n/a"}`,
+      `9. AFAL -> payment-rail: execute approved action ${args.payer.intent.intentId}`,
+      `10. AFAL -> payer/payee agents: receipt=${receipt?.receiptId ?? args.payee.summary.receiptRef ?? "n/a"}, status=${args.payee.summary.intentStatus}`,
+      `11. AFAL receipt evidence: txHash=${receiptEvidence?.txHash ?? settlement?.txHash ?? "n/a"}, amount=${receiptEvidence?.amount ?? settlement?.amount ?? args.instruction.amount} ${receiptEvidence?.asset ?? settlement?.asset ?? args.instruction.asset}`,
+      `12. payee-agent -> AFAL: verified amount=${settlement?.amount ?? args.instruction.amount} ${settlement?.asset ?? args.instruction.asset}, chain=${settlement?.chain ?? args.instruction.chain}, settlement=${args.payee.summary.settlementRef ?? "n/a"}`,
       "",
       "Demo Summary",
       `actionRef: ${args.payer.intent.intentId}`,
@@ -338,6 +382,9 @@ function writeFinalTranscript(args: {
       `finalIntentStatus: ${args.payee.summary.intentStatus}`,
       `settlementRef: ${args.payee.summary.settlementRef ?? "n/a"}`,
       `receiptRef: ${args.payee.summary.receiptRef ?? "n/a"}`,
+      `onchainVerification: ${verification?.ok ? "ok" : "n/a"}`,
+      `verifiedChainId: ${verification?.chainId ?? args.walletConfirmation?.chainId ?? "n/a"}`,
+      `verifiedLogIndex: ${verification?.logIndex ?? "n/a"}`,
       `txHash: ${settlement?.txHash ?? "n/a"}`,
       "",
     ].join("\n")
@@ -415,6 +462,21 @@ async function main(): Promise<void> {
     );
   }
 
+  const walletConfirmation = await readWalletPaymentConfirmation({
+    walletDemoUrl: args.walletDemoUrl,
+    actionRef: payer.intent.intentId,
+  });
+  timeline.push({
+    actor: "payment-rail",
+    event: "wallet_confirmation_readback",
+    detail: {
+      actionRef: payer.intent.intentId,
+      txHash: walletConfirmation?.txHash,
+      status: walletConfirmation?.status,
+      verification: walletConfirmation?.verification,
+    },
+  });
+
   let approval: ApprovalAgentResult | undefined;
   if (args.autoApprove) {
     const approvalClient = createAfalHttpClient(args.baseUrl);
@@ -458,7 +520,7 @@ async function main(): Promise<void> {
   });
 
   if (args.outputMode === "transcript") {
-    writeFinalTranscript({ instruction, payer, approval, payee, walletUrl });
+    writeFinalTranscript({ instruction, payer, approval, payee, walletUrl, walletConfirmation });
   } else {
     process.stdout.write(
       `${JSON.stringify(
@@ -473,6 +535,7 @@ async function main(): Promise<void> {
           },
           instruction,
           payer,
+          walletConfirmation,
           approval,
           payee,
           timeline,
