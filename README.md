@@ -922,6 +922,7 @@ npm run accept:sqlite
 - [docs/whitepaper/afal-whitepaper-v6.md](docs/whitepaper/afal-whitepaper-v6.md)
 - [docs/product/mvp-scope.md](docs/product/mvp-scope.md)
 - [docs/product/current-project-status.md](docs/product/current-project-status.md)
+- [docs/product/phase-2-agent-payment-control-plane.md](docs/product/phase-2-agent-payment-control-plane.md)
 - [docs/product/implementation-roadmap-next-stage.md](docs/product/implementation-roadmap-next-stage.md)
 - [docs/product/next-stage-integration-plan.md](docs/product/next-stage-integration-plan.md)
 - [docs/product/metamask-payment-demo.md](docs/product/metamask-payment-demo.md)
