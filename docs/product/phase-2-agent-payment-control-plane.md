@@ -206,6 +206,7 @@ Current implementation status:
 - The verifier checks `eth_chainId` and `eth_getTransactionReceipt`.
 - It validates transaction success, block inclusion, transaction hash, ERC-20 `Transfer` log, token, sender, recipient, and USDC-style 6-decimal amount.
 - It rejects replayed `txHash` values for different AFAL actions.
+- GCP staging has validated the verifier against Base Sepolia RPC for tx `0x16d906dd16a67ef91abb384bc68b1ee3a6ec4f8166ead96cc1c4cdfeb73b55fd`.
 - Remaining production work: configurable asset registry, finality threshold, production RPC provider strategy, and stronger payer/payee allowlists.
 
 ### 5. Coinbase x402 Pilot
@@ -264,8 +265,8 @@ Phase 2 is complete when:
 
 ## Immediate Next Steps
 
-1. Enable onchain verification on the GCP staging payment rail and rerun the MetaMask demo against a real Base Sepolia RPC provider.
-2. Add a concise transcript mode for `demo:metamask-agent-payment`.
-3. Start `@afal/client` or equivalent TypeScript SDK inside this repo.
-4. Build one minimal OpenRouter agent example on top of the SDK.
-5. Design the x402/Coinbase pilot adapter and decide the first paid resource/API scenario.
+1. Use the new `--transcript` demo mode for presentation recordings and external walkthroughs.
+2. Start `@afal/client` or equivalent TypeScript SDK inside this repo.
+3. Build one minimal OpenRouter agent example on top of the SDK.
+4. Design the x402/Coinbase pilot adapter and decide the first paid resource/API scenario.
+5. Move staging from raw IP/HTTP to a stable HTTPS endpoint.

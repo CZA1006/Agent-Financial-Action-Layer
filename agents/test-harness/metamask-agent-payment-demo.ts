@@ -28,6 +28,7 @@ interface DemoArgs {
   tokenAddress: string;
   autoApprove: boolean;
   assumeWalletConfirmed: boolean;
+  outputMode: "json" | "transcript";
 }
 
 interface PaymentInstruction {
@@ -82,6 +83,7 @@ function parseArgs(argv: string[]): DemoArgs {
     tokenAddress: process.env.AFAL_DEMO_TOKEN_ADDRESS ?? DEFAULT_TOKEN_ADDRESS,
     autoApprove: process.env.AFAL_DEMO_AUTO_APPROVE !== "false",
     assumeWalletConfirmed: process.env.AFAL_DEMO_ASSUME_WALLET_CONFIRMED === "true",
+    outputMode: process.env.AFAL_DEMO_OUTPUT_MODE === "transcript" ? "transcript" : "json",
   };
 
   for (let index = 0; index < argv.length; index += 1) {
@@ -136,6 +138,14 @@ function parseArgs(argv: string[]): DemoArgs {
     }
     if (arg === "--assume-wallet-confirmed") {
       result.assumeWalletConfirmed = true;
+      continue;
+    }
+    if (arg === "--transcript") {
+      result.outputMode = "transcript";
+      continue;
+    }
+    if (arg === "--json") {
+      result.outputMode = "json";
     }
   }
 
@@ -150,6 +160,7 @@ function parseArgs(argv: string[]): DemoArgs {
     tokenAddress: required("AFAL_DEMO_TOKEN_ADDRESS or --token-address", result.tokenAddress),
     autoApprove: Boolean(result.autoApprove),
     assumeWalletConfirmed: Boolean(result.assumeWalletConfirmed),
+    outputMode: result.outputMode ?? "json",
   };
 }
 
@@ -280,6 +291,59 @@ async function waitForWalletConfirmation(prompt: string): Promise<void> {
   }
 }
 
+function writePreWalletTranscript(args: {
+  instruction: PaymentInstruction;
+  payer: PaymentApprovalRequestOutput;
+  walletUrl: string;
+}): void {
+  process.stdout.write(
+    [
+      "AFAL MetaMask Agent Payment Demo Transcript",
+      "",
+      `1. user -> payer-agent: "${args.instruction.rawMessage}"`,
+      `2. payer-agent parsed: ${args.instruction.amount} ${args.instruction.asset} on ${args.instruction.chain} to ${args.instruction.payeeAddress}`,
+      `3. payer-agent -> AFAL: requestPaymentApproval(actionRef=${args.payer.intent.intentId})`,
+      `4. AFAL -> payer-agent: pending approval ${args.payer.approvalSession.approvalSessionId}, reserved ${args.payer.updatedBudget?.reservedAmount ?? "n/a"} ${args.instruction.asset}, available ${args.payer.updatedBudget?.availableAmount ?? "n/a"}`,
+      `5. payment-rail -> wallet: open MetaMask URL and send ${args.instruction.amount} ${args.instruction.asset}`,
+      args.walletUrl,
+      "",
+    ].join("\n")
+  );
+}
+
+function writeFinalTranscript(args: {
+  instruction: PaymentInstruction;
+  payer: PaymentApprovalRequestOutput;
+  approval?: ApprovalAgentResult;
+  payee: PayeeAgentResult;
+  walletUrl: string;
+}): void {
+  const settlement = args.payee.response.settlement;
+  const receipt = args.payee.response.paymentReceipt;
+  process.stdout.write(
+    [
+      "",
+      "AFAL Settlement Result",
+      "",
+      `6. trusted-surface -> AFAL: ${args.approval?.summary.result ?? "not-auto-approved"} ${args.approval?.summary.approvalSessionRef ?? args.payer.approvalSession.approvalSessionId}`,
+      `7. AFAL -> payment-rail: execute approved action ${args.payer.intent.intentId}`,
+      `8. payment-rail -> AFAL: settled txHash=${settlement?.txHash ?? "n/a"}`,
+      `9. AFAL -> payer/payee agents: receipt=${receipt?.receiptId ?? args.payee.summary.receiptRef ?? "n/a"}, status=${args.payee.summary.intentStatus}`,
+      `10. payee-agent -> AFAL: verified amount=${settlement?.amount ?? args.instruction.amount} ${settlement?.asset ?? args.instruction.asset}, chain=${settlement?.chain ?? args.instruction.chain}, settlement=${args.payee.summary.settlementRef ?? "n/a"}`,
+      "",
+      "Demo Summary",
+      `actionRef: ${args.payer.intent.intentId}`,
+      `approvalSessionRef: ${args.payer.approvalSession.approvalSessionId}`,
+      `walletUrl: ${args.walletUrl}`,
+      `finalIntentStatus: ${args.payee.summary.intentStatus}`,
+      `settlementRef: ${args.payee.summary.settlementRef ?? "n/a"}`,
+      `receiptRef: ${args.payee.summary.receiptRef ?? "n/a"}`,
+      `txHash: ${settlement?.txHash ?? "n/a"}`,
+      "",
+    ].join("\n")
+  );
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
   const instruction = parsePaymentInstruction(args);
@@ -339,7 +403,11 @@ async function main(): Promise<void> {
     },
   });
 
-  process.stdout.write(`${JSON.stringify({ timeline }, null, 2)}\n`);
+  if (args.outputMode === "transcript") {
+    writePreWalletTranscript({ instruction, payer, walletUrl });
+  } else {
+    process.stdout.write(`${JSON.stringify({ timeline }, null, 2)}\n`);
+  }
 
   if (!args.assumeWalletConfirmed) {
     await waitForWalletConfirmation(
@@ -389,27 +457,31 @@ async function main(): Promise<void> {
     },
   });
 
-  process.stdout.write(
-    `${JSON.stringify(
-      {
-        summary: {
-          actionRef: payer.intent.intentId,
-          approvalSessionRef: payer.approvalSession.approvalSessionId,
-          walletUrl,
-          finalIntentStatus: payee.summary.intentStatus,
-          settlementRef: payee.summary.settlementRef,
-          receiptRef: payee.summary.receiptRef,
+  if (args.outputMode === "transcript") {
+    writeFinalTranscript({ instruction, payer, approval, payee, walletUrl });
+  } else {
+    process.stdout.write(
+      `${JSON.stringify(
+        {
+          summary: {
+            actionRef: payer.intent.intentId,
+            approvalSessionRef: payer.approvalSession.approvalSessionId,
+            walletUrl,
+            finalIntentStatus: payee.summary.intentStatus,
+            settlementRef: payee.summary.settlementRef,
+            receiptRef: payee.summary.receiptRef,
+          },
+          instruction,
+          payer,
+          approval,
+          payee,
+          timeline,
         },
-        instruction,
-        payer,
-        approval,
-        payee,
-        timeline,
-      },
-      null,
-      2
-    )}\n`
-  );
+        null,
+        2
+      )}\n`
+    );
+  }
 }
 
 const isDirectRun =

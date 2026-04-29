@@ -38,6 +38,8 @@ Current staging baseline:
 - AFAL service: `afal-staging.service`
 - payment rail service: `afal-payment-rail.service`
 - MetaMask demo data dir: `/srv/afal/metamask-demo-001/sqlite-data`
+- payment rail verification: `PAYMENT_RAIL_VERIFY_ONCHAIN=true`
+- Base Sepolia RPC: `https://sepolia.base.org`
 
 ### Prompt-Driven MetaMask Payment Demo
 
@@ -48,7 +50,7 @@ user prompt
   -> payer agent
   -> AFAL external-client auth, mandate, policy, budget, challenge
   -> MetaMask Base Sepolia USDC transfer
-  -> payment rail txHash registration and optional RPC receipt verification
+  -> payment rail txHash registration and RPC receipt verification
   -> trusted-surface approval and resume
   -> AFAL settlement and receipt
   -> payee-agent AFAL readback
@@ -61,6 +63,7 @@ Validated output includes:
 - final intent status: `settled`
 - settlement ref: `stl-wallet-payint-0001`
 - receipt ref: `rcpt-pay-0001`
+- latest verified staging tx hash: `0x16d906dd16a67ef91abb384bc68b1ee3a6ec4f8166ead96cc1c4cdfeb73b55fd`
 - dynamic approval context matching the actual prompt amount, chain, payee DID, settlement address, and purpose
 
 ## What This Proves
@@ -89,10 +92,10 @@ AFAL does not yet provide:
 
 ## Next Engineering Priorities
 
-1. Enable `PAYMENT_RAIL_VERIFY_ONCHAIN=true` on staging with a Base Sepolia RPC provider and rerun the MetaMask demo.
-2. Add a cleaner demo transcript mode so presentations do not need to scroll through full JSON.
-3. Start the first TypeScript SDK boundary around auth, callbacks, payment/resource requests, and action readback.
-4. Build the OpenRouter/Claude Code agent example on top of the SDK instead of monorepo harness internals.
+1. Use `--transcript` for demo recordings so presentations do not need to scroll through full JSON.
+2. Start the first TypeScript SDK boundary around auth, callbacks, payment/resource requests, and action readback.
+3. Build the OpenRouter/Claude Code agent example on top of the SDK instead of monorepo harness internals.
+4. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.
 5. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
 
 Phase 2 plan:

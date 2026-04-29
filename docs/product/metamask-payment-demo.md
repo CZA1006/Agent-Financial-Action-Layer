@@ -12,7 +12,13 @@ Current validated staging result:
 - AFAL resumed the approved action and marked the intent `settled`
 - AFAL issued settlement `stl-wallet-payint-0001` and receipt `rcpt-pay-0001`
 - payee agent read AFAL and verified the settled intent, settlement record, receipt, amount, chain, address, and `txHash`
-- payment rail now has an optional server-side JSON-RPC verifier for Base Sepolia USDC receipts
+- payment rail verified the wallet `txHash` through Base Sepolia JSON-RPC on staging
+
+Latest verified staging transaction:
+
+```text
+0x16d906dd16a67ef91abb384bc68b1ee3a6ec4f8166ead96cc1c4cdfeb73b55fd
+```
 
 ## Current Demo Boundary
 
@@ -25,7 +31,7 @@ The demo proves:
 - The payment rail can reject a submitted `txHash` unless an RPC receipt contains the expected ERC-20 `Transfer` log.
 - When the trusted-surface approval resumes the action, AFAL can settle against the externally confirmed `txHash`.
 
-The demo still does not prove production-grade custody. MetaMask remains the signing surface. The payment rail can now verify chain, token, sender, recipient, amount, transaction success, and replay protection through an RPC provider when `PAYMENT_RAIL_VERIFY_ONCHAIN=true`. Production still needs configurable asset/rail policy, finality thresholds, production RPC reliability, key/custody design, and stronger operator controls.
+The demo still does not prove production-grade custody. MetaMask remains the signing surface. The staging payment rail now verifies chain, token, sender, recipient, amount, transaction success, and replay protection through `PAYMENT_RAIL_VERIFY_ONCHAIN=true`. Production still needs configurable asset/rail policy, finality thresholds, production RPC reliability, key/custody design, and stronger operator controls.
 
 The important product point is that AFAL is not "the user manually paid in a browser." AFAL is the layer that constrains, authorizes, records, and exposes the agent payment action. MetaMask is only the current safe signing surface for the testnet rail.
 
@@ -130,8 +136,11 @@ AFAL_CLIENT_ID=client-metamask-demo-001 \
 AFAL_SIGNING_KEY=<provisioned-signing-key> \
 npm run demo:metamask-agent-payment -- \
   --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
-  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo \
+  --transcript
 ```
+
+Use `--transcript` for presentation-friendly output. Omit it, or pass `--json`, when you need the full raw AFAL objects for debugging.
 
 The command prints a timeline with these actors:
 
@@ -144,18 +153,16 @@ The command prints a timeline with these actors:
 
 Current mock-runtime caveat: the seeded payment runtime accepts only `payint-0001`, so a full settled demo is one-shot per clean SQLite data directory. Reset the demo DB before recording or repeating the presentation.
 
-The expected terminal summary after a successful run includes:
+The expected transcript summary after a successful run includes:
 
-```json
-{
-  "summary": {
-    "actionRef": "payint-0001",
-    "approvalSessionRef": "aps-chall-0001",
-    "finalIntentStatus": "settled",
-    "settlementRef": "stl-wallet-payint-0001",
-    "receiptRef": "rcpt-pay-0001"
-  }
-}
+```text
+Demo Summary
+actionRef: payint-0001
+approvalSessionRef: aps-chall-0001
+finalIntentStatus: settled
+settlementRef: stl-wallet-payint-0001
+receiptRef: rcpt-pay-0001
+txHash: 0x...
 ```
 
 Detailed steps:
