@@ -138,13 +138,20 @@ test("payment rail service exposes the MetaMask wallet demo surface", async () =
     method: "GET",
     url: PAYMENT_RAIL_SERVICE_ROUTES.walletDemoScript,
   });
+  const pageHeaders = page.headers as Record<string, string>;
+  const scriptHeaders = script.headers as Record<string, string>;
 
   assert.equal(page.statusCode, 200);
   assert.match(page.bodyText, /AFAL MetaMask Payment Demo/);
   assert.match(page.bodyText, /Base Sepolia USDC/);
+  assert.match(pageHeaders["cache-control"], /no-store/);
   assert.equal(script.statusCode, 200);
+  assert.match(scriptHeaders["cache-control"], /no-store/);
   assert.match(script.bodyText, /wallet_switchEthereumChain/);
   assert.match(script.bodyText, /wallet-payments\/confirm/);
+  assert.match(script.bodyText, /BASE_SEPOLIA_USDC/);
+  assert.match(script.bodyText, /Invalid token address/);
+  assert.match(script.bodyText, /resetToken/);
 });
 
 test("payment rail service records a wallet confirmation and settles with its tx hash", async () => {

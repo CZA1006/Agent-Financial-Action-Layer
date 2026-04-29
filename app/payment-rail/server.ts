@@ -114,6 +114,7 @@ function stringifyHtmlResponse(statusCode: number, bodyText: string) {
     headers: {
       "content-type": "text/html; charset=utf-8",
       "content-length": Buffer.byteLength(bodyText, "utf8").toString(),
+      "cache-control": "no-store",
     },
     bodyText,
   };
@@ -125,6 +126,7 @@ function stringifyJavaScriptResponse(statusCode: number, bodyText: string) {
     headers: {
       "content-type": "application/javascript; charset=utf-8",
       "content-length": Buffer.byteLength(bodyText, "utf8").toString(),
+      "cache-control": "no-store",
     },
     bodyText,
   };
@@ -302,6 +304,7 @@ function buildWalletDemoHtml(): string {
     <label>Token Address <input id="tokenAddress" value="0x036CbD53842c5426634e7929541eC2318f3dCF7e" /></label>
     <button id="connect">Connect Wallet</button>
     <button id="pay">Send Testnet USDC + Register txHash</button>
+    <button id="resetToken" type="button">Reset Base Sepolia USDC</button>
     <pre id="log">{}</pre>
   </main>
   <script src="/wallet-demo.js"></script>
@@ -312,6 +315,7 @@ function buildWalletDemoHtml(): string {
 function buildWalletDemoScript(): string {
   return `
 const BASE_SEPOLIA_CHAIN_ID = "0x14a34";
+const BASE_SEPOLIA_USDC = "0x036CbD53842c5426634e7929541eC2318f3dCF7e";
 const BASE_SEPOLIA_PARAMS = {
   chainId: BASE_SEPOLIA_CHAIN_ID,
   chainName: "Base Sepolia",
@@ -322,6 +326,7 @@ const BASE_SEPOLIA_PARAMS = {
 const log = (payload) => {
   document.querySelector("#log").textContent = JSON.stringify(payload, null, 2);
 };
+const isEvmAddress = (value) => /^0x[a-fA-F0-9]{40}$/.test(value);
 const params = new URLSearchParams(window.location.search);
 for (const [param, selector] of [
   ["actionRef", "#actionRef"],
@@ -332,6 +337,10 @@ for (const [param, selector] of [
   const value = params.get(param);
   if (value) document.querySelector(selector).value = value;
 }
+document.querySelector("#resetToken").addEventListener("click", () => {
+  document.querySelector("#tokenAddress").value = BASE_SEPOLIA_USDC;
+  log({ tokenAddress: BASE_SEPOLIA_USDC, reset: true });
+});
 const parseUnits = (value, decimals) => {
   const [whole, fraction = ""] = value.trim().split(".");
   const normalizedFraction = (fraction + "0".repeat(decimals)).slice(0, decimals);
@@ -371,6 +380,14 @@ document.querySelector("#pay").addEventListener("click", async () => {
   const to = document.querySelector("#to").value.trim();
   const tokenAddress = document.querySelector("#tokenAddress").value.trim();
   const amount = document.querySelector("#amount").value.trim();
+  if (!isEvmAddress(to)) {
+    log({ ok: false, error: "Invalid payee address", to });
+    return;
+  }
+  if (!isEvmAddress(tokenAddress)) {
+    log({ ok: false, error: "Invalid token address", tokenAddress, expectedBaseSepoliaUsdc: BASE_SEPOLIA_USDC });
+    return;
+  }
   const txHash = await ethereum.request({
     method: "eth_sendTransaction",
     params: [{
