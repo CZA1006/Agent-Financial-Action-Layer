@@ -163,6 +163,16 @@ Current implementation:
 - `npm run tool:afal-provider-gate` rejects delivery unless AFAL action readback is settled and the final receipt evidence matches expected payment fields.
 - The existing MetaMask transcript demo remains the full end-to-end presentation path with wallet confirmation, onchain verification, AFAL settlement, receipt evidence, and payee-agent readback.
 
+Claude Code-style tool-only acceptance, captured on 2026-04-30:
+
+- `tool:afal-payment` returned `pending_approval`, `payint-0001`, `aps-chall-0001`, and a prefilled wallet URL.
+- MetaMask completed a Base Sepolia USDC transfer with txHash `0xde130e0f1500121a280b826dd8f04a526acbfe80b1c13db15ca6d826fefa9528`.
+- Payment rail accepted the wallet confirmation with JSON-RPC verification `ok`.
+- `tool:afal-approve-resume` returned `finalIntentStatus=settled`, `settlementRef=stl-wallet-payint-0001`, and `receiptRef=rcpt-pay-0001`.
+- `tool:afal-provider-gate` returned `deliverService=true` with every receipt, settlement, payee, amount, asset, chain, and txHash check passing.
+
+This proves the shell/tool contract needed by Claude Code or another local agent runtime. Real OpenRouter LLM selection is still pending because the available OpenRouter account returned a 402 insufficient-credits response.
+
 ### 3. Payment Rail Adapter Interface
 
 Goal:
