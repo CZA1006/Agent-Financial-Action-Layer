@@ -102,11 +102,12 @@ Phase 2 now has the first SDK/tool boundary:
 - `sdk/client/agent-payment` converts a prompt-style USDC payment instruction into an AFAL payment intent and wallet rail URL.
 - `samples/agent-payment-tool` exposes this as `npm run tool:afal-payment`, which is the first Claude Code/OpenRouter-style tool wrapper.
 - `npm run demo:openrouter-agent-payment-tool` wraps that tool in a minimal LLM agent loop; the LLM must choose `afal_request_payment` before any paid downstream service can proceed.
+- `npm run tool:afal-approve-resume` provides the trusted-surface approval/resume step that turns a wallet-confirmed pending action into AFAL settlement and receipt state.
 - `npm run tool:afal-provider-gate` gives the payee/provider side a strict receipt gate; it rejects pending actions and stale receipt artifacts unless AFAL reports settled final evidence.
 
 ## Next Engineering Priorities
 
-1. Wire the OpenRouter/Claude Code sample into a full request -> wallet confirmation -> approval/resume -> provider gate transcript.
+1. Wire the OpenRouter/Claude Code sample into a single full transcript command for request -> wallet confirmation -> approval/resume -> provider gate.
 2. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
 3. Replace seeded/static action refs in live demos with unique request/action refs to avoid stale receipt confusion.
 4. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.

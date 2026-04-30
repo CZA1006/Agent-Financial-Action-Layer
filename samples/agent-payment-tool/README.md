@@ -83,6 +83,30 @@ The gate returns `deliverService: true` only when all checks pass:
 - receipt `settlementRef` matches the settlement
 - optional expected payee, amount, asset, chain, and tx hash match
 
+## Trusted-Surface Approve And Resume
+
+After the wallet page confirms the transfer, the trusted surface must still approve and resume the AFAL action:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+npm run tool:afal-approve-resume -- \
+  --approval-session-ref aps-chall-0001 \
+  --comment "Approved after wallet-confirmed Base Sepolia USDC transfer"
+```
+
+Expected output includes:
+
+```json
+{
+  "tool": "afal.trusted_surface_approve_resume",
+  "finalIntentStatus": "settled",
+  "deliverableHint": "run_provider_gate",
+  "txHash": "0x..."
+}
+```
+
+Then run `tool:afal-provider-gate` with the same `actionRef` and expected `txHash`. The provider should deliver only after the gate returns `deliverService: true`.
+
 ## OpenRouter Agent Loop Sample
 
 `npm run demo:openrouter-agent-payment-tool` wraps the tool in a minimal LLM agent loop:
