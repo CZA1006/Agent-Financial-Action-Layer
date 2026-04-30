@@ -110,6 +110,20 @@ This command performs the full AFAL control-plane sequence:
 
 In the current Base Sepolia demo, MetaMask signing is still human-in-the-loop. Fully autonomous payment requires replacing the wallet-confirmed rail with an agent-wallet/custody rail that signs under AFAL policy.
 
+If the payment rail is configured with `PAYMENT_RAIL_AGENT_WALLET_COMMAND`, run the same orchestration in autonomous signer mode:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<from /tmp/afal-metamask-demo-client.json> \
+npm run tool:afal-agent -- pay-and-gate \
+  --payment-mode agent-wallet \
+  --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+```
+
+`agent-wallet` mode skips browser confirmation polling. It resumes the AFAL action immediately after the approval session, lets the payment rail signer execute the transfer, and then provider-gates the resulting `txHash`.
+
 ## Provider Receipt Gate
 
 The provider/payee side must not deliver paid service just because a wallet transfer happened. It must read AFAL and require a settled action plus final receipt evidence:
