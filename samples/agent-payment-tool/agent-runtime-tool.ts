@@ -22,6 +22,7 @@ export interface AgentRuntimeToolResult {
 
 export interface AgentRuntimePayAndGateArgs extends AfalPaymentToolArgs {
   approvalComment?: string;
+  paymentMode: "wallet" | "agent-wallet";
   walletConfirmationBaseUrl: string;
   walletConfirmationTimeoutMs: number;
   walletConfirmationPollIntervalMs: number;
@@ -54,7 +55,7 @@ export interface AgentRuntimePayAndGateResult {
   actionRef: string;
   approvalSessionRef: string;
   walletUrl: string;
-  walletConfirmation: WalletConfirmationReadback;
+  walletConfirmation?: WalletConfirmationReadback;
   approval: unknown;
   providerGate: ProviderReceiptGateResult;
   deliverService: boolean;
@@ -122,6 +123,16 @@ function deriveWalletConfirmationBaseUrl(walletDemoUrl: string): string {
   return url.origin;
 }
 
+function readPaymentMode(value: string | undefined): "wallet" | "agent-wallet" {
+  if (!value || value === "wallet") {
+    return "wallet";
+  }
+  if (value === "agent-wallet") {
+    return value;
+  }
+  throw new Error('--payment-mode must be "wallet" or "agent-wallet"');
+}
+
 function parseRequestPaymentArgs(argv: string[]): AfalPaymentToolArgs {
   return {
     baseUrl: required("AFAL_BASE_URL or --base-url", readOption(argv, "--base-url") ?? process.env.AFAL_BASE_URL),
@@ -157,6 +168,7 @@ function parsePayAndGateArgs(argv: string[]): AgentRuntimePayAndGateArgs {
       readOption(argv, "--comment") ??
       process.env.AFAL_APPROVAL_COMMENT ??
       "Approved after wallet-confirmed AFAL payment",
+    paymentMode: readPaymentMode(readOption(argv, "--payment-mode") ?? process.env.AFAL_PAYMENT_MODE),
     walletConfirmationBaseUrl,
     walletConfirmationTimeoutMs: optionalPositiveInteger(
       "AFAL_WALLET_CONFIRMATION_TIMEOUT_MS or --wallet-confirmation-timeout-ms",
@@ -237,6 +249,21 @@ function readBooleanField(value: Record<string, unknown>, field: string, name: s
   const fieldValue = value[field];
   if (typeof fieldValue !== "boolean") {
     throw new Error(`${name}.${field} must be a boolean`);
+  }
+  return fieldValue;
+}
+
+function readOptionalStringField(
+  value: Record<string, unknown>,
+  field: string,
+  name: string
+): string | undefined {
+  const fieldValue = value[field];
+  if (fieldValue === undefined) {
+    return undefined;
+  }
+  if (typeof fieldValue !== "string") {
+    throw new Error(`${name}.${field} must be a string`);
   }
   return fieldValue;
 }
@@ -335,18 +362,27 @@ async function runPayAndGate(
   const asset = readStringField(requestPayment, "asset", "requestPayment result");
   const chain = readStringField(requestPayment, "chain", "requestPayment result");
 
-  const walletConfirmation = await runners.waitForWalletConfirmation({
-    baseUrl: args.walletConfirmationBaseUrl,
-    actionRef,
-    timeoutMs: args.walletConfirmationTimeoutMs,
-    pollIntervalMs: args.walletConfirmationPollIntervalMs,
-  });
+  const walletConfirmation =
+    args.paymentMode === "wallet"
+      ? await runners.waitForWalletConfirmation({
+          baseUrl: args.walletConfirmationBaseUrl,
+          actionRef,
+          timeoutMs: args.walletConfirmationTimeoutMs,
+          pollIntervalMs: args.walletConfirmationPollIntervalMs,
+        })
+      : undefined;
 
   const approval = await runners.approveResume({
     baseUrl: args.baseUrl,
     approvalSessionRef,
     comment: args.approvalComment,
   });
+  const approvalRecord = asRecord(approval, "approval result");
+  const approvalTxHash = readOptionalStringField(approvalRecord, "txHash", "approval result");
+  const expectedTxHash = walletConfirmation?.txHash ?? approvalTxHash;
+  if (!expectedTxHash) {
+    throw new Error("payment txHash was not available from wallet confirmation or approval result");
+  }
   const providerGate = (await runners.providerGate({
     baseUrl: args.baseUrl,
     clientId: args.clientId,
@@ -356,7 +392,7 @@ async function runPayAndGate(
     expectedAmount: amount,
     expectedAsset: asset,
     expectedChain: chain,
-    expectedTxHash: walletConfirmation.txHash,
+    expectedTxHash,
   })) as ProviderReceiptGateResult;
   const providerGateRecord = asRecord(providerGate, "providerGate result");
   const deliverService = readBooleanField(

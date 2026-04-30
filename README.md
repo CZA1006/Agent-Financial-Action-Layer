@@ -594,6 +594,17 @@ npm run tool:afal-agent -- pay-and-gate \
 
 This creates the AFAL payment action, waits for the payment rail's wallet confirmation, resumes settlement, and runs the provider gate in one command. With the current MetaMask rail, wallet signing is still human-in-the-loop; fully autonomous agent payment requires an agent-controlled signer or custody rail behind the same AFAL policy boundary.
 
+When the payment rail is configured with the Base Sepolia agent-wallet signer, use:
+
+```bash
+npm run tool:afal-agent -- pay-and-gate \
+  --payment-mode agent-wallet \
+  --message "Pay 0.01 USDC to payee agent at 0x..." \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+```
+
+In `agent-wallet` mode the command does not wait for a browser wallet. It requests AFAL approval, resumes the action, lets the payment rail signer broadcast the USDC transfer, and then runs provider-gate against the returned `txHash`.
+
 ## What Exists Today
 
 | Area | Current State |

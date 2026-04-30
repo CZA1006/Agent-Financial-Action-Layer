@@ -200,6 +200,86 @@ test("agent runtime tool orchestrates pay-and-gate commands", async () => {
   assert.equal((result.result as { actionRef: string }).actionRef, "payint-0001");
 });
 
+test("agent runtime tool orchestrates agent-wallet pay-and-gate without waiting for wallet confirmation", async () => {
+  let walletConfirmationCalls = 0;
+  const result = await runAgentRuntimeTool(
+    [
+      "pay-and-gate",
+      "--payment-mode",
+      "agent-wallet",
+      "--base-url",
+      "http://afal.test",
+      "--client-id",
+      "client-001",
+      "--signing-key",
+      "secret",
+      "--message",
+      "Pay 0.01 USDC",
+      "--wallet-demo-url",
+      "http://wallet.test/wallet-demo",
+    ],
+    {
+      ...runners,
+      async requestPayment() {
+        return {
+          tool: "afal.request_payment",
+          status: "pending_approval",
+          actionRef: "payint-0001",
+          approvalSessionRef: "aps-chall-0001",
+          payeeAddress: "0xpayee",
+          amount: "0.01",
+          asset: "USDC",
+          chain: "base-sepolia",
+          walletUrl: "http://wallet.test/wallet-demo?actionRef=payint-0001",
+        };
+      },
+      async waitForWalletConfirmation(args) {
+        walletConfirmationCalls += 1;
+        return runners.waitForWalletConfirmation(args);
+      },
+      async approveResume(args) {
+        return {
+          called: "approveResume",
+          approvalSessionRef: args.approvalSessionRef,
+          comment: args.comment,
+          txHash: "0xagentwallet",
+        };
+      },
+      async providerGate(args) {
+        return {
+          tool: "afal.provider_receipt_gate",
+          actionRef: args.actionRef,
+          deliverService: true,
+          reason: "ok",
+          checks: {
+            actionTypePayment: true,
+            intentSettled: true,
+            settlementPresent: true,
+            paymentReceiptFinal: true,
+            receiptSettlementMatches: true,
+            payeeMatches: true,
+            amountMatches: true,
+            assetMatches: true,
+            chainMatches: true,
+            txHashMatches: true,
+          },
+          evidence: {
+            txHash: args.expectedTxHash,
+          },
+        };
+      },
+    }
+  );
+
+  assert.equal(walletConfirmationCalls, 0);
+  assert.equal(result.command, "pay-and-gate");
+  assert.equal((result.result as { deliverService: boolean }).deliverService, true);
+  assert.equal(
+    (result.result as { providerGate: { evidence?: { txHash?: string } } }).providerGate.evidence?.txHash,
+    "0xagentwallet"
+  );
+});
+
 test("agent runtime tool rejects unknown commands", async () => {
   await assert.rejects(
     runAgentRuntimeTool(["pay-directly"], runners),
