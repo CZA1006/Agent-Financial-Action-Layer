@@ -101,12 +101,13 @@ Phase 2 now has the first SDK/tool boundary:
 - `sdk/client/createAfalClient().waitForPaymentReceipt` provides the first receipt polling helper.
 - `sdk/client/agent-payment` converts a prompt-style USDC payment instruction into an AFAL payment intent and wallet rail URL.
 - `samples/agent-payment-tool` exposes this as `npm run tool:afal-payment`, which is the first Claude Code/OpenRouter-style tool wrapper.
+- `npm run demo:openrouter-agent-payment-tool` wraps that tool in a minimal LLM agent loop; the LLM must choose `afal_request_payment` before any paid downstream service can proceed.
 
 ## Next Engineering Priorities
 
-1. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
-2. Build the OpenRouter/Claude Code agent example on top of `samples/agent-payment-tool` instead of monorepo harness internals.
-3. Add payee/provider service gating: do not deliver service unless AFAL action readback has a final receipt.
+1. Add payee/provider service gating: do not deliver service unless AFAL action readback has a final receipt.
+2. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
+3. Extend the OpenRouter/Claude Code sample from payment-request creation into receipt-gated service delivery.
 4. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.
 5. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
 

@@ -132,6 +132,7 @@ Current implementation:
 - `sdk/client/createAfalClient` signs external-client requests and wraps payment approval, resource approval, action readback, and payment receipt polling.
 - `sdk/client/agent-payment` parses a simple prompt-style USDC payment instruction and builds the AFAL payment intent plus wallet rail URL.
 - `samples/agent-payment-tool` exposes the first Claude/OpenRouter-style CLI tool via `npm run tool:afal-payment`.
+- `samples/agent-payment-tool/openrouter-agent.ts` wraps the tool in a minimal LLM agent loop and rejects non-AFAL payment tool choices.
 
 ### 2. Agent Examples
 
@@ -155,6 +156,7 @@ Current implementation:
 
 - `npm run tool:afal-payment` accepts a natural-language payment message and returns `pending_approval`, `actionRef`, `approvalSessionRef`, budget reservation fields, and a wallet rail URL.
 - The tool is suitable as a required Claude Code/OpenRouter function before any paid downstream action.
+- `npm run demo:openrouter-agent-payment-tool` demonstrates an agent choosing the mandatory AFAL payment tool before downstream delivery.
 - The existing MetaMask transcript demo remains the full end-to-end presentation path with wallet confirmation, onchain verification, AFAL settlement, receipt evidence, and payee-agent readback.
 
 ### 3. Payment Rail Adapter Interface

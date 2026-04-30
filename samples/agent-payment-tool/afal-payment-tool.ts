@@ -7,7 +7,7 @@ import {
   parseAgentPaymentInstruction,
 } from "../../sdk/client";
 
-interface Args {
+export interface AfalPaymentToolArgs {
   baseUrl: string;
   clientId: string;
   signingKey: string;
@@ -31,8 +31,8 @@ function getArgValue(argv: string[], index: number): string {
   return value;
 }
 
-function parseArgs(argv: string[]): Args {
-  const args: Partial<Args> = {
+function parseArgs(argv: string[]): AfalPaymentToolArgs {
+  const args: Partial<AfalPaymentToolArgs> = {
     baseUrl: process.env.AFAL_BASE_URL,
     clientId: process.env.AFAL_CLIENT_ID,
     signingKey: process.env.AFAL_SIGNING_KEY,
@@ -83,7 +83,7 @@ function parseArgs(argv: string[]): Args {
   };
 }
 
-export async function runAfalPaymentTool(args: Args) {
+export async function runAfalPaymentTool(args: AfalPaymentToolArgs) {
   const afal = createAfalClient({
     baseUrl: args.baseUrl,
     clientId: args.clientId,
