@@ -7,6 +7,10 @@ For a Claude Code payment-agent workspace that forces all payment prompts throug
 - [claude-code-agent/README.md](./claude-code-agent/README.md)
 - [claude-code-agent/CLAUDE.md](./claude-code-agent/CLAUDE.md)
 
+For a portable Claude Code / MCP integration where the agent discovers AFAL as tools, use:
+
+- [afal-mcp-server/README.md](./afal-mcp-server/README.md)
+
 For a repo-external / extractable consumer kit, use:
 
 - [standalone-external-agent-pilot/README.md](./standalone-external-agent-pilot/README.md)
