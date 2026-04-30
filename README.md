@@ -586,6 +586,8 @@ After that, rerun `tool:afal-provider-gate`. A successful path ends with `delive
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
 
+For staging, run the payment rail with `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH` set. That persists wallet-confirmed tx hashes across service restarts, so AFAL can still resume and settle the matching pending action after deployment reloads.
+
 ## What Is Real vs. What Is Still Stubbed
 
 Already real in local development terms:

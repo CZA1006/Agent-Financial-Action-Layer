@@ -1,4 +1,7 @@
 import assert from "node:assert/strict";
+import { mkdirSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { test } from "node:test";
 
 import { paymentFlowFixtures } from "../../sdk/fixtures";
@@ -256,6 +259,67 @@ test("payment rail service records a wallet confirmation and settles with its tx
   assert.equal(parsed.data.amount, "0.01");
   assert.equal(parsed.data.chain, "base-sepolia");
   assert.equal(parsed.data.destination.settlementAddress, WALLET_PAYEE);
+});
+
+test("payment rail service persists wallet confirmations across state reloads", async () => {
+  const dir = mkdtempSync(join(tmpdir(), "afal-payment-rail-"));
+  mkdirSync(dir, { recursive: true });
+  const walletConfirmationsPath = join(dir, "wallet-confirmations.json");
+  const state = createPaymentRailServiceState({
+    requireWalletConfirmation: true,
+    walletConfirmationsPath,
+  });
+
+  const confirmation = await handlePaymentRailNodeHttpRequest(
+    {
+      method: "POST",
+      url: PAYMENT_RAIL_SERVICE_ROUTES.confirmWalletPayment,
+      bodyText: JSON.stringify({
+        requestRef: "req-wallet-confirm-payint-0001",
+        input: {
+          actionRef: walletPaymentIntent.intentId,
+          txHash: "0xpersistedwalletconfirmed",
+          from: WALLET_FROM,
+          to: WALLET_PAYEE,
+          tokenAddress: BASE_SEPOLIA_USDC,
+          amount: "0.01",
+          asset: "USDC",
+          chain: "base-sepolia",
+          chainId: BASE_SEPOLIA_CHAIN_ID,
+          confirmedAt: "2026-04-27T04:00:00Z",
+        },
+      }),
+    },
+    state
+  );
+  const reloadedState = createPaymentRailServiceState({
+    requireWalletConfirmation: true,
+    walletConfirmationsPath,
+  });
+  const settled = await handlePaymentRailNodeHttpRequest(
+    {
+      method: "POST",
+      url: PAYMENT_RAIL_SERVICE_ROUTES.executePayment,
+      bodyText: JSON.stringify({
+        requestRef: "req-payment-rail-payint-0001",
+        input: {
+          intent: walletPaymentIntent,
+          decision: paymentFlowFixtures.authorizationDecisionFinal,
+        },
+      }),
+    },
+    reloadedState
+  );
+  const parsed = JSON.parse(settled.bodyText) as {
+    ok: true;
+    data: {
+      txHash: string;
+    };
+  };
+
+  assert.equal(confirmation.statusCode, 200);
+  assert.equal(settled.statusCode, 200);
+  assert.equal(parsed.data.txHash, "0xpersistedwalletconfirmed");
 });
 
 test("payment rail service verifies wallet confirmations against an onchain ERC-20 Transfer receipt", async () => {
