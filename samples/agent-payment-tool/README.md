@@ -57,6 +57,32 @@ The tool output is the contract the agent should use:
 - `approvalSessionRef` is the trusted-surface approval handle.
 - `receiptRef` and `settlementRef` appear only after AFAL has settled the action.
 
+## Provider Receipt Gate
+
+The provider/payee side must not deliver paid service just because a wallet transfer happened. It must read AFAL and require a settled action plus final receipt evidence:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<from /tmp/afal-metamask-demo-client.json> \
+npm run tool:afal-provider-gate -- \
+  --action-ref payint-0001 \
+  --expected-payee-address 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 \
+  --expected-amount 0.01 \
+  --expected-asset USDC \
+  --expected-chain base-sepolia \
+  --expected-tx-hash <wallet-confirmed-txHash>
+```
+
+The gate returns `deliverService: true` only when all checks pass:
+
+- AFAL action type is `payment`
+- AFAL intent status is `settled`
+- settlement record exists
+- payment receipt is `final`
+- receipt `settlementRef` matches the settlement
+- optional expected payee, amount, asset, chain, and tx hash match
+
 ## OpenRouter Agent Loop Sample
 
 `npm run demo:openrouter-agent-payment-tool` wraps the tool in a minimal LLM agent loop:
