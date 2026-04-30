@@ -580,6 +580,20 @@ npm run tool:afal-agent -- provider-gate --action-ref payint-0001 --expected-tx-
 
 The wrapper preserves the same contract: payer agents request payment, trusted surfaces approve/resume, and providers deliver only after `provider-gate` returns `deliverService: true`.
 
+For Claude Code-style testing where one user prompt should drive the complete AFAL flow, use the orchestrated command:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<provisioned-signing-key> \
+npm run tool:afal-agent -- pay-and-gate \
+  --message "Pay 0.01 USDC to payee agent at 0x..." \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo \
+  --wallet-confirmation-timeout-ms 300000
+```
+
+This creates the AFAL payment action, waits for the payment rail's wallet confirmation, resumes settlement, and runs the provider gate in one command. With the current MetaMask rail, wallet signing is still human-in-the-loop; fully autonomous agent payment requires an agent-controlled signer or custody rail behind the same AFAL policy boundary.
+
 ## What Exists Today
 
 | Area | Current State |

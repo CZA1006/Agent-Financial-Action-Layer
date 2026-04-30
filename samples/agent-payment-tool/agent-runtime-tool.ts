@@ -4,10 +4,15 @@ import { runAfalPaymentTool, type AfalPaymentToolArgs } from "./afal-payment-too
 import { runApproveResumeTool, type ApproveResumeToolArgs } from "./approve-resume-tool";
 import {
   runProviderReceiptGate,
+  type ProviderReceiptGateResult,
   type ProviderReceiptGateArgs,
 } from "./provider-receipt-gate";
 
-export type AgentRuntimeToolCommand = "request-payment" | "approve-resume" | "provider-gate";
+export type AgentRuntimeToolCommand =
+  | "request-payment"
+  | "approve-resume"
+  | "provider-gate"
+  | "pay-and-gate";
 
 export interface AgentRuntimeToolResult {
   tool: "afal.agent_runtime_tool";
@@ -15,16 +20,63 @@ export interface AgentRuntimeToolResult {
   result: unknown;
 }
 
+export interface AgentRuntimePayAndGateArgs extends AfalPaymentToolArgs {
+  approvalComment?: string;
+  walletConfirmationBaseUrl: string;
+  walletConfirmationTimeoutMs: number;
+  walletConfirmationPollIntervalMs: number;
+}
+
+export interface WalletConfirmationReadback {
+  actionRef: string;
+  txHash: string;
+  from: string;
+  to: string;
+  tokenAddress: string;
+  amount: string;
+  asset: string;
+  chain: string;
+  chainId: number;
+  confirmedAt: string;
+  verification?: {
+    ok: boolean;
+    verifiedAt: string;
+    chainId: number;
+    txHash: string;
+    logIndex?: number;
+  };
+  status: "ok";
+}
+
+export interface AgentRuntimePayAndGateResult {
+  tool: "afal.pay_and_gate";
+  status: "settled" | "not_deliverable";
+  actionRef: string;
+  approvalSessionRef: string;
+  walletUrl: string;
+  walletConfirmation: WalletConfirmationReadback;
+  approval: unknown;
+  providerGate: ProviderReceiptGateResult;
+  deliverService: boolean;
+}
+
 export interface AgentRuntimeToolRunners {
   requestPayment(args: AfalPaymentToolArgs): Promise<unknown>;
   approveResume(args: ApproveResumeToolArgs): Promise<unknown>;
   providerGate(args: ProviderReceiptGateArgs): Promise<unknown>;
+  waitForWalletConfirmation(args: {
+    baseUrl: string;
+    actionRef: string;
+    timeoutMs: number;
+    pollIntervalMs: number;
+  }): Promise<WalletConfirmationReadback>;
 }
 
 const defaultRunners: AgentRuntimeToolRunners = {
   requestPayment: runAfalPaymentTool,
   approveResume: runApproveResumeTool,
   providerGate: runProviderReceiptGate,
+  waitForWalletConfirmation,
 };
 
 function required(name: string, value: string | undefined): string {
@@ -54,6 +106,22 @@ function hasFlag(argv: string[], flag: string): boolean {
   return argv.includes(flag);
 }
 
+function optionalPositiveInteger(name: string, value: string | undefined, fallback: number): number {
+  if (!value) {
+    return fallback;
+  }
+  const parsed = Number.parseInt(value, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    throw new Error(`${name} must be a positive integer`);
+  }
+  return parsed;
+}
+
+function deriveWalletConfirmationBaseUrl(walletDemoUrl: string): string {
+  const url = new URL(walletDemoUrl);
+  return url.origin;
+}
+
 function parseRequestPaymentArgs(argv: string[]): AfalPaymentToolArgs {
   return {
     baseUrl: required("AFAL_BASE_URL or --base-url", readOption(argv, "--base-url") ?? process.env.AFAL_BASE_URL),
@@ -73,6 +141,35 @@ function parseRequestPaymentArgs(argv: string[]): AfalPaymentToolArgs {
         "http://34.44.95.42:3412/wallet-demo"
     ),
     waitForReceipt: hasFlag(argv, "--wait-for-receipt"),
+  };
+}
+
+function parsePayAndGateArgs(argv: string[]): AgentRuntimePayAndGateArgs {
+  const requestArgs = parseRequestPaymentArgs(argv);
+  const walletConfirmationBaseUrl =
+    readOption(argv, "--wallet-confirmation-base-url") ??
+    process.env.AFAL_WALLET_CONFIRMATION_BASE_URL ??
+    deriveWalletConfirmationBaseUrl(requestArgs.walletDemoUrl);
+
+  return {
+    ...requestArgs,
+    approvalComment:
+      readOption(argv, "--comment") ??
+      process.env.AFAL_APPROVAL_COMMENT ??
+      "Approved after wallet-confirmed AFAL payment",
+    walletConfirmationBaseUrl,
+    walletConfirmationTimeoutMs: optionalPositiveInteger(
+      "AFAL_WALLET_CONFIRMATION_TIMEOUT_MS or --wallet-confirmation-timeout-ms",
+      readOption(argv, "--wallet-confirmation-timeout-ms") ??
+        process.env.AFAL_WALLET_CONFIRMATION_TIMEOUT_MS,
+      300_000
+    ),
+    walletConfirmationPollIntervalMs: optionalPositiveInteger(
+      "AFAL_WALLET_CONFIRMATION_POLL_INTERVAL_MS or --wallet-confirmation-poll-interval-ms",
+      readOption(argv, "--wallet-confirmation-poll-interval-ms") ??
+        process.env.AFAL_WALLET_CONFIRMATION_POLL_INTERVAL_MS,
+      2_000
+    ),
   };
 }
 
@@ -111,13 +208,174 @@ function parseCommand(value: string | undefined): AgentRuntimeToolCommand {
   if (
     value === "request-payment" ||
     value === "approve-resume" ||
-    value === "provider-gate"
+    value === "provider-gate" ||
+    value === "pay-and-gate"
   ) {
     return value;
   }
   throw new Error(
-    'First argument must be one of "request-payment", "approve-resume", or "provider-gate"'
+    'First argument must be one of "request-payment", "approve-resume", "provider-gate", or "pay-and-gate"'
   );
+}
+
+function asRecord(value: unknown, name: string): Record<string, unknown> {
+  if (!value || typeof value !== "object") {
+    throw new Error(`${name} must be an object`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function readStringField(value: Record<string, unknown>, field: string, name: string): string {
+  const fieldValue = value[field];
+  if (typeof fieldValue !== "string") {
+    throw new Error(`${name}.${field} must be a string`);
+  }
+  return fieldValue;
+}
+
+function readBooleanField(value: Record<string, unknown>, field: string, name: string): boolean {
+  const fieldValue = value[field];
+  if (typeof fieldValue !== "boolean") {
+    throw new Error(`${name}.${field} must be a boolean`);
+  }
+  return fieldValue;
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isWalletConfirmationReadback(value: unknown): value is WalletConfirmationReadback {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "actionRef" in value &&
+      typeof value.actionRef === "string" &&
+      "txHash" in value &&
+      typeof value.txHash === "string" &&
+      "from" in value &&
+      typeof value.from === "string" &&
+      "to" in value &&
+      typeof value.to === "string" &&
+      "tokenAddress" in value &&
+      typeof value.tokenAddress === "string" &&
+      "amount" in value &&
+      typeof value.amount === "string" &&
+      "asset" in value &&
+      typeof value.asset === "string" &&
+      "chain" in value &&
+      typeof value.chain === "string" &&
+      "chainId" in value &&
+      typeof value.chainId === "number" &&
+      "confirmedAt" in value &&
+      typeof value.confirmedAt === "string" &&
+      "status" in value &&
+      value.status === "ok"
+  );
+}
+
+async function readWalletConfirmation(
+  baseUrl: string,
+  actionRef: string
+): Promise<WalletConfirmationReadback | undefined> {
+  const response = await fetch(
+    `${baseUrl.replace(/\/$/, "")}/wallet-payments/confirmations/${encodeURIComponent(actionRef)}`
+  );
+  if (response.status === 404) {
+    return undefined;
+  }
+  const body = (await response.json()) as unknown;
+  const envelope = asRecord(body, "wallet confirmation response");
+  if (envelope.ok !== true) {
+    throw new Error(JSON.stringify(body));
+  }
+  const data = envelope.data;
+  if (!isWalletConfirmationReadback(data)) {
+    throw new Error("wallet confirmation response data is invalid");
+  }
+  return data;
+}
+
+async function waitForWalletConfirmation(args: {
+  baseUrl: string;
+  actionRef: string;
+  timeoutMs: number;
+  pollIntervalMs: number;
+}): Promise<WalletConfirmationReadback> {
+  const deadline = Date.now() + args.timeoutMs;
+  while (Date.now() <= deadline) {
+    const confirmation = await readWalletConfirmation(args.baseUrl, args.actionRef);
+    if (confirmation) {
+      return confirmation;
+    }
+    await sleep(args.pollIntervalMs);
+  }
+  throw new Error(
+    `Timed out waiting for wallet confirmation for action "${args.actionRef}"`
+  );
+}
+
+async function runPayAndGate(
+  args: AgentRuntimePayAndGateArgs,
+  runners: AgentRuntimeToolRunners
+): Promise<AgentRuntimePayAndGateResult> {
+  const requestPayment = asRecord(
+    await runners.requestPayment({ ...args, waitForReceipt: false }),
+    "requestPayment result"
+  );
+  const actionRef = readStringField(requestPayment, "actionRef", "requestPayment result");
+  const approvalSessionRef = readStringField(
+    requestPayment,
+    "approvalSessionRef",
+    "requestPayment result"
+  );
+  const walletUrl = readStringField(requestPayment, "walletUrl", "requestPayment result");
+  const payeeAddress = readStringField(requestPayment, "payeeAddress", "requestPayment result");
+  const amount = readStringField(requestPayment, "amount", "requestPayment result");
+  const asset = readStringField(requestPayment, "asset", "requestPayment result");
+  const chain = readStringField(requestPayment, "chain", "requestPayment result");
+
+  const walletConfirmation = await runners.waitForWalletConfirmation({
+    baseUrl: args.walletConfirmationBaseUrl,
+    actionRef,
+    timeoutMs: args.walletConfirmationTimeoutMs,
+    pollIntervalMs: args.walletConfirmationPollIntervalMs,
+  });
+
+  const approval = await runners.approveResume({
+    baseUrl: args.baseUrl,
+    approvalSessionRef,
+    comment: args.approvalComment,
+  });
+  const providerGate = (await runners.providerGate({
+    baseUrl: args.baseUrl,
+    clientId: args.clientId,
+    signingKey: args.signingKey,
+    actionRef,
+    expectedPayeeAddress: payeeAddress,
+    expectedAmount: amount,
+    expectedAsset: asset,
+    expectedChain: chain,
+    expectedTxHash: walletConfirmation.txHash,
+  })) as ProviderReceiptGateResult;
+  const providerGateRecord = asRecord(providerGate, "providerGate result");
+  const deliverService = readBooleanField(
+    providerGateRecord,
+    "deliverService",
+    "providerGate result"
+  );
+
+  return {
+    tool: "afal.pay_and_gate",
+    status: deliverService ? "settled" : "not_deliverable",
+    actionRef,
+    approvalSessionRef,
+    walletUrl,
+    walletConfirmation,
+    approval,
+    providerGate,
+    deliverService,
+  };
 }
 
 export async function runAgentRuntimeTool(
@@ -140,6 +398,14 @@ export async function runAgentRuntimeTool(
       tool: "afal.agent_runtime_tool",
       command,
       result: await runners.approveResume(parseApproveResumeArgs(commandArgs)),
+    };
+  }
+
+  if (command === "pay-and-gate") {
+    return {
+      tool: "afal.agent_runtime_tool",
+      command,
+      result: await runPayAndGate(parsePayAndGateArgs(commandArgs), runners),
     };
   }
 

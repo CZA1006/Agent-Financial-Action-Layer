@@ -87,6 +87,29 @@ npm run tool:afal-agent -- provider-gate \
 
 The unified command returns a wrapper object with `tool: "afal.agent_runtime_tool"`, the selected `command`, and the underlying AFAL tool result. That shape is easier to register as one Claude Code/custom-agent command while preserving explicit payer, trusted-surface, and provider roles.
 
+For a Claude Code-style "one prompt drives the whole AFAL flow" integration, use the orchestrated command:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<from /tmp/afal-metamask-demo-client.json> \
+npm run tool:afal-agent -- pay-and-gate \
+  --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo \
+  --wallet-confirmation-timeout-ms 300000
+```
+
+This command performs the full AFAL control-plane sequence:
+
+- requests the governed payment action from AFAL
+- returns the wallet URL as the trusted payment surface
+- waits for `/wallet-payments/confirmations/{actionRef}` to show a wallet-confirmed, onchain-verified transfer
+- approves and resumes the AFAL action
+- runs the provider receipt gate
+- returns `deliverService: true` only when the provider may deliver the paid service
+
+In the current Base Sepolia demo, MetaMask signing is still human-in-the-loop. Fully autonomous payment requires replacing the wallet-confirmed rail with an agent-wallet/custody rail that signs under AFAL policy.
+
 ## Provider Receipt Gate
 
 The provider/payee side must not deliver paid service just because a wallet transfer happened. It must read AFAL and require a settled action plus final receipt evidence:
