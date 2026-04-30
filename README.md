@@ -542,6 +542,23 @@ npm run demo:openrouter-agent-payment-tool -- \
 
 With `OPENROUTER_API_KEY` set, remove `--mock-llm` to let the LLM decide whether it must call `afal_request_payment`. The sample rejects non-AFAL payment tools, which makes AFAL the mandatory payment control plane in this demo path.
 
+Provider/payee delivery is gated separately:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<provisioned-signing-key> \
+npm run tool:afal-provider-gate -- \
+  --action-ref payint-0001 \
+  --expected-payee-address 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 \
+  --expected-amount 0.01 \
+  --expected-asset USDC \
+  --expected-chain base-sepolia \
+  --expected-tx-hash <wallet-confirmed-txHash>
+```
+
+The provider gate returns `deliverService: true` only if AFAL reports a settled payment with final receipt evidence. Pending approvals or stale receipt artifacts are rejected.
+
 ## What Exists Today
 
 | Area | Current State |
