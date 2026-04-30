@@ -108,11 +108,12 @@ Phase 2 now has the first SDK/tool boundary:
 - `npm run tool:afal-approve-resume` provides the trusted-surface approval/resume step that turns a wallet-confirmed pending action into AFAL settlement and receipt state.
 - `npm run tool:afal-provider-gate` gives the payee/provider side a strict receipt gate; it rejects pending actions and stale receipt artifacts unless AFAL reports settled final evidence.
 - The staging payment rail now persists wallet confirmations across service restarts when `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH` is configured.
+- Claude Code-style tool-only acceptance passed on 2026-04-30: `tool:afal-payment` -> MetaMask wallet confirmation -> `tool:afal-approve-resume` -> `tool:afal-provider-gate`, ending in `deliverService=true` for txHash `0xde130e0f1500121a280b826dd8f04a526acbfe80b1c13db15ca6d826fefa9528`.
 
 ## Next Engineering Priorities
 
 1. Wire the OpenRouter/Claude Code sample into a single full transcript command for request -> wallet confirmation -> approval/resume -> provider gate.
-2. Run the OpenRouter sample with a real `OPENROUTER_API_KEY` and confirm the LLM consistently chooses `afal_request_payment`.
+2. Run the OpenRouter sample with a funded `OPENROUTER_API_KEY` and confirm the LLM consistently chooses `afal_request_payment`.
 3. Replace seeded/static action refs in live demos with unique request/action refs to avoid stale receipt confusion.
 4. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
 5. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.

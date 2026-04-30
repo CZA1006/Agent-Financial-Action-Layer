@@ -57,6 +57,14 @@ The tool output is the contract the agent should use:
 - `approvalSessionRef` is the trusted-surface approval handle.
 - `receiptRef` and `settlementRef` appear only after AFAL has settled the action.
 
+Agent runtime integration contract:
+
+- Payer-side agents must call `afal_request_payment` before claiming that payment or paid work is complete.
+- A `pending_approval` response is not sufficient to deliver service.
+- The trusted surface must complete wallet confirmation and `tool:afal-approve-resume`.
+- Provider/payee agents must call `tool:afal-provider-gate` or equivalent AFAL receipt readback before delivering service.
+- The only delivery-allowed terminal condition in this sample is `deliverService: true`.
+
 ## Provider Receipt Gate
 
 The provider/payee side must not deliver paid service just because a wallet transfer happened. It must read AFAL and require a settled action plus final receipt evidence:
@@ -117,6 +125,21 @@ Latest clean staging acceptance, captured on 2026-04-30:
   "settlementRef": "stl-wallet-payint-0001",
   "receiptRef": "rcpt-pay-0001",
   "txHash": "0xdcf0650d64117d08f8d1ca60acf39b470c3a52aabe89d7c30280b2c30e92343a",
+  "providerGate": {
+    "deliverService": true
+  }
+}
+```
+
+Latest Claude Code-style tool-only acceptance, captured on 2026-04-30:
+
+```json
+{
+  "tool": "afal.request_payment",
+  "actionRef": "payint-0001",
+  "approvalSessionRef": "aps-chall-0001",
+  "walletTxHash": "0xde130e0f1500121a280b826dd8f04a526acbfe80b1c13db15ca6d826fefa9528",
+  "finalIntentStatus": "settled",
   "providerGate": {
     "deliverService": true
   }
