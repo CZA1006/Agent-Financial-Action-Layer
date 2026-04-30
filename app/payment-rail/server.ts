@@ -1,5 +1,13 @@
 import { createHash } from "node:crypto";
+import {
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  renameSync,
+  writeFileSync,
+} from "node:fs";
 import { createServer, type IncomingMessage, type RequestListener, type Server } from "node:http";
+import { dirname } from "node:path";
 import { pathToFileURL } from "node:url";
 
 import type { AuthorizationDecision, PaymentIntent, SettlementRecord } from "../../sdk/types";
@@ -56,12 +64,14 @@ export interface PaymentRailServiceState {
   requireWalletConfirmation: boolean;
   walletConfirmations: Map<string, WalletPaymentConfirmation>;
   walletTxHashes: Map<string, string>;
+  walletConfirmationsPath?: string;
   walletVerifier?: WalletPaymentVerifier;
 }
 
 export interface PaymentRailFailurePlan {
   executePaymentFailuresBeforeSuccess?: number;
   requireWalletConfirmation?: boolean;
+  walletConfirmationsPath?: string;
   walletVerifier?: WalletPaymentVerifier;
 }
 
@@ -158,14 +168,56 @@ function buildFailure(
 export function createPaymentRailServiceState(
   plan?: PaymentRailFailurePlan
 ): PaymentRailServiceState {
+  const walletConfirmations = loadWalletConfirmations(plan?.walletConfirmationsPath);
+  const walletTxHashes = new Map<string, string>();
+  for (const confirmation of walletConfirmations.values()) {
+    walletTxHashes.set(confirmation.txHash.toLowerCase(), confirmation.actionRef);
+  }
+
   return {
     executePaymentAttempts: 0,
     executePaymentFailuresRemaining: Math.max(0, plan?.executePaymentFailuresBeforeSuccess ?? 0),
     requireWalletConfirmation: plan?.requireWalletConfirmation ?? false,
-    walletConfirmations: new Map(),
-    walletTxHashes: new Map(),
+    walletConfirmations,
+    walletTxHashes,
+    walletConfirmationsPath: plan?.walletConfirmationsPath,
     walletVerifier: plan?.walletVerifier,
   };
+}
+
+function loadWalletConfirmations(path: string | undefined): Map<string, WalletPaymentConfirmation> {
+  if (!path || !existsSync(path)) {
+    return new Map();
+  }
+
+  const parsed = JSON.parse(readFileSync(path, "utf8")) as {
+    confirmations?: WalletPaymentConfirmation[];
+  };
+  return new Map(
+    (parsed.confirmations ?? []).map((confirmation) => [
+      confirmation.actionRef,
+      confirmation,
+    ])
+  );
+}
+
+function persistWalletConfirmations(state: PaymentRailServiceState): void {
+  if (!state.walletConfirmationsPath) {
+    return;
+  }
+
+  const payload = JSON.stringify(
+    {
+      schemaVersion: 1,
+      confirmations: [...state.walletConfirmations.values()],
+    },
+    null,
+    2
+  );
+  mkdirSync(dirname(state.walletConfirmationsPath), { recursive: true });
+  const tmpPath = `${state.walletConfirmationsPath}.tmp`;
+  writeFileSync(tmpPath, `${payload}\n`);
+  renameSync(tmpPath, state.walletConfirmationsPath);
 }
 
 function normalizeAddress(value: string): string {
@@ -609,6 +661,7 @@ export async function handlePaymentRailNodeHttpRequest(request: {
 
     state.walletConfirmations.set(confirmation.actionRef, confirmation);
     state.walletTxHashes.set(confirmation.txHash.toLowerCase(), confirmation.actionRef);
+    persistWalletConfirmations(state);
 
     return stringifyResponse(200, {
       ok: true,
@@ -790,6 +843,7 @@ async function main(): Promise<void> {
     process.env.PAYMENT_RAIL_VERIFY_ONCHAIN === "true" ||
     process.env.PAYMENT_RAIL_VERIFY_ONCHAIN === "1";
   const rpcUrl = process.env.PAYMENT_RAIL_RPC_URL;
+  const walletConfirmationsPath = process.env.PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH;
   if (verifyOnchain && !rpcUrl) {
     throw new Error("PAYMENT_RAIL_RPC_URL is required when PAYMENT_RAIL_VERIFY_ONCHAIN is enabled");
   }
@@ -798,6 +852,7 @@ async function main(): Promise<void> {
     port,
     failurePlan: {
       requireWalletConfirmation,
+      walletConfirmationsPath,
       walletVerifier: verifyOnchain && rpcUrl
         ? new JsonRpcWalletPaymentVerifier({ rpcUrl })
         : undefined,
@@ -816,6 +871,7 @@ async function main(): Promise<void> {
         port: server.port,
         url: server.url,
         requireWalletConfirmation,
+        walletConfirmationsPath: walletConfirmationsPath ?? null,
         verifyOnchain,
         rpcUrl: verifyOnchain ? rpcUrl : null,
         routes: PAYMENT_RAIL_SERVICE_ROUTES,

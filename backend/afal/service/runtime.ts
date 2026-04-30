@@ -273,6 +273,10 @@ function isUnknownIntentError(error: unknown): boolean {
   );
 }
 
+function isInactiveReservationError(error: unknown): boolean {
+  return error instanceof Error && error.message.includes("is not active");
+}
+
 function selectLatestCapabilityResponse(
   entries: CapabilityResponse[]
 ): CapabilityResponse | undefined {
@@ -888,6 +892,66 @@ export class AfalRuntimeService
     const fixtures = getPaymentFixtures(args.pendingExecution.actionRef);
     const intent = await this.ports.intents.getPaymentIntent(args.pendingExecution.actionRef);
 
+    if (intent.status === "settled" && intent.settlementRef && intent.receiptRef) {
+      assertKnown(
+        canGetSettlement(this.ports.paymentSettlement),
+        "Payment settlement readback is not configured"
+      );
+      const settlement = await this.ports.paymentSettlement.getSettlement(intent.settlementRef);
+      const receipts = canListReceipts(this.ports.receipts)
+        ? (await this.ports.receipts.listReceipts()).filter((receipt) => receipt.actionRef === intent.intentId)
+        : [];
+      const paymentReceipt = receipts.find((receipt) => receipt.receiptId === intent.receiptRef);
+      assertKnown(
+        paymentReceipt,
+        `Payment receipt "${intent.receiptRef}" not found for settled intent "${intent.intentId}"`
+      );
+      const approvalReceipt = receipts.find((receipt) => receipt.receiptType === "approval");
+      const capabilityResponses = canListCapabilityResponses(this.ports.capabilityResponses)
+        ? (
+            await this.ports.capabilityResponses.listCapabilityResponses()
+          ).filter((response) => response.actionRef === intent.intentId)
+        : [];
+      const capabilityResponse =
+        selectLatestCapabilityResponse(capabilityResponses) ??
+        await this.ports.capabilityResponses.createCapabilityResponse({
+          capability: "resumeApprovedAction",
+          requestRef: args.requestRef,
+          actionRef: intent.intentId,
+          result: args.finalDecision.result,
+          decisionRef: args.finalDecision.decisionId,
+          challengeRef: args.challenge.challengeId,
+          settlementRef: settlement.settlementId,
+          receiptRef: paymentReceipt.receiptId,
+          message: "Payment intent was already settled; returning existing receipt evidence",
+        });
+      const updatedBudget = await this.ports.ats.getMonetaryBudgetState(
+        args.pendingExecution.monetaryBudgetRef ?? fixtures.monetaryBudgetInitial.budgetId
+      );
+      await this.ports.intents.markPendingExecution({
+        approvalSessionRef: args.approvalSession.approvalSessionId,
+        status: "resumed",
+        updatedAt: settlement.settledAt ?? settlement.executedAt,
+        finalDecisionRef: args.finalDecision.decisionId,
+        settlementRef: settlement.settlementId,
+        receiptRef: paymentReceipt.receiptId,
+      });
+
+      return {
+        intent,
+        initialDecision: args.initialDecision,
+        challenge: args.challenge,
+        approvalContext: args.approvalContext,
+        approvalResult: args.approvalResult,
+        finalDecision: args.finalDecision,
+        settlement,
+        approvalReceipt,
+        paymentReceipt,
+        capabilityResponse,
+        updatedBudget,
+      };
+    }
+
     if (args.finalDecision.result !== "approved") {
       if (args.pendingExecution.reservationRef && canReleaseMonetaryReservation(this.ports.ats)) {
         await this.ports.ats.releaseMonetaryReservation({
@@ -980,17 +1044,27 @@ export class AfalRuntimeService
       receiptRef: paymentReceipt.receiptId,
       message: fixtures.capabilityResponse.message,
     });
-    const updatedBudget =
-      args.pendingExecution.reservationRef && canSettleMonetaryReservation(this.ports.ats)
-        ? (
-            await this.ports.ats.settleMonetaryReservation({
-              reservationRef: args.pendingExecution.reservationRef,
-              settledAt: settlement.settledAt ?? settlement.executedAt,
-            })
-          ).budget
-        : await this.ports.ats.getMonetaryBudgetState(
-            args.pendingExecution.monetaryBudgetRef ?? fixtures.monetaryBudgetInitial.budgetId
-          );
+    let updatedBudget;
+    try {
+      updatedBudget =
+        args.pendingExecution.reservationRef && canSettleMonetaryReservation(this.ports.ats)
+          ? (
+              await this.ports.ats.settleMonetaryReservation({
+                reservationRef: args.pendingExecution.reservationRef,
+                settledAt: settlement.settledAt ?? settlement.executedAt,
+              })
+            ).budget
+          : await this.ports.ats.getMonetaryBudgetState(
+              args.pendingExecution.monetaryBudgetRef ?? fixtures.monetaryBudgetInitial.budgetId
+            );
+    } catch (error) {
+      if (!isInactiveReservationError(error)) {
+        throw error;
+      }
+      updatedBudget = await this.ports.ats.getMonetaryBudgetState(
+        args.pendingExecution.monetaryBudgetRef ?? fixtures.monetaryBudgetInitial.budgetId
+      );
+    }
     await this.ports.intents.markPendingExecution({
       approvalSessionRef: args.approvalSession.approvalSessionId,
       status: "resumed",

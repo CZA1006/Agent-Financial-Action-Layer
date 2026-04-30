@@ -16,6 +16,7 @@ Start the payment rail service:
 PAYMENT_RAIL_TOKEN=payment-rail-secret \
 PAYMENT_RAIL_SIGNING_KEY=payment-rail-signing-secret \
 PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION=true \
+PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH=/tmp/afal-wallet-confirmations.json \
 npm run serve:payment-rail -- 0.0.0.0 3412
 ```
 
@@ -43,6 +44,8 @@ token: 0x036CbD53842c5426634e7929541eC2318f3dCF7e
 
 Use a testnet-funded MetaMask account only. The demo sends an ERC-20 transfer, registers the returned `txHash` with `/wallet-payments/confirm`, and then AFAL can settle the matching payment intent through `/payments/execute`.
 
+Set `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH` in staging. Without it, confirmations are in-memory and a payment rail restart can forget a wallet-confirmed transaction before AFAL resumes the action.
+
 The page also accepts query parameters so a payer agent can hand the user a prefilled approval URL:
 
 ```text
@@ -69,6 +72,7 @@ For a stronger staging run, enable server-side receipt verification:
 PAYMENT_RAIL_TOKEN=payment-rail-secret \
 PAYMENT_RAIL_SIGNING_KEY=payment-rail-signing-secret \
 PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION=true \
+PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH=/tmp/afal-wallet-confirmations.json \
 PAYMENT_RAIL_VERIFY_ONCHAIN=true \
 PAYMENT_RAIL_RPC_URL=https://<base-sepolia-rpc-provider> \
 npm run serve:payment-rail -- 0.0.0.0 3412
@@ -91,5 +95,6 @@ When enabled, `/wallet-payments/confirm` rejects the confirmation unless the RPC
 This is a testnet bridge from AFAL to a human-confirmed wallet transaction. It is not yet a production payment rail:
 
 - Server-side receipt verification is available when `PAYMENT_RAIL_VERIFY_ONCHAIN=true`, but it currently targets the Base Sepolia USDC demo shape and does not yet implement a configurable asset registry or finality threshold.
+- Wallet confirmations persist across restarts only when `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH` is configured.
 - MetaMask approval is human-in-the-loop. A fully autonomous agent wallet requires a separate custody or smart-account boundary.
 - The seeded demo runtime uses `payint-0001`, so reset the SQLite demo data directory before recording repeated full-settlement runs.

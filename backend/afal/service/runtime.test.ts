@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import { paymentFlowFixtures, resourceFlowFixtures } from "../../../sdk/fixtures";
+import type { AtsAdminPort } from "../../ats";
 import { InMemoryAfalAdminAuditStore } from "../admin-audit";
 import { createMockAfalPorts } from "../mock";
 import {
@@ -277,6 +278,54 @@ test("AFAL runtime service carries external wallet settlement evidence into paym
     resumedExecution.paymentReceipt.evidence.txHash,
     "0xbb053d513054da80442c04a5b63277d269a3a108633141bf2ca5f7a3d9fc7170"
   );
+});
+
+test("AFAL runtime service returns settled payment evidence when reservation settlement is already inactive", async () => {
+  const ports = createMockAfalPorts();
+  const ats = ports.ats as typeof ports.ats & Pick<AtsAdminPort, "settleMonetaryReservation">;
+  const settleMonetaryReservation = ats.settleMonetaryReservation.bind(ats);
+  ats.settleMonetaryReservation = async (args) => {
+    if (args.reservationRef === `resv-${paymentFlowFixtures.paymentIntentCreated.intentId}`) {
+      throw new Error(`Monetary reservation "${args.reservationRef}" is not active`);
+    }
+    return settleMonetaryReservation(args);
+  };
+  const service = new AfalRuntimeService({ ports });
+  const paymentPending = await service.requestPaymentApproval({
+    capability: "requestPaymentApproval",
+    requestRef: "req-runtime-inactive-reservation-payment-approval-001",
+    input: {
+      requestRef: paymentFlowFixtures.capabilityResponse.requestRef,
+      intent: paymentFlowFixtures.paymentIntentCreated,
+      monetaryBudgetRef: paymentFlowFixtures.monetaryBudgetInitial.budgetId,
+    },
+  });
+
+  await service.applyApprovalResult({
+    capability: "applyApprovalResult",
+    requestRef: "req-runtime-inactive-reservation-payment-apply-001",
+    input: {
+      approvalSessionRef: paymentPending.approvalSession.approvalSessionId,
+      result: paymentFlowFixtures.approvalResult,
+    },
+  });
+  const resumedExecution = await service.resumeApprovedAction({
+    capability: "resumeApprovedAction",
+    requestRef: "req-runtime-inactive-reservation-payment-resume-001",
+    input: {
+      approvalSessionRef: paymentPending.approvalSession.approvalSessionId,
+    },
+  });
+  const pendingExecution = await service.ports.intents.getPendingExecution(
+    paymentPending.approvalSession.approvalSessionId
+  );
+
+  if (!("paymentReceipt" in resumedExecution)) {
+    assert.fail("expected resumeApprovedAction to return a settled payment flow");
+  }
+  assert.equal(resumedExecution.intent.status, "settled");
+  assert.equal(resumedExecution.paymentReceipt.receiptId, paymentFlowFixtures.paymentReceipt.receiptId);
+  assert.equal(pendingExecution.status, "resumed");
 });
 
 test("AFAL runtime service propagates rejected approval results into action status and releases reservations", async () => {
