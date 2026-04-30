@@ -49,6 +49,8 @@ Phase 2 target stage:
 
 At the end of Phase 2, a developer should be able to build a simple Claude Code or OpenRouter-backed agent and make it pay through AFAL without copying monorepo harness code.
 
+Current status: the Claude Code path has reached first acceptance through MCP. A user issued a plain payment prompt, Claude Code called `afal_pay_and_gate`, the VM agent-wallet signer executed a Base Sepolia USDC transfer, and AFAL provider gate returned `deliverService=true`.
+
 The ideal user experience is:
 
 ```ts
@@ -77,6 +79,7 @@ The agent should not need to know how to manually create AFAL auth headers, call
 
 - TypeScript client SDK for AFAL public routes.
 - Claude Code style tool wrapper around the SDK.
+- MCP server exposing AFAL payment tools to Claude Code / MCP-capable agent runtimes.
 - OpenRouter simple agent example using the SDK.
 - Payment rail adapter interface.
 - Server-side onchain verification for wallet-submitted `txHash` values, plus a wallet-confirmation readback that lets agent demos show `verification.ok`, verified chain ID, log index, and tx hash.
@@ -135,6 +138,8 @@ Current implementation:
 - `samples/agent-payment-tool/openrouter-agent.ts` wraps the tool in a minimal LLM agent loop and rejects non-AFAL payment tool choices.
 - `samples/agent-payment-tool/approve-resume-tool.ts` exposes the trusted-surface approve/resume step as `npm run tool:afal-approve-resume`.
 - `samples/agent-payment-tool/provider-receipt-gate.ts` gives provider/payee agents a strict AFAL receipt gate before service delivery.
+- `samples/afal-mcp-server` exposes `afal_pay_and_gate`, `afal_request_payment`, `afal_approve_resume`, and `afal_provider_gate` as MCP tools.
+- `afal-payment-mcp` is the preview binary entrypoint for MCP distribution.
 
 ### 2. Agent Examples
 
@@ -173,6 +178,18 @@ Claude Code-style tool-only acceptance, captured on 2026-04-30:
 
 This proves the shell/tool contract needed by Claude Code or another local agent runtime. Real OpenRouter LLM selection is still pending because the available OpenRouter account returned a 402 insufficient-credits response.
 
+Claude Code MCP acceptance, captured on 2026-05-01:
+
+- Claude Code MCP server: `afal-payment`
+- MCP tool called: `afal_pay_and_gate`
+- user prompt: `Pay 0.01 USDC to the fraud detection payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94, then only deliver the service if AFAL provider gate passes.`
+- result: `settled`
+- provider gate: passed
+- `deliverService`: `true`
+- tx hash: `0x9e848b428fe6476bcacbb0ce1c2edd0aa36bf6e390b55db210a70b95ef8dde79`
+
+This proves a real agent runtime can discover AFAL as a tool and route payment through AFAL without the user manually running shell commands.
+
 ### 3. Payment Rail Adapter Interface
 
 Goal:
@@ -196,6 +213,7 @@ Initial adapters:
 
 - `mock`
 - `wallet-confirmed-base-sepolia`
+- `agent-wallet-base-sepolia-usdc`
 - `x402-coinbase-pilot`
 
 Acceptance:
@@ -279,6 +297,17 @@ Concrete demo path:
 8. AFAL issues receipt.
 9. Payee agent reads AFAL and releases service only after receipt verification.
 
+Current Claude Code MCP demo path:
+
+1. User prompts Claude Code with a payment request.
+2. Claude Code discovers the `afal-payment` MCP server.
+3. Claude Code calls `afal_pay_and_gate`.
+4. AFAL authorizes and reserves the action.
+5. AFAL approval/resume triggers the payment rail agent-wallet signer.
+6. The signer broadcasts Base Sepolia USDC under configured max-amount and payee allowlist policy.
+7. AFAL records settlement and receipt.
+8. Provider gate returns `deliverService=true`.
+
 ## Phase 2 Exit Criteria
 
 Phase 2 is complete when:
@@ -293,8 +322,9 @@ Phase 2 is complete when:
 
 ## Immediate Next Steps
 
-1. Use the `--transcript` demo mode for presentation recordings and external walkthroughs, including the payment rail wallet-confirmation readback and onchain verification evidence.
-2. Start `@afal/client` or equivalent TypeScript SDK inside this repo.
-3. Build one minimal OpenRouter agent example on top of the SDK.
-4. Design the x402/Coinbase pilot adapter and decide the first paid resource/API scenario.
-5. Move staging from raw IP/HTTP to a stable HTTPS endpoint.
+1. Cut an AFAL payment MCP preview release with `afal-payment-mcp`, clear Claude Code setup docs, and no live secrets.
+2. Replace deterministic demo refs such as `payint-0001` with unique action refs for repeated live testing.
+3. Reduce the MCP package surface so external testers can install without cloning the full repo.
+4. Build one minimal OpenRouter agent example on top of the MCP/SDK boundary after account credits are available.
+5. Design the x402/Coinbase pilot adapter and decide the first paid resource/API scenario.
+6. Move staging from raw IP/HTTP to a stable HTTPS endpoint.

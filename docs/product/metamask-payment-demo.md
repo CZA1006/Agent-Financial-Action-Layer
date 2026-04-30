@@ -18,6 +18,8 @@ Current validated staging result:
 - payment rail verified the wallet `txHash` through Base Sepolia JSON-RPC on staging
 - provider receipt gate returned `deliverService: true`
 - payment rail persisted wallet confirmations across service restarts via `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH`
+- payment rail executed autonomous agent-wallet Base Sepolia USDC transfers through `PAYMENT_RAIL_AGENT_WALLET_COMMAND`
+- Claude Code called the AFAL MCP tool `afal_pay_and_gate` from a natural-language payment prompt and reached `deliverService: true`
 
 Latest verified staging transaction:
 
@@ -38,6 +40,18 @@ verifiedLogIndex: 0
 providerGate: deliverService=true
 ```
 
+Latest Claude Code MCP agent-wallet acceptance, captured on 2026-05-01:
+
+```text
+prompt: Pay 0.01 USDC to the fraud detection payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94, then only deliver the service if AFAL provider gate passes.
+MCP server: afal-payment
+MCP tool: afal_pay_and_gate
+paymentMode: agent-wallet
+finalIntentStatus: settled
+providerGate: deliverService=true
+txHash: 0x9e848b428fe6476bcacbb0ce1c2edd0aa36bf6e390b55db210a70b95ef8dde79
+```
+
 ## Current Demo Boundary
 
 The demo proves:
@@ -52,6 +66,8 @@ The demo proves:
 The demo still does not prove production-grade custody. MetaMask remains the signing surface. The staging payment rail now verifies chain, token, sender, recipient, amount, transaction success, and replay protection through `PAYMENT_RAIL_VERIFY_ONCHAIN=true`. Production still needs configurable asset/rail policy, finality thresholds, production RPC reliability, key/custody design, and stronger operator controls.
 
 The important product point is that AFAL is not "the user manually paid in a browser." AFAL is the layer that constrains, authorizes, records, and exposes the agent payment action. MetaMask is only the current safe signing surface for the testnet rail.
+
+For Claude Code / MCP testing, MetaMask is no longer required in the happy path. The MCP tool calls `pay-and-gate` in `agent-wallet` mode, so the payment rail invokes the configured signer behind AFAL policy. MetaMask remains useful as the browser-confirmed demo rail and for visual presentations.
 
 ## Prerequisites
 
@@ -190,6 +206,34 @@ txHash: 0x...
 ```
 
 For the OpenRouter/Claude-style Phase 2 path, use `npm run demo:openrouter-agent-payment-tool`, then complete the wallet URL, run `npm run tool:afal-approve-resume`, and finally run `npm run tool:afal-provider-gate`. The provider may deliver only when the gate returns `deliverService: true`.
+
+For the Claude Code MCP path, register the MCP server and let Claude call `afal_pay_and_gate` directly:
+
+```bash
+claude mcp add-json afal-payment '{
+  "type": "stdio",
+  "command": "npm",
+  "args": [
+    "--prefix",
+    "/path/to/agent-financial-action-layer",
+    "run",
+    "mcp:afal-payment"
+  ],
+  "env": {
+    "AFAL_BASE_URL": "http://34.44.95.42:3213",
+    "AFAL_CLIENT_ID": "client-metamask-demo-001",
+    "AFAL_SIGNING_KEY": "<current signing key>",
+    "AFAL_WALLET_DEMO_URL": "http://34.44.95.42:3412/wallet-demo",
+    "AFAL_PAYMENT_MODE": "agent-wallet"
+  }
+}'
+```
+
+Then prompt Claude Code:
+
+```text
+Pay 0.01 USDC to the fraud detection payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94, then only deliver the service if AFAL provider gate passes.
+```
 
 Detailed steps:
 

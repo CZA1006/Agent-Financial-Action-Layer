@@ -81,6 +81,8 @@ AFAL has already completed the following foundation work:
 - a standalone external-agent pilot kit now exists for repo-external validation
 - a live GCP staging sandbox has passed external engineer Round 003 from an extracted handoff archive
 - a prompt-driven MetaMask agent payment demo now connects user prompt, payer agent, AFAL authorization, Base Sepolia USDC transfer, trusted-surface resume, and payee-agent readback
+- the payment rail now supports an autonomous Base Sepolia USDC agent-wallet signer behind AFAL approval and rail-side guardrails
+- Claude Code can now discover AFAL through an MCP server and complete `afal_pay_and_gate` from a plain payment prompt, ending with `deliverService=true`
 
 What does **not** exist yet:
 
@@ -90,7 +92,7 @@ What does **not** exist yet:
 - full trusted-surface approval handling across independently deployed services
 - production stablecoin settlement integration
 - production-grade onchain finality policy and configurable asset registry for wallet-confirmed rails
-- autonomous custody, MPC, or smart-account signing
+- production autonomous custody, MPC, or smart-account signing
 - real provider billing / usage confirmation integration
 - real on-chain interfaces beyond documentation
 
@@ -131,7 +133,7 @@ Those would add surface area before the consumer boundary has been validated.
 
 The immediate next deliverable is:
 
-- using the verified wallet-confirmed payment rail in presentation-friendly transcript mode, then starting the SDK boundary
+- cutting an AFAL payment MCP preview release that external testers can install/configure without relying on monorepo internals
 
 The already-passed repo-external pilot used:
 
@@ -147,9 +149,9 @@ It should not rely on:
 
 If that pilot succeeds, the next implementation unit should be:
 
-- a consumer-facing TypeScript SDK / package boundary for AFAL public routes
+- a smaller consumer-facing TypeScript SDK / MCP package boundary for AFAL public routes
 
-That condition is now satisfied for the first pass. The SDK boundary should move from draft to implementation after the payment rail verification gap is closed.
+That condition is now satisfied for the first pass. The repo now has `sdk/client`, `samples/agent-payment-tool`, `samples/afal-mcp-server`, and the `afal-payment-mcp` binary entrypoint. The next packaging step is to cut a preview GitHub release, then reduce the package surface so external testers can install only the MCP/SDK layer.
 
 ---
 

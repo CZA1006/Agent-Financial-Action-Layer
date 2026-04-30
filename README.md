@@ -613,6 +613,26 @@ For a Claude Code-ready workspace, use:
 
 The Claude Code sample gives the operating rule we need for AI payment infra: payment prompts must call AFAL first, no direct wallet/signer/provider payment is allowed, and paid service can be delivered only after `providerGate.deliverService === true`. The MCP server is the portable integration path: Claude Code or another MCP-capable agent can discover `afal_pay_and_gate` as a tool instead of relying on local prompt instructions.
 
+Latest Claude Code MCP acceptance, captured on 2026-05-01:
+
+```text
+prompt -> Claude Code -> afal-payment MCP -> afal_pay_and_gate
+status: settled
+providerGate: passed
+deliverService: true
+txHash: 0x9e848b428fe6476bcacbb0ce1c2edd0aa36bf6e390b55db210a70b95ef8dde79
+```
+
+The package now exposes a binary entrypoint for the MCP server:
+
+```bash
+afal-payment-mcp
+```
+
+Preview release/testing instructions:
+
+- [docs/product/afal-payment-mcp-release-quickstart.md](./docs/product/afal-payment-mcp-release-quickstart.md)
+
 ## What Exists Today
 
 | Area | Current State |
@@ -658,6 +678,7 @@ Already real in local development terms:
 - autonomous Base Sepolia USDC signer behind the payment rail for agent-wallet flows
 - Claude Code-ready payment-agent sample that forces payment prompts through AFAL and gates service delivery on `deliverService: true`
 - MCP payment server exposing AFAL payment and provider-gate tools to Claude Code-style agent runtimes
+- package binary entrypoint `afal-payment-mcp` for preview MCP distribution
 
 Still intentionally not production-real:
 - production database backend
