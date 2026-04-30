@@ -570,6 +570,16 @@ npm run tool:afal-approve-resume -- \
 
 After that, rerun `tool:afal-provider-gate`. A successful path ends with `deliverService: true`.
 
+For Claude Code or custom agent runtimes that want one registered command, use the unified wrapper:
+
+```bash
+npm run tool:afal-agent -- request-payment --message "Pay 0.01 USDC to payee agent at 0x..."
+npm run tool:afal-agent -- approve-resume --approval-session-ref aps-chall-0001
+npm run tool:afal-agent -- provider-gate --action-ref payint-0001 --expected-tx-hash <txHash>
+```
+
+The wrapper preserves the same contract: payer agents request payment, trusted surfaces approve/resume, and providers deliver only after `provider-gate` returns `deliverService: true`.
+
 ## What Exists Today
 
 | Area | Current State |

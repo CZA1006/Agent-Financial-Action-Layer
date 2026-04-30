@@ -65,6 +65,28 @@ Agent runtime integration contract:
 - Provider/payee agents must call `tool:afal-provider-gate` or equivalent AFAL receipt readback before delivering service.
 - The only delivery-allowed terminal condition in this sample is `deliverService: true`.
 
+For agent runtimes that prefer a single command, expose `npm run tool:afal-agent` and pass one of three subcommands:
+
+```bash
+npm run tool:afal-agent -- request-payment \
+  --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+
+npm run tool:afal-agent -- approve-resume \
+  --approval-session-ref aps-chall-0001 \
+  --comment "Approved after wallet-confirmed Base Sepolia USDC transfer"
+
+npm run tool:afal-agent -- provider-gate \
+  --action-ref payint-0001 \
+  --expected-payee-address 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 \
+  --expected-amount 0.01 \
+  --expected-asset USDC \
+  --expected-chain base-sepolia \
+  --expected-tx-hash <wallet-confirmed-txHash>
+```
+
+The unified command returns a wrapper object with `tool: "afal.agent_runtime_tool"`, the selected `command`, and the underlying AFAL tool result. That shape is easier to register as one Claude Code/custom-agent command while preserving explicit payer, trusted-surface, and provider roles.
+
 ## Provider Receipt Gate
 
 The provider/payee side must not deliver paid service just because a wallet transfer happened. It must read AFAL and require a settled action plus final receipt evidence:
