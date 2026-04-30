@@ -106,6 +106,24 @@ PAYMENT_RAIL_RPC_URL=https://<base-sepolia-rpc-provider> \
 npm run serve:payment-rail -- 0.0.0.0 3412
 ```
 
+This repo includes a constrained Base Sepolia USDC signer command for testnet-only runs:
+
+```sh
+AGENT_WALLET_PRIVATE_KEY=<base-sepolia-testnet-private-key> \
+AGENT_WALLET_RPC_URL=https://sepolia.base.org \
+AGENT_WALLET_MAX_USDC_AMOUNT=0.01 \
+AGENT_WALLET_ALLOWED_PAYEE_ADDRESSES=0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 \
+npm --silent run signer:base-sepolia-usdc
+```
+
+When used from the payment rail service, set:
+
+```sh
+PAYMENT_RAIL_AGENT_WALLET_COMMAND="npm --silent run signer:base-sepolia-usdc"
+```
+
+The signer is deliberately narrow: it only accepts an approved AFAL decision, `USDC`, `base-sepolia`, a positive amount not exceeding `AGENT_WALLET_MAX_USDC_AMOUNT`, and an optional allowlisted payee address.
+
 The command receives this JSON on stdin:
 
 ```json
