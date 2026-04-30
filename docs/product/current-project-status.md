@@ -39,6 +39,7 @@ Current staging baseline:
 - payment rail service: `afal-payment-rail.service`
 - MetaMask demo data dir: `/srv/afal/metamask-demo-001/sqlite-data`
 - payment rail verification: `PAYMENT_RAIL_VERIFY_ONCHAIN=true`
+- payment rail wallet-confirmation persistence: `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH=/srv/afal/metamask-demo-001/payment-rail/wallet-confirmations.json`
 - Base Sepolia RPC: `https://sepolia.base.org`
 
 ### Prompt-Driven MetaMask Payment Demo
@@ -64,10 +65,12 @@ Validated output includes:
 - final intent status: `settled`
 - settlement ref: `stl-wallet-payint-0001`
 - receipt ref: `rcpt-pay-0001`
-- latest clean verified staging tx hash: `0xa01b5bc37b7591f9563bb73adf541e466a957798dcd8342e9c11ada81f73a0bf`
+- latest clean verified staging tx hash: `0xdcf0650d64117d08f8d1ca60acf39b470c3a52aabe89d7c30280b2c30e92343a`
 - payment rail readback: `wallet confirmation ok`
 - onchain verification readback: `ok`, `chainId=84532`, `logIndex=0`
 - dynamic approval context matching the actual prompt amount, chain, payee DID, settlement address, and purpose
+- trusted-surface approve/resume readback: `finalIntentStatus=settled`, `settlementRef=stl-wallet-payint-0001`, `receiptRef=rcpt-pay-0001`
+- provider gate readback: `deliverService=true`, with all settlement, receipt, payee, amount, asset, chain, and txHash checks passing
 
 ## What This Proves
 
@@ -104,14 +107,16 @@ Phase 2 now has the first SDK/tool boundary:
 - `npm run demo:openrouter-agent-payment-tool` wraps that tool in a minimal LLM agent loop; the LLM must choose `afal_request_payment` before any paid downstream service can proceed.
 - `npm run tool:afal-approve-resume` provides the trusted-surface approval/resume step that turns a wallet-confirmed pending action into AFAL settlement and receipt state.
 - `npm run tool:afal-provider-gate` gives the payee/provider side a strict receipt gate; it rejects pending actions and stale receipt artifacts unless AFAL reports settled final evidence.
+- The staging payment rail now persists wallet confirmations across service restarts when `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH` is configured.
 
 ## Next Engineering Priorities
 
 1. Wire the OpenRouter/Claude Code sample into a single full transcript command for request -> wallet confirmation -> approval/resume -> provider gate.
-2. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
+2. Run the OpenRouter sample with a real `OPENROUTER_API_KEY` and confirm the LLM consistently chooses `afal_request_payment`.
 3. Replace seeded/static action refs in live demos with unique request/action refs to avoid stale receipt confusion.
-4. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.
-5. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
+4. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
+5. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.
+6. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
 
 Phase 2 plan:
 

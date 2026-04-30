@@ -16,11 +16,26 @@ Current validated staging result:
 - AFAL issued settlement `stl-wallet-payint-0001` and receipt `rcpt-pay-0001`
 - payee agent read AFAL and verified the settled intent, settlement record, receipt, amount, chain, address, and `txHash`
 - payment rail verified the wallet `txHash` through Base Sepolia JSON-RPC on staging
+- provider receipt gate returned `deliverService: true`
+- payment rail persisted wallet confirmations across service restarts via `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH`
 
 Latest verified staging transaction:
 
 ```text
-0xa01b5bc37b7591f9563bb73adf541e466a957798dcd8342e9c11ada81f73a0bf
+0xdcf0650d64117d08f8d1ca60acf39b470c3a52aabe89d7c30280b2c30e92343a
+```
+
+Latest clean Phase 2 acceptance evidence, captured on 2026-04-30:
+
+```text
+approvalSessionRef: aps-chall-0001
+finalIntentStatus: settled
+settlementRef: stl-wallet-payint-0001
+receiptRef: rcpt-pay-0001
+onchainVerification: ok
+verifiedChainId: 84532
+verifiedLogIndex: 0
+providerGate: deliverService=true
 ```
 
 ## Current Demo Boundary
@@ -62,6 +77,7 @@ Start the wallet-confirmed payment rail:
 PAYMENT_RAIL_TOKEN=payment-rail-secret \
 PAYMENT_RAIL_SIGNING_KEY=payment-rail-signing-secret \
 PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION=true \
+PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH=/tmp/afal-wallet-confirmations.json \
 npm run serve:payment-rail -- 0.0.0.0 3412
 ```
 
@@ -127,6 +143,7 @@ If you want this staging run to reject spoofed wallet confirmations, configure `
 ```ini
 Environment=PAYMENT_RAIL_VERIFY_ONCHAIN=true
 Environment=PAYMENT_RAIL_RPC_URL=https://<base-sepolia-rpc-provider>
+Environment=PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH=/srv/afal/metamask-demo-001/payment-rail/wallet-confirmations.json
 ```
 
 Then run `sudo systemctl daemon-reload && sudo systemctl restart afal-payment-rail`.
@@ -171,6 +188,8 @@ verifiedChainId: 84532
 verifiedLogIndex: 0
 txHash: 0x...
 ```
+
+For the OpenRouter/Claude-style Phase 2 path, use `npm run demo:openrouter-agent-payment-tool`, then complete the wallet URL, run `npm run tool:afal-approve-resume`, and finally run `npm run tool:afal-provider-gate`. The provider may deliver only when the gate returns `deliverService: true`.
 
 Detailed steps:
 
