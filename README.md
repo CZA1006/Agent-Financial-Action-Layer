@@ -605,6 +605,13 @@ npm run tool:afal-agent -- pay-and-gate \
 
 In `agent-wallet` mode the command does not wait for a browser wallet. It requests AFAL approval, resumes the action, lets the payment rail signer broadcast the USDC transfer, and then runs provider-gate against the returned `txHash`.
 
+For a Claude Code-ready workspace, use:
+
+- [samples/claude-code-agent/README.md](./samples/claude-code-agent/README.md)
+- [samples/claude-code-agent/CLAUDE.md](./samples/claude-code-agent/CLAUDE.md)
+
+That sample gives Claude Code the operating rule we need for AI payment infra: payment prompts must call AFAL first, no direct wallet/signer/provider payment is allowed, and paid service can be delivered only after `providerGate.deliverService === true`.
+
 ## What Exists Today
 
 | Area | Current State |
@@ -617,7 +624,7 @@ In `agent-wallet` mode the command does not wait for a browser wallet. It reques
 | HTTP surface | framework-free router, durable HTTP wiring, SQLite HTTP wiring, thin Node server shells |
 | External sandbox | provisioned client registry, signed external-client auth, callback registration, standalone handoff package, public release-safe package |
 | Payment rail | mock payment rail, wallet-confirmed Base Sepolia MetaMask rail, optional JSON-RPC receipt verification, prompt-driven agent payment demo |
-| SDK / agent tool | lightweight signed AFAL TypeScript client, payment/resource request wrappers, action readback, payment receipt polling, prompt-payment helper, Claude/OpenRouter-style CLI tool |
+| SDK / agent tool | lightweight signed AFAL TypeScript client, payment/resource request wrappers, action readback, payment receipt polling, prompt-payment helper, Claude/OpenRouter-style CLI tool, Claude Code payment-agent workspace |
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
 
@@ -647,12 +654,14 @@ Already real in local development terms:
 - AFAL settlement and receipt finalization against a wallet-provided `txHash`
 - staging-validated payment-rail JSON-RPC receipt verification for Base Sepolia USDC `Transfer` logs and replay protection
 - payee-agent readback of settled status, settlement record, and payment receipt
+- autonomous Base Sepolia USDC signer behind the payment rail for agent-wallet flows
+- Claude Code-ready payment-agent sample that forces payment prompts through AFAL and gates service delivery on `deliverService: true`
 
 Still intentionally not production-real:
 - production database backend
 - production stablecoin settlement integration
 - production-grade asset registry, chain finality policy, and RPC provider strategy
-- autonomous custody, MPC, or smart-account signing
+- production autonomous custody, MPC, or smart-account signing
 - real provider usage and billing integration
 - real trusted-surface callback handling across independent deployed services beyond the current local stub
 - real chain contracts and anchoring

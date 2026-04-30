@@ -2,6 +2,11 @@
 
 This directory contains the first external-agent pilot kit samples.
 
+For a Claude Code payment-agent workspace that forces all payment prompts through AFAL before service delivery, use:
+
+- [claude-code-agent/README.md](./claude-code-agent/README.md)
+- [claude-code-agent/CLAUDE.md](./claude-code-agent/CLAUDE.md)
+
 For a repo-external / extractable consumer kit, use:
 
 - [standalone-external-agent-pilot/README.md](./standalone-external-agent-pilot/README.md)
