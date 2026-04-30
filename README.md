@@ -559,6 +559,17 @@ npm run tool:afal-provider-gate -- \
 
 The provider gate returns `deliverService: true` only if AFAL reports a settled payment with final receipt evidence. Pending approvals or stale receipt artifacts are rejected.
 
+To move a wallet-confirmed pending action into AFAL settlement, run the trusted-surface resume tool:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+npm run tool:afal-approve-resume -- \
+  --approval-session-ref aps-chall-0001 \
+  --comment "Approved after wallet-confirmed Base Sepolia USDC transfer"
+```
+
+After that, rerun `tool:afal-provider-gate`. A successful path ends with `deliverService: true`.
+
 ## What Exists Today
 
 | Area | Current State |
