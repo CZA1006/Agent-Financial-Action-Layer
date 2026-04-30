@@ -609,8 +609,9 @@ For a Claude Code-ready workspace, use:
 
 - [samples/claude-code-agent/README.md](./samples/claude-code-agent/README.md)
 - [samples/claude-code-agent/CLAUDE.md](./samples/claude-code-agent/CLAUDE.md)
+- [samples/afal-mcp-server/README.md](./samples/afal-mcp-server/README.md)
 
-That sample gives Claude Code the operating rule we need for AI payment infra: payment prompts must call AFAL first, no direct wallet/signer/provider payment is allowed, and paid service can be delivered only after `providerGate.deliverService === true`.
+The Claude Code sample gives the operating rule we need for AI payment infra: payment prompts must call AFAL first, no direct wallet/signer/provider payment is allowed, and paid service can be delivered only after `providerGate.deliverService === true`. The MCP server is the portable integration path: Claude Code or another MCP-capable agent can discover `afal_pay_and_gate` as a tool instead of relying on local prompt instructions.
 
 ## What Exists Today
 
@@ -624,7 +625,7 @@ That sample gives Claude Code the operating rule we need for AI payment infra: p
 | HTTP surface | framework-free router, durable HTTP wiring, SQLite HTTP wiring, thin Node server shells |
 | External sandbox | provisioned client registry, signed external-client auth, callback registration, standalone handoff package, public release-safe package |
 | Payment rail | mock payment rail, wallet-confirmed Base Sepolia MetaMask rail, optional JSON-RPC receipt verification, prompt-driven agent payment demo |
-| SDK / agent tool | lightweight signed AFAL TypeScript client, payment/resource request wrappers, action readback, payment receipt polling, prompt-payment helper, Claude/OpenRouter-style CLI tool, Claude Code payment-agent workspace |
+| SDK / agent tool | lightweight signed AFAL TypeScript client, payment/resource request wrappers, action readback, payment receipt polling, prompt-payment helper, Claude/OpenRouter-style CLI tool, Claude Code payment-agent workspace, AFAL MCP payment server |
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
 
@@ -656,6 +657,7 @@ Already real in local development terms:
 - payee-agent readback of settled status, settlement record, and payment receipt
 - autonomous Base Sepolia USDC signer behind the payment rail for agent-wallet flows
 - Claude Code-ready payment-agent sample that forces payment prompts through AFAL and gates service delivery on `deliverService: true`
+- MCP payment server exposing AFAL payment and provider-gate tools to Claude Code-style agent runtimes
 
 Still intentionally not production-real:
 - production database backend
