@@ -90,11 +90,54 @@ When enabled, `/wallet-payments/confirm` rejects the confirmation unless the RPC
 
 `/payments/execute` also checks that the accepted wallet confirmation matches the AFAL intent's `actionRef`, asset, amount, chain, and settlement address before returning settlement evidence.
 
+## Agent-Wallet Executor Mode
+
+For autonomous-agent payment tests, the payment rail can call a configured signer/executor during `/payments/execute` instead of waiting for a browser wallet confirmation:
+
+```sh
+PAYMENT_RAIL_TOKEN=payment-rail-secret \
+PAYMENT_RAIL_SIGNING_KEY=payment-rail-signing-secret \
+PAYMENT_RAIL_REQUIRE_WALLET_CONFIRMATION=true \
+PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH=/tmp/afal-wallet-confirmations.json \
+PAYMENT_RAIL_AGENT_WALLET_COMMAND=/path/to/agent-wallet-signer \
+PAYMENT_RAIL_AGENT_WALLET_COMMAND_TIMEOUT_MS=120000 \
+PAYMENT_RAIL_VERIFY_ONCHAIN=true \
+PAYMENT_RAIL_RPC_URL=https://<base-sepolia-rpc-provider> \
+npm run serve:payment-rail -- 0.0.0.0 3412
+```
+
+The command receives this JSON on stdin:
+
+```json
+{
+  "intent": { "...": "AFAL payment intent" },
+  "decision": { "...": "approved AFAL authorization decision" }
+}
+```
+
+It must print a wallet payment execution JSON object on stdout:
+
+```json
+{
+  "actionRef": "payint-0001",
+  "txHash": "0x...",
+  "from": "0x...",
+  "to": "0x...",
+  "tokenAddress": "0x036CbD53842c5426634e7929541eC2318f3dCF7e",
+  "amount": "0.01",
+  "asset": "USDC",
+  "chain": "base-sepolia",
+  "chainId": 84532
+}
+```
+
+The rail then applies the same AFAL intent matching, duplicate txHash protection, optional onchain verification, wallet-confirmation persistence, settlement, and receipt path used by the MetaMask demo. This is the boundary where a testnet private-key signer, smart-account session key, MPC wallet, or custody provider should be integrated.
+
 ## Demo Limitations
 
 This is a testnet bridge from AFAL to a human-confirmed wallet transaction. It is not yet a production payment rail:
 
 - Server-side receipt verification is available when `PAYMENT_RAIL_VERIFY_ONCHAIN=true`, but it currently targets the Base Sepolia USDC demo shape and does not yet implement a configurable asset registry or finality threshold.
 - Wallet confirmations persist across restarts only when `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH` is configured.
-- MetaMask approval is human-in-the-loop. A fully autonomous agent wallet requires a separate custody or smart-account boundary.
+- MetaMask approval is human-in-the-loop. Autonomous operation should use agent-wallet executor mode with a constrained testnet signer first, then a smart-account/session-key or custody boundary for production.
 - The seeded demo runtime uses `payint-0001`, so reset the SQLite demo data directory before recording repeated full-settlement runs.

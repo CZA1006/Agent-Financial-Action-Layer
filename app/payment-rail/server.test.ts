@@ -261,6 +261,71 @@ test("payment rail service records a wallet confirmation and settles with its tx
   assert.equal(parsed.data.destination.settlementAddress, WALLET_PAYEE);
 });
 
+test("payment rail service can execute through an agent wallet executor", async () => {
+  const state = createPaymentRailServiceState({
+    requireWalletConfirmation: true,
+    agentWalletExecutor: {
+      async execute(input) {
+        return {
+          actionRef: input.intent.intentId,
+          txHash: "0xagentwalletconfirmed",
+          from: WALLET_FROM,
+          to: WALLET_PAYEE,
+          tokenAddress: BASE_SEPOLIA_USDC,
+          amount: "0.01",
+          asset: "USDC",
+          chain: "base-sepolia",
+          chainId: BASE_SEPOLIA_CHAIN_ID,
+          confirmedAt: "2026-04-30T08:00:00Z",
+        };
+      },
+    },
+  });
+
+  const settled = await handlePaymentRailNodeHttpRequest(
+    {
+      method: "POST",
+      url: PAYMENT_RAIL_SERVICE_ROUTES.executePayment,
+      bodyText: JSON.stringify({
+        requestRef: "req-payment-rail-agent-wallet-payint-0001",
+        input: {
+          intent: walletPaymentIntent,
+          decision: paymentFlowFixtures.authorizationDecisionFinal,
+        },
+      }),
+    },
+    state
+  );
+  const parsed = JSON.parse(settled.bodyText) as {
+    ok: true;
+    data: {
+      txHash: string;
+      amount: string;
+      chain: string;
+      destination: {
+        settlementAddress?: string;
+      };
+    };
+  };
+
+  assert.equal(settled.statusCode, 200);
+  assert.equal(parsed.ok, true);
+  assert.equal(parsed.data.txHash, "0xagentwalletconfirmed");
+  assert.equal(parsed.data.amount, "0.01");
+  assert.equal(parsed.data.chain, "base-sepolia");
+  assert.equal(parsed.data.destination.settlementAddress, WALLET_PAYEE);
+
+  const readback = await handlePaymentRailNodeHttpRequest(
+    {
+      method: "GET",
+      url: `${PAYMENT_RAIL_SERVICE_ROUTES.getWalletPaymentConfirmation}/${walletPaymentIntent.intentId}`,
+    },
+    state
+  );
+  assert.equal(readback.statusCode, 200);
+  assert.match(readback.bodyText, /0xagentwalletconfirmed/);
+});
+
 test("payment rail service persists wallet confirmations across state reloads", async () => {
   const dir = mkdtempSync(join(tmpdir(), "afal-payment-rail-"));
   mkdirSync(dir, { recursive: true });

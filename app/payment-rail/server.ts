@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { spawn } from "node:child_process";
 import {
   existsSync,
   mkdirSync,
@@ -66,6 +67,7 @@ export interface PaymentRailServiceState {
   walletTxHashes: Map<string, string>;
   walletConfirmationsPath?: string;
   walletVerifier?: WalletPaymentVerifier;
+  agentWalletExecutor?: AgentWalletPaymentExecutor;
 }
 
 export interface PaymentRailFailurePlan {
@@ -73,6 +75,7 @@ export interface PaymentRailFailurePlan {
   requireWalletConfirmation?: boolean;
   walletConfirmationsPath?: string;
   walletVerifier?: WalletPaymentVerifier;
+  agentWalletExecutor?: AgentWalletPaymentExecutor;
 }
 
 export interface PaymentRailServiceAuth {
@@ -96,6 +99,85 @@ export interface WalletPaymentConfirmation {
   chainId: number;
   confirmedAt: string;
   verification?: WalletPaymentVerification;
+}
+
+export interface AgentWalletPaymentExecutionInput {
+  intent: PaymentIntent;
+  decision: AuthorizationDecision;
+}
+
+export interface AgentWalletPaymentExecutor {
+  execute(input: AgentWalletPaymentExecutionInput): Promise<
+    Omit<WalletPaymentConfirmation, "confirmedAt"> & { confirmedAt?: string }
+  >;
+}
+
+export class CommandAgentWalletPaymentExecutor implements AgentWalletPaymentExecutor {
+  constructor(
+    private readonly args: {
+      command: string;
+      timeoutMs?: number;
+    }
+  ) {}
+
+  async execute(input: AgentWalletPaymentExecutionInput): Promise<
+    Omit<WalletPaymentConfirmation, "confirmedAt"> & { confirmedAt?: string }
+  > {
+    const [executable, ...args] = this.args.command.split(" ").filter(Boolean);
+    if (!executable) {
+      throw new Error("agent wallet command must not be empty");
+    }
+
+    return new Promise((resolve, reject) => {
+      const child = spawn(executable, args, {
+        stdio: ["pipe", "pipe", "pipe"],
+      });
+      const timeout = setTimeout(() => {
+        child.kill("SIGTERM");
+        reject(new Error("agent wallet command timed out"));
+      }, this.args.timeoutMs ?? 120_000);
+      const stdout: Buffer[] = [];
+      const stderr: Buffer[] = [];
+
+      child.stdout.on("data", (chunk) => {
+        stdout.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      });
+      child.stderr.on("data", (chunk) => {
+        stderr.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+      });
+      child.once("error", (error) => {
+        clearTimeout(timeout);
+        reject(error);
+      });
+      child.once("close", (code) => {
+        clearTimeout(timeout);
+        if (code !== 0) {
+          reject(
+            new Error(
+              `agent wallet command failed with exit code ${code}: ${Buffer.concat(stderr).toString("utf8")}`
+            )
+          );
+          return;
+        }
+
+        try {
+          resolve(JSON.parse(Buffer.concat(stdout).toString("utf8")) as Omit<
+            WalletPaymentConfirmation,
+            "confirmedAt"
+          > & { confirmedAt?: string });
+        } catch (error) {
+          reject(
+            new Error(
+              `agent wallet command returned invalid JSON: ${
+                error instanceof Error ? error.message : "unknown parse error"
+              }`
+            )
+          );
+        }
+      });
+      child.stdin.end(`${JSON.stringify(input)}\n`);
+    });
+  }
 }
 
 export interface RunningPaymentRailStubServer {
@@ -182,6 +264,7 @@ export function createPaymentRailServiceState(
     walletTxHashes,
     walletConfirmationsPath: plan?.walletConfirmationsPath,
     walletVerifier: plan?.walletVerifier,
+    agentWalletExecutor: plan?.agentWalletExecutor,
   };
 }
 
@@ -324,6 +407,65 @@ function buildWalletSettlement(
     executedAt: confirmation.confirmedAt,
     settledAt: confirmation.confirmedAt,
   };
+}
+
+function isWalletPaymentExecution(value: unknown): value is
+  Omit<WalletPaymentConfirmation, "confirmedAt"> & { confirmedAt?: string } {
+  return Boolean(
+    value &&
+      typeof value === "object" &&
+      "actionRef" in value &&
+      typeof value.actionRef === "string" &&
+      "txHash" in value &&
+      typeof value.txHash === "string" &&
+      "from" in value &&
+      typeof value.from === "string" &&
+      "to" in value &&
+      typeof value.to === "string" &&
+      "tokenAddress" in value &&
+      typeof value.tokenAddress === "string" &&
+      "amount" in value &&
+      typeof value.amount === "string" &&
+      "asset" in value &&
+      typeof value.asset === "string" &&
+      "chain" in value &&
+      typeof value.chain === "string" &&
+      "chainId" in value &&
+      typeof value.chainId === "number"
+  );
+}
+
+async function executeAgentWalletPayment(
+  state: PaymentRailServiceState,
+  input: AgentWalletPaymentExecutionInput
+): Promise<WalletPaymentConfirmation> {
+  if (!state.agentWalletExecutor) {
+    throw new Error("agent wallet executor is not configured");
+  }
+  const execution = await state.agentWalletExecutor.execute(input);
+  if (!isWalletPaymentExecution(execution)) {
+    throw new Error("agent wallet executor returned invalid wallet payment execution");
+  }
+  const existingActionForTx = state.walletTxHashes.get(execution.txHash.toLowerCase());
+  if (existingActionForTx && existingActionForTx !== execution.actionRef) {
+    throw new Error(
+      `wallet txHash "${execution.txHash}" is already registered for action "${existingActionForTx}"`
+    );
+  }
+
+  const confirmation: WalletPaymentConfirmation = {
+    ...execution,
+    confirmedAt: execution.confirmedAt ?? new Date().toISOString(),
+  };
+  assertWalletConfirmationMatchesIntent(confirmation, input.intent);
+  if (state.walletVerifier) {
+    confirmation.verification = await state.walletVerifier.verify(confirmation);
+  }
+
+  state.walletConfirmations.set(confirmation.actionRef, confirmation);
+  state.walletTxHashes.set(confirmation.txHash.toLowerCase(), confirmation.actionRef);
+  persistWalletConfirmations(state);
+  return confirmation;
 }
 
 function buildWalletDemoHtml(): string {
@@ -720,7 +862,10 @@ export async function handlePaymentRailNodeHttpRequest(request: {
           "payment rail stub is temporarily unavailable"
         );
       }
-      const confirmation = state.walletConfirmations.get(body.input.intent.intentId);
+      let confirmation = state.walletConfirmations.get(body.input.intent.intentId);
+      if (!confirmation && state.agentWalletExecutor) {
+        confirmation = await executeAgentWalletPayment(state, body.input);
+      }
       if (state.requireWalletConfirmation && !confirmation) {
         return buildFailure(
           body.requestRef,
@@ -844,6 +989,10 @@ async function main(): Promise<void> {
     process.env.PAYMENT_RAIL_VERIFY_ONCHAIN === "1";
   const rpcUrl = process.env.PAYMENT_RAIL_RPC_URL;
   const walletConfirmationsPath = process.env.PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH;
+  const agentWalletCommand = process.env.PAYMENT_RAIL_AGENT_WALLET_COMMAND;
+  const agentWalletCommandTimeoutMs = process.env.PAYMENT_RAIL_AGENT_WALLET_COMMAND_TIMEOUT_MS
+    ? Number(process.env.PAYMENT_RAIL_AGENT_WALLET_COMMAND_TIMEOUT_MS)
+    : undefined;
   if (verifyOnchain && !rpcUrl) {
     throw new Error("PAYMENT_RAIL_RPC_URL is required when PAYMENT_RAIL_VERIFY_ONCHAIN is enabled");
   }
@@ -853,6 +1002,12 @@ async function main(): Promise<void> {
     failurePlan: {
       requireWalletConfirmation,
       walletConfirmationsPath,
+      agentWalletExecutor: agentWalletCommand
+        ? new CommandAgentWalletPaymentExecutor({
+            command: agentWalletCommand,
+            timeoutMs: agentWalletCommandTimeoutMs,
+          })
+        : undefined,
       walletVerifier: verifyOnchain && rpcUrl
         ? new JsonRpcWalletPaymentVerifier({ rpcUrl })
         : undefined,
@@ -872,6 +1027,7 @@ async function main(): Promise<void> {
         url: server.url,
         requireWalletConfirmation,
         walletConfirmationsPath: walletConfirmationsPath ?? null,
+        agentWalletExecutor: agentWalletCommand ? "command" : null,
         verifyOnchain,
         rpcUrl: verifyOnchain ? rpcUrl : null,
         routes: PAYMENT_RAIL_SERVICE_ROUTES,
