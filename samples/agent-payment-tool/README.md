@@ -107,6 +107,22 @@ Expected output includes:
 
 Then run `tool:afal-provider-gate` with the same `actionRef` and expected `txHash`. The provider should deliver only after the gate returns `deliverService: true`.
 
+Latest clean staging acceptance, captured on 2026-04-30:
+
+```json
+{
+  "actionRef": "payint-0001",
+  "approvalSessionRef": "aps-chall-0001",
+  "finalIntentStatus": "settled",
+  "settlementRef": "stl-wallet-payint-0001",
+  "receiptRef": "rcpt-pay-0001",
+  "txHash": "0xdcf0650d64117d08f8d1ca60acf39b470c3a52aabe89d7c30280b2c30e92343a",
+  "providerGate": {
+    "deliverService": true
+  }
+}
+```
+
 ## OpenRouter Agent Loop Sample
 
 `npm run demo:openrouter-agent-payment-tool` wraps the tool in a minimal LLM agent loop:
