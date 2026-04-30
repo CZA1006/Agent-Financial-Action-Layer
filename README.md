@@ -528,6 +528,20 @@ npm run tool:afal-payment -- \
 
 This command uses `sdk/client` instead of the monorepo test harness. It returns a JSON tool result with `actionRef`, `approvalSessionRef`, budget reservation fields, and the wallet rail URL that the trusted surface must complete before the payee agent should deliver service.
 
+There is also a minimal OpenRouter/Claude-style agent loop around the tool:
+
+```bash
+AFAL_BASE_URL=http://34.44.95.42:3213 \
+AFAL_CLIENT_ID=client-metamask-demo-001 \
+AFAL_SIGNING_KEY=<provisioned-signing-key> \
+npm run demo:openrouter-agent-payment-tool -- \
+  --mock-llm \
+  --message "Pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service" \
+  --wallet-demo-url http://34.44.95.42:3412/wallet-demo
+```
+
+With `OPENROUTER_API_KEY` set, remove `--mock-llm` to let the LLM decide whether it must call `afal_request_payment`. The sample rejects non-AFAL payment tools, which makes AFAL the mandatory payment control plane in this demo path.
+
 ## What Exists Today
 
 | Area | Current State |
