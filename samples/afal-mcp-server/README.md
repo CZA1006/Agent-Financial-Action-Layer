@@ -33,6 +33,12 @@ From the repo root:
 npm run mcp:afal-payment
 ```
 
+Package/binary entrypoint:
+
+```bash
+afal-payment-mcp
+```
+
 Claude Code MCP config shape:
 
 ```json
@@ -60,6 +66,21 @@ Pay 0.01 USDC to the fraud detection payee agent, then only deliver the service 
 ```
 
 The agent should call `afal_pay_and_gate`. The paid service is deliverable only when the tool result contains `deliverService: true`.
+
+Latest Claude Code MCP acceptance, captured on 2026-05-01:
+
+```text
+prompt: Pay 0.01 USDC to the fraud detection payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94, then only deliver the service if AFAL provider gate passes.
+tool: afal_pay_and_gate
+status: settled
+providerGate: passed
+deliverService: true
+txHash: 0x9e848b428fe6476bcacbb0ce1c2edd0aa36bf6e390b55db210a70b95ef8dde79
+```
+
+Release/testing details:
+
+- [AFAL Payment MCP Preview Release Quickstart](../../docs/product/afal-payment-mcp-release-quickstart.md)
 
 ## Boundary
 

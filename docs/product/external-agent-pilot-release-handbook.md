@@ -8,6 +8,7 @@ It exists because AFAL now has two different distribution modes:
 
 - an internal handoff artifact for a specific external engineer
 - a public release-safe package for broader distribution
+- an AFAL payment MCP preview package for Claude Code / MCP-capable agent testing
 
 Those are not interchangeable.
 
@@ -177,6 +178,74 @@ Do not use:
 - `v0.1.0`
 - `pilot-v0.1.0`
 - `external-agent-v0.1.0`
+
+---
+
+## AFAL Payment MCP Preview Package
+
+Use this when:
+
+- a tester wants Claude Code or another MCP-capable agent to discover AFAL payment tools
+- the tester has a separately provisioned AFAL external-client signing key
+- the tester should not need to run internal harness commands manually
+
+Current entrypoint:
+
+```bash
+afal-payment-mcp
+```
+
+Current repo-local command:
+
+```bash
+npm run mcp:afal-payment
+```
+
+Current quickstart:
+
+- [AFAL Payment MCP Preview Release Quickstart](afal-payment-mcp-release-quickstart.md)
+
+Recommended preview release validation:
+
+```bash
+npm run typecheck
+npm run test:mock
+npm pack
+```
+
+Then perform a live Claude Code MCP acceptance run against staging:
+
+```text
+Pay 0.01 USDC to the fraud detection payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94, then only deliver the service if AFAL provider gate passes.
+```
+
+Release notes must include:
+
+- required env vars: `AFAL_BASE_URL`, `AFAL_CLIENT_ID`, `AFAL_SIGNING_KEY`, `AFAL_WALLET_DEMO_URL`, `AFAL_PAYMENT_MODE`
+- Claude Code `claude mcp add-json` example
+- sandbox reset/provision instructions
+- testnet-only disclaimer
+- latest acceptance tx hash
+- explicit statement that no private wallet key belongs in Claude Code or MCP config
+
+Security posture:
+
+- release asset must not contain a live `AFAL_SIGNING_KEY`
+- release asset must not contain an agent wallet private key
+- signing key must be provisioned per tester or copied from the operator-run staging output
+- agent wallet private key remains only in the VM payment rail service environment
+
+Recommended tag format:
+
+```text
+afal-payment-mcp-vX.Y.Z-preview.N
+```
+
+Example:
+
+```text
+afal-payment-mcp-v0.1.0-preview.1
+```
 
 The workflow is intentionally scoped to the explicit `external-agent-pilot-v*` pattern.
 

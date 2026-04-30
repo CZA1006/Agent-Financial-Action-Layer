@@ -2,7 +2,7 @@
 
 ## Snapshot
 
-AFAL is currently a late Phase 1 externally validated sandbox. It is not production payment infrastructure yet, but the repo now proves a real integration boundary:
+AFAL is currently past the original Phase 1 sandbox boundary and into Phase 2 agent-payment control-plane validation. It is not production payment infrastructure yet, but the repo now proves a real integration boundary:
 
 - AFAL can run as a SQLite-backed HTTP sandbox.
 - External agents can authenticate with provisioned client credentials.
@@ -11,6 +11,8 @@ AFAL is currently a late Phase 1 externally validated sandbox. It is not product
 - A prompt-driven payer-agent demo can create an AFAL-governed payment action and settle it through a real Base Sepolia USDC MetaMask transfer.
 - A payee agent can verify settlement and receipt state by reading AFAL, not by trusting the payer agent's local output.
 - The wallet-confirmed payment rail has optional server-side JSON-RPC receipt verification for Base Sepolia USDC `txHash` submissions.
+- The payment rail can execute an autonomous Base Sepolia USDC transfer through an agent-wallet signer constrained by AFAL approval, max amount, asset/chain, and payee allowlist.
+- Claude Code can discover AFAL as an MCP server and complete a natural-language payment prompt through `afal_pay_and_gate`, ending in `deliverService=true`.
 
 ## What Is Working
 
@@ -40,6 +42,8 @@ Current staging baseline:
 - MetaMask demo data dir: `/srv/afal/metamask-demo-001/sqlite-data`
 - payment rail verification: `PAYMENT_RAIL_VERIFY_ONCHAIN=true`
 - payment rail wallet-confirmation persistence: `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH=/srv/afal/metamask-demo-001/payment-rail/wallet-confirmations.json`
+- payment rail agent-wallet signer: `PAYMENT_RAIL_AGENT_WALLET_COMMAND=npm --silent run signer:base-sepolia-usdc`
+- agent-wallet guardrails: `AGENT_WALLET_MAX_USDC_AMOUNT=0.01`, `AGENT_WALLET_ALLOWED_PAYEE_ADDRESSES=0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94`
 - Base Sepolia RPC: `https://sepolia.base.org`
 
 ### Prompt-Driven MetaMask Payment Demo
@@ -84,6 +88,35 @@ AFAL is acting as the AI infra payment layer:
 
 The MetaMask step is intentionally human-in-the-loop. That is a safety boundary for the current testnet demo, not the final custody model.
 
+### Autonomous Agent-Wallet And Claude Code MCP Acceptance
+
+The current Phase 2 agent-wallet flow is:
+
+```text
+user natural-language prompt
+  -> Claude Code
+  -> AFAL MCP tool afal_pay_and_gate
+  -> AFAL external-client auth, mandate, policy, budget, challenge
+  -> trusted-surface approve/resume
+  -> payment rail agent-wallet signer
+  -> Base Sepolia USDC transfer
+  -> AFAL settlement and payment receipt
+  -> provider gate
+  -> deliverService=true
+```
+
+Latest Claude Code MCP acceptance, captured on 2026-05-01:
+
+- prompt: `Pay 0.01 USDC to the fraud detection payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94, then only deliver the service if AFAL provider gate passes.`
+- MCP server: `afal-payment`
+- MCP tool: `afal_pay_and_gate`
+- result: `settled`
+- provider gate: passed
+- `deliverService`: `true`
+- tx hash: `0x9e848b428fe6476bcacbb0ce1c2edd0aa36bf6e390b55db210a70b95ef8dde79`
+
+This proves Claude Code can act as the agent runtime: the user gives a payment prompt, Claude discovers AFAL through MCP, and AFAL remains the policy, settlement, and provider-gate layer.
+
 ## Current Limits
 
 AFAL does not yet provide:
@@ -91,7 +124,7 @@ AFAL does not yet provide:
 - production auth
 - production database deployment
 - production-grade onchain finality policy or configurable asset registry
-- autonomous custody, MPC, or smart-account signing
+- production autonomous custody, MPC, or smart-account signing
 - production trusted-surface UI
 - production observability and operator control plane
 - mainnet payment readiness
@@ -109,15 +142,19 @@ Phase 2 now has the first SDK/tool boundary:
 - `npm run tool:afal-provider-gate` gives the payee/provider side a strict receipt gate; it rejects pending actions and stale receipt artifacts unless AFAL reports settled final evidence.
 - The staging payment rail now persists wallet confirmations across service restarts when `PAYMENT_RAIL_WALLET_CONFIRMATIONS_PATH` is configured.
 - Claude Code-style tool-only acceptance passed on 2026-04-30: `tool:afal-payment` -> MetaMask wallet confirmation -> `tool:afal-approve-resume` -> `tool:afal-provider-gate`, ending in `deliverService=true` for txHash `0xde130e0f1500121a280b826dd8f04a526acbfe80b1c13db15ca6d826fefa9528`.
+- `npm run tool:afal-agent -- pay-and-gate --payment-mode agent-wallet` completes the autonomous payment flow in one command through the VM agent-wallet signer.
+- `npm run mcp:afal-payment` exposes AFAL payment tools to Claude Code / MCP-capable agents.
+- The package now includes the `afal-payment-mcp` binary entrypoint for preview MCP distribution.
 
 ## Next Engineering Priorities
 
-1. Wire the OpenRouter/Claude Code sample into a single full transcript command for request -> wallet confirmation -> approval/resume -> provider gate.
-2. Run the OpenRouter sample with a funded `OPENROUTER_API_KEY` and confirm the LLM consistently chooses `afal_request_payment`.
-3. Replace seeded/static action refs in live demos with unique request/action refs to avoid stale receipt confusion.
-4. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
-5. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.
-6. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
+1. Cut a GitHub prerelease for the AFAL payment MCP preview, including clear tester instructions and no live secrets.
+2. Replace seeded/static action refs in live demos with unique request/action refs to avoid stale receipt confusion.
+3. Move from repo-local MCP execution to a smaller standalone package or published npm package.
+4. Run the OpenRouter sample with a funded `OPENROUTER_API_KEY` and confirm the LLM consistently chooses AFAL payment tools.
+5. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
+6. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.
+7. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
 
 Phase 2 plan:
 

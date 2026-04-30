@@ -3,7 +3,21 @@
   "version": "0.1.0",
   "private": true,
   "type": "module",
-  "description": "AFAL Phase 1 schema-aligned mock orchestration workspace",
+  "description": "Agent Financial Action Layer sandbox, SDK, payment tools, and MCP server",
+  "bin": {
+    "afal-payment-mcp": "bin/afal-payment-mcp.mjs"
+  },
+  "files": [
+    "app/trusted-surface/**/*.ts",
+    "backend/**/*.ts",
+    "bin/afal-payment-mcp.mjs",
+    "docs/product/afal-payment-mcp-release-quickstart.md",
+    "samples/afal-mcp-server/**/*.ts",
+    "samples/afal-mcp-server/README.md",
+    "samples/agent-payment-tool/**/*.ts",
+    "samples/agent-payment-tool/README.md",
+    "sdk/client/**/*.ts"
+  ],
   "scripts": {
     "accept:local": "bash scripts/check-local-acceptance.sh",
     "accept:external-agent": "bash scripts/check-openrouter-external-agent-acceptance.sh",
@@ -61,10 +75,10 @@
   },
   "devDependencies": {
     "@types/node": "^22.15.21",
-    "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   },
   "dependencies": {
-    "ethers": "^6.16.0"
+    "ethers": "^6.16.0",
+    "tsx": "^4.21.0"
   }
 }
