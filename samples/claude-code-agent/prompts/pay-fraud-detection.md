@@ -1,0 +1,1 @@
+Using samples/claude-code-agent/CLAUDE.md, pay 0.01 USDC to payee agent at 0x3c3c15373eCF0f68C7a841Eac56893FfE1952a94 for fraud detection service. Only deliver the service if AFAL provider gate returns deliverService=true.
