@@ -13,7 +13,7 @@ Build the minimum viable AFAL foundation for:
 - trusted-surface challenge hooks
 
 This milestone is no longer at the "starting from zero" stage.
-The repo now has a stable contract and seeded-runtime foundation, so the remaining work is to turn the current skeletons into real implementations without changing the Phase 1 external contract.
+The repo now has a stable contract, seeded-runtime foundation, externally validated sandbox, and early Phase 2 agent-payment control-plane proof through Claude Code MCP.
 
 ## Deliverables Status
 
@@ -38,6 +38,10 @@ Completed:
 - AFAL API adapter
 - AFAL HTTP transport contract
 - OpenAPI draft / stable publish / snapshot / preview pipeline
+- SQLite-backed HTTP sandbox and external-client provisioning
+- wallet-confirmed Base Sepolia USDC demo with AFAL settlement and receipt
+- autonomous agent-wallet payment rail mode under AFAL guardrails
+- Claude Code MCP acceptance through `afal_pay_and_gate`
 
 Remaining for MVP:
 
@@ -70,7 +74,7 @@ Already met:
 - canonical payment and resource flows runnable through seeded runtime and tests
 - stable AFAL API / HTTP / OpenAPI contract artifacts
 
-Still required before calling the MVP implementation complete:
+Still required before calling the MVP implementation production-ready:
 
 - one seeded local environment runs the Phase 1 flows through real storage-backed AIP / ATS / AMN services
 - payment and resource flows persist state transitions beyond process-local fixture replay

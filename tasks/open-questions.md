@@ -7,17 +7,20 @@
 3. First wallet signing surface: MetaMask human-in-the-loop.
 4. First external LLM route: OpenRouter-backed pilot agents.
 5. First external validation surface: standalone handoff package against GCP staging.
+6. First autonomous signer path: Base Sepolia USDC agent-wallet behind payment rail guardrails.
+7. First Claude Code integration path: MCP server with `afal_pay_and_gate`.
 
 ## Phase 2 Open Questions
 
 1. Which Coinbase x402 scenario should be the first pilot: paid API, content/resource access, or service-agent invoice?
 2. Which package name should the TypeScript SDK use: `@afal/client`, `@afal/sdk`, or another namespace?
-3. Should Claude Code integration be a documented tool wrapper first or a packaged MCP/server-style tool?
+3. Should the dedicated MCP package be `@afal/payment-mcp`, `@afal/mcp-payment`, or part of a broader SDK package?
 4. Which RPC provider should verify Base Sepolia and later mainnet transactions?
 5. What minimum confirmation/finality policy is enough for testnet demo versus production pilot?
 6. What is the first payee/provider verification contract: pull-based `getActionStatus`, callback delivery, or both?
 7. Should AFAL require downstream rails to reject requests without AFAL receipt evidence, or should that remain a demo convention until partner integration?
 8. What is the first hosted sandbox domain and HTTPS strategy?
+9. What tester provisioning flow should issue scoped `AFAL_CLIENT_ID` / `AFAL_SIGNING_KEY` without manual VM operator handoff?
 
 ## Longer-Term Questions
 

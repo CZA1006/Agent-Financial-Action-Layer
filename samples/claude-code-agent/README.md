@@ -1,8 +1,10 @@
 # Claude Code AFAL Payment Agent Demo
 
-This sample is the Claude Code entrypoint for the Phase 2 autonomous payment demo.
+This sample is the repo-local Claude Code entrypoint for the Phase 2 autonomous payment demo.
 
 Goal: give Claude Code a natural-language payment prompt and force the payment path through AFAL before any paid service is delivered.
+
+For portable Claude Code usage, prefer the MCP server in `samples/afal-mcp-server`. The MCP path lets Claude discover AFAL as tools instead of relying on this sample's `CLAUDE.md` instructions.
 
 ## What This Proves
 
@@ -22,6 +24,12 @@ user prompt
 ```
 
 Claude Code does not send funds directly. It delegates payment control to AFAL.
+
+This repo-local sample has been superseded as the primary portability path by the AFAL MCP server:
+
+- MCP tool: `afal_pay_and_gate`
+- preview binary: `afal-payment-mcp`
+- GitHub prerelease: `afal-payment-mcp-v0.1.0-preview.1`
 
 ## Prerequisites
 

@@ -26,9 +26,12 @@ These items are related to the current phase, but do not need to block the initi
 These items are now the immediate next stage after the externally validated Phase 1 sandbox.
 
 - TypeScript AFAL client SDK for public routes
-- Claude Code tool wrapper that forces payment requests through AFAL before downstream payment execution
+- Claude Code MCP/tool wrapper that forces payment requests through AFAL before downstream payment execution
 - OpenRouter simple agent example using the AFAL SDK
 - server-side onchain verification for wallet-confirmed `txHash` values
+- agent-wallet payment rail signer under AFAL approval, max amount, asset/chain, and payee allowlist guardrails
+- GitHub prerelease path for AFAL payment MCP preview testing
+- smaller dedicated MCP/SDK package surface for external testers
 - payment rail adapter interface
 - Coinbase x402 pilot adapter behind AFAL approval
 - payee/provider verification flow through AFAL settlement and receipt readback

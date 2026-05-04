@@ -131,9 +131,9 @@ Those would add surface area before the consumer boundary has been validated.
 
 ## Immediate Next Deliverable
 
-The immediate next deliverable is:
+The immediate next deliverable has been completed:
 
-- cutting an AFAL payment MCP preview release that external testers can install/configure without relying on monorepo internals
+- cut an AFAL payment MCP preview release that external testers can install/configure without relying on monorepo internals
 
 The already-passed repo-external pilot used:
 
@@ -151,7 +151,9 @@ If that pilot succeeds, the next implementation unit should be:
 
 - a smaller consumer-facing TypeScript SDK / MCP package boundary for AFAL public routes
 
-That condition is now satisfied for the first pass. The repo now has `sdk/client`, `samples/agent-payment-tool`, `samples/afal-mcp-server`, and the `afal-payment-mcp` binary entrypoint. The next packaging step is to cut a preview GitHub release, then reduce the package surface so external testers can install only the MCP/SDK layer.
+That condition is now satisfied for the first pass. The repo now has `sdk/client`, `samples/agent-payment-tool`, `samples/afal-mcp-server`, the `afal-payment-mcp` binary entrypoint, and GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1`.
+
+The next packaging step is to reduce the package surface so external testers can install only the MCP/SDK layer, then decide whether to publish it as a dedicated npm package such as `@afal/payment-mcp`.
 
 ---
 

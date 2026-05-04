@@ -151,6 +151,14 @@ It must print a wallet payment execution JSON object on stdout:
 
 The rail then applies the same AFAL intent matching, duplicate txHash protection, optional onchain verification, wallet-confirmation persistence, settlement, and receipt path used by the MetaMask demo. This is the boundary where a testnet private-key signer, smart-account session key, MPC wallet, or custody provider should be integrated.
 
+This mode is the rail used by the Claude Code MCP acceptance path:
+
+```text
+Claude Code -> afal_pay_and_gate -> AFAL approval/resume -> payment rail agent-wallet signer -> AFAL receipt -> provider gate deliverService=true
+```
+
+The MCP server never receives the wallet private key. The key stays behind this rail service and is constrained by `AGENT_WALLET_MAX_USDC_AMOUNT`, `AGENT_WALLET_ALLOWED_PAYEE_ADDRESSES`, asset, chain, and AFAL-approved decision checks.
+
 ## Demo Limitations
 
 This is a testnet bridge from AFAL to a human-confirmed wallet transaction. It is not yet a production payment rail:

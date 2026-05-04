@@ -6,6 +6,13 @@ This document defines the first public-preview path for testing AFAL as an agent
 
 The current package is still a sandbox preview. It is intended for Claude Code / MCP-capable agent testing against a provisioned AFAL staging sandbox. It is not production payment infrastructure and must not be used with mainnet funds.
 
+Current published preview:
+
+- GitHub release: `afal-payment-mcp-v0.1.0-preview.1`
+- Release URL: `https://github.com/CZA1006/Agent-Financial-Action-Layer/releases/tag/afal-payment-mcp-v0.1.0-preview.1`
+- Asset: `agent-financial-action-layer-0.1.0.tgz`
+- Asset SHA256: `a9db6523aec7a066eb7def347d984644cc212f5d62284acc621ae428cbccfac2`
+
 ## What The Preview Proves
 
 An MCP-capable agent can receive a plain payment prompt, discover the AFAL MCP tool, and complete:
@@ -62,12 +69,12 @@ afal-payment-mcp
 Preview install from a GitHub Release tarball:
 
 ```bash
-npm install -g ./agent-financial-action-layer-0.1.0.tgz
+npm install -g https://github.com/CZA1006/Agent-Financial-Action-Layer/releases/download/afal-payment-mcp-v0.1.0-preview.1/agent-financial-action-layer-0.1.0.tgz
 which afal-payment-mcp
 afal-payment-mcp
 ```
 
-The current preview package intentionally ships the MCP server plus the minimal SDK/runtime files it imports. A later package should split this into a smaller dedicated `@afal/payment-mcp` package.
+The current preview package intentionally ships the MCP server plus the minimal SDK/runtime files it imports. A later package should split this into a smaller dedicated `@afal/payment-mcp` package. Do not treat this tarball as the final npm package shape.
 
 ## Required Environment
 
@@ -160,7 +167,7 @@ txHash: 0x...
 
 ## Release Guidance
 
-For a GitHub preview release:
+For the next GitHub preview release:
 
 1. Reset and provision staging.
 2. Run the Claude Code MCP acceptance prompt.
@@ -177,6 +184,8 @@ npm_config_cache=/tmp/afal-npm-cache npm pack
 6. Include this quickstart and the staging setup instructions in the release notes.
 
 Security rule: public release notes and assets must never contain live `AFAL_SIGNING_KEY` values or agent wallet private keys.
+
+Package publishing rule: keep npm publishing blocked until the MCP server is split into a dedicated package with a smaller dependency and file surface. GitHub prerelease tarballs are the current external tester path.
 
 ## Production Gaps
 

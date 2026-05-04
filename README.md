@@ -14,7 +14,7 @@ Together, these modules form the substrate for agent financial actions across pa
 AFAL is no longer just a whitepaper or schema set.
 
 Current stage:
-- **Late Phase 1 externally validated sandbox with wallet-confirmed testnet payment demo**
+- **Early Phase 2 agent payment control-plane preview with Claude Code MCP acceptance**
 - docs/specs/contracts are frozen enough to demo
 - AIP / ATS / AMN / AFAL runtime all run in seeded durable local mode
 - top-level approval requests, trusted-surface callback persistence, and post-approval resume-to-settlement are all wired end to end
@@ -29,6 +29,9 @@ Current stage:
 - a GCP staging sandbox has been used by an external engineer from outside the monorepo
 - the standalone external-agent handoff package passed Round 003 external validation
 - a prompt-driven payer-agent demo now reaches a real Base Sepolia USDC transfer through MetaMask, then finalizes AFAL settlement and receipt state for the payee agent
+- the payment rail now supports an autonomous Base Sepolia USDC agent-wallet signer constrained by AFAL approval, max amount, asset/chain, and payee allowlist
+- Claude Code can discover AFAL through the `afal-payment` MCP server and complete a plain natural-language payment prompt through `afal_pay_and_gate`
+- the AFAL payment MCP preview has a package binary, release quickstart, and GitHub prerelease artifact
 
 The repo now includes:
 - frozen Phase 1 schemas and canonical examples
@@ -48,6 +51,9 @@ The repo now includes:
 - an OpenRouter-backed real-agent resource pilot over the sandbox-facing AFAL public API
 - a wallet-confirmed payment rail demo service for Base Sepolia USDC
 - a prompt-driven MetaMask agent payment demo that connects user prompt, payer agent, AFAL authorization, wallet transfer, trusted-surface resume, and payee-agent readback
+- an agent-wallet payment rail mode for autonomous testnet transfers behind AFAL policy
+- a Claude Code / MCP payment server exposing AFAL payment and provider-gate tools
+- a preview package binary, `afal-payment-mcp`, for MCP-capable agent runtimes
 - OpenAPI draft, stable publish artifacts, snapshot releases, and preview UI
 - automated verification across runtime, API, HTTP, OpenAPI export, and durable persistence
 
@@ -59,6 +65,9 @@ Current validated state:
 - `npm run accept:external-agent` passes for the current internal real-agent sandbox matrix
 - external engineer Round 003 passed against a live GCP AFAL sandbox using only the extracted handoff archive
 - the prompt-driven MetaMask agent payment demo has completed a Base Sepolia USDC transfer and AFAL settlement/receipt flow against staging
+- the autonomous agent-wallet path has completed `pay-and-gate --payment-mode agent-wallet`, producing AFAL settlement, receipt evidence, and provider-gate `deliverService=true`
+- Claude Code MCP acceptance passed: Claude discovered `afal_pay_and_gate`, executed a Base Sepolia USDC agent-wallet payment, and returned provider-gate passed with `deliverService=true`
+- GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1` is available for MCP preview testing
 - GitHub Actions CI now runs `typecheck`, `test:mock`, and `accept:external-onboarding` on pull requests and pushes to `main`
 - branch protection and required-check guidance lives in [docs/product/ci-merge-gate.md](docs/product/ci-merge-gate.md)
 - repo-admin setup can be scripted with [scripts/configure-branch-protection.sh](scripts/configure-branch-protection.sh)
@@ -470,9 +479,9 @@ flowchart LR
     E --> J[Trusted Surface Hooks]
 ```
 
-## Canonical Phase 1 Flows
+## AFAL Architecture And Canonical Flows
 
-![AFAL Canonical Phase 1 Flows](docs/images/afal-canonical-phase-1-flows.png)
+![AFAL Architecture](docs/images/afal-architecture.png)
 
 Canonical examples:
 - [docs/examples/mvp-agent-payment-flow.md](docs/examples/mvp-agent-payment-flow.md)
@@ -511,7 +520,7 @@ npm run demo:metamask-agent-payment -- \
   --transcript
 ```
 
-This sends real Base Sepolia testnet USDC through MetaMask. It is not a mainnet or autonomous-custody demo.
+This sends real Base Sepolia testnet USDC through MetaMask. It is not a mainnet demo. It is the browser-wallet rail; the Phase 2 autonomous path uses the agent-wallet mode documented below.
 Use `--json` instead of `--transcript` when debugging the full AFAL response objects.
 In transcript mode, the CLI also reads the payment rail's wallet-confirmation endpoint after you press Enter, so the demo output includes `onchainVerification: ok`, `verifiedChainId: 84532`, `verifiedLogIndex`, and the verified `txHash`.
 
@@ -632,6 +641,7 @@ afal-payment-mcp
 Preview release/testing instructions:
 
 - [docs/product/afal-payment-mcp-release-quickstart.md](./docs/product/afal-payment-mcp-release-quickstart.md)
+- GitHub prerelease: [afal-payment-mcp-v0.1.0-preview.1](https://github.com/CZA1006/Agent-Financial-Action-Layer/releases/tag/afal-payment-mcp-v0.1.0-preview.1)
 
 ## What Exists Today
 
@@ -644,8 +654,8 @@ Preview release/testing instructions:
 | AFAL runtime | seeded runtime, durable runtime, SQLite integration runtime, intent state, settlement, outputs, payment/resource runtime-agent harnesses, receiver callback outbox and worker control |
 | HTTP surface | framework-free router, durable HTTP wiring, SQLite HTTP wiring, thin Node server shells |
 | External sandbox | provisioned client registry, signed external-client auth, callback registration, standalone handoff package, public release-safe package |
-| Payment rail | mock payment rail, wallet-confirmed Base Sepolia MetaMask rail, optional JSON-RPC receipt verification, prompt-driven agent payment demo |
-| SDK / agent tool | lightweight signed AFAL TypeScript client, payment/resource request wrappers, action readback, payment receipt polling, prompt-payment helper, Claude/OpenRouter-style CLI tool, Claude Code payment-agent workspace, AFAL MCP payment server |
+| Payment rail | mock payment rail, wallet-confirmed Base Sepolia MetaMask rail, optional JSON-RPC receipt verification, persistent wallet confirmations, autonomous Base Sepolia agent-wallet signer |
+| SDK / agent tool | lightweight signed AFAL TypeScript client, payment/resource request wrappers, action readback, payment receipt polling, prompt-payment helper, Claude/OpenRouter-style CLI tool, Claude Code payment-agent workspace, AFAL MCP payment server, `afal-payment-mcp` preview binary |
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
 
@@ -1096,14 +1106,17 @@ AFAL currently demonstrates:
 - payee-agent settlement and receipt verification through AFAL readback
 - optional server-side JSON-RPC verification of wallet-submitted Base Sepolia USDC transactions
 - versioned OpenAPI publication
+- autonomous agent-wallet payment through the payment rail behind AFAL policy
+- Claude Code MCP payment acceptance with `afal_pay_and_gate`
+- MCP preview package and GitHub prerelease
 
 AFAL does not yet claim:
 - production settlement
 - production-grade trusted-surface callbacks
 - production-grade wallet custody, asset registry, finality policy, or RPC operations
-- autonomous custody or smart-account wallet management
+- production MPC, custody-provider, or smart-account wallet management
 - full operator control plane or hosted dashboards
 - chain-native enforcement
 - market venue execution
 
-That means the repo has moved beyond the original seeded durable runtime milestone and now sits in a late Phase 1 externally validated sandbox slice, still short of production deployment.
+That means the repo has moved beyond the original seeded durable runtime milestone and the externally validated Phase 1 sandbox. It now sits in an early Phase 2 agent payment control-plane preview: usable for testnet Claude Code/MCP acceptance, still short of production payment infrastructure.

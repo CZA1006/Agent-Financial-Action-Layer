@@ -51,6 +51,8 @@ At the end of Phase 2, a developer should be able to build a simple Claude Code 
 
 Current status: the Claude Code path has reached first acceptance through MCP. A user issued a plain payment prompt, Claude Code called `afal_pay_and_gate`, the VM agent-wallet signer executed a Base Sepolia USDC transfer, and AFAL provider gate returned `deliverService=true`.
 
+Packaging status: the first GitHub prerelease, `afal-payment-mcp-v0.1.0-preview.1`, is published with the `afal-payment-mcp` binary and release quickstart. This is still a preview tarball from the monorepo package, not the final dedicated npm package.
+
 The ideal user experience is:
 
 ```ts
@@ -140,6 +142,7 @@ Current implementation:
 - `samples/agent-payment-tool/provider-receipt-gate.ts` gives provider/payee agents a strict AFAL receipt gate before service delivery.
 - `samples/afal-mcp-server` exposes `afal_pay_and_gate`, `afal_request_payment`, `afal_approve_resume`, and `afal_provider_gate` as MCP tools.
 - `afal-payment-mcp` is the preview binary entrypoint for MCP distribution.
+- GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1` is available for testers who want to install the binary from a release tarball instead of cloning the repo.
 
 ### 2. Agent Examples
 
@@ -322,9 +325,9 @@ Phase 2 is complete when:
 
 ## Immediate Next Steps
 
-1. Cut an AFAL payment MCP preview release with `afal-payment-mcp`, clear Claude Code setup docs, and no live secrets.
+1. Reduce the MCP package surface so external testers can install only the MCP/SDK layer, not a monorepo-shaped tarball.
 2. Replace deterministic demo refs such as `payint-0001` with unique action refs for repeated live testing.
-3. Reduce the MCP package surface so external testers can install without cloning the full repo.
-4. Build one minimal OpenRouter agent example on top of the MCP/SDK boundary after account credits are available.
-5. Design the x402/Coinbase pilot adapter and decide the first paid resource/API scenario.
-6. Move staging from raw IP/HTTP to a stable HTTPS endpoint.
+3. Build one minimal OpenRouter agent example on top of the MCP/SDK boundary after account credits are available.
+4. Design the x402/Coinbase pilot adapter and decide the first paid resource/API scenario.
+5. Move staging from raw IP/HTTP to a stable HTTPS endpoint.
+6. Define a provisioned-test-client flow for external testers so release assets never need live secrets.
