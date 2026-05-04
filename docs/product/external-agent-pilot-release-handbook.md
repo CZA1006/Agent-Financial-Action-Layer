@@ -205,6 +205,13 @@ Current quickstart:
 
 - [AFAL Payment MCP Preview Release Quickstart](afal-payment-mcp-release-quickstart.md)
 
+Current published preview:
+
+- tag: `afal-payment-mcp-v0.1.0-preview.1`
+- URL: `https://github.com/CZA1006/Agent-Financial-Action-Layer/releases/tag/afal-payment-mcp-v0.1.0-preview.1`
+- asset: `agent-financial-action-layer-0.1.0.tgz`
+- SHA256: `a9db6523aec7a066eb7def347d984644cc212f5d62284acc621ae428cbccfac2`
+
 Recommended preview release validation:
 
 ```bash
@@ -327,7 +334,9 @@ For the repo today:
 
 1. use internal handoff artifacts for active second-engineer pilots
 2. use public release packages for broader discovery and reproducible downloads
-3. keep the credential-bearing handoff artifact out of GitHub Releases
-4. keep the public release path template-only until AFAL has a stronger hosted provisioning story
+3. use the AFAL payment MCP GitHub prerelease for Claude Code / MCP preview testing
+4. keep the credential-bearing handoff artifact out of GitHub Releases
+5. keep the public release path template-only until AFAL has a stronger hosted provisioning story
+6. do not publish an npm package until the MCP package is split into a smaller dedicated package surface
 
 That keeps distribution practical without weakening the sandbox boundary.

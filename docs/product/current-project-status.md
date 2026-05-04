@@ -13,6 +13,7 @@ AFAL is currently past the original Phase 1 sandbox boundary and into Phase 2 ag
 - The wallet-confirmed payment rail has optional server-side JSON-RPC receipt verification for Base Sepolia USDC `txHash` submissions.
 - The payment rail can execute an autonomous Base Sepolia USDC transfer through an agent-wallet signer constrained by AFAL approval, max amount, asset/chain, and payee allowlist.
 - Claude Code can discover AFAL as an MCP server and complete a natural-language payment prompt through `afal_pay_and_gate`, ending in `deliverService=true`.
+- The first AFAL payment MCP GitHub prerelease is published for preview testing.
 
 ## What Is Working
 
@@ -145,16 +146,17 @@ Phase 2 now has the first SDK/tool boundary:
 - `npm run tool:afal-agent -- pay-and-gate --payment-mode agent-wallet` completes the autonomous payment flow in one command through the VM agent-wallet signer.
 - `npm run mcp:afal-payment` exposes AFAL payment tools to Claude Code / MCP-capable agents.
 - The package now includes the `afal-payment-mcp` binary entrypoint for preview MCP distribution.
+- GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1` publishes the first preview tarball and release quickstart for external MCP testing.
 
 ## Next Engineering Priorities
 
-1. Cut a GitHub prerelease for the AFAL payment MCP preview, including clear tester instructions and no live secrets.
+1. Split the preview MCP server into a smaller consumer package, likely `@afal/payment-mcp`, instead of shipping the monorepo-shaped tarball.
 2. Replace seeded/static action refs in live demos with unique request/action refs to avoid stale receipt confusion.
-3. Move from repo-local MCP execution to a smaller standalone package or published npm package.
+3. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
 4. Run the OpenRouter sample with a funded `OPENROUTER_API_KEY` and confirm the LLM consistently chooses AFAL payment tools.
 5. Add callback registration helpers to `sdk/client`, then update standalone external-agent samples to use the SDK boundary.
 6. Design the x402/Coinbase pilot adapter and decide the first paid API/resource scenario.
-7. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
+7. Define the first public provisioning flow so testers can obtain scoped `AFAL_CLIENT_ID` / `AFAL_SIGNING_KEY` credentials without operator handoff.
 
 Phase 2 plan:
 

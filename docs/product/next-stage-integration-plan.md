@@ -28,7 +28,7 @@ It assumes the current repo already has:
 
 AFAL's current stage is:
 
-- **Late Phase 1 externally validated sandbox with wallet-confirmed testnet payment demo**
+- **Early Phase 2 agent payment control-plane preview with Claude Code MCP acceptance**
 
 What that means in practical terms:
 
@@ -52,6 +52,9 @@ What that means in practical terms:
 - internal real-agent sandbox acceptance and standalone extractable pilot kit now both exist
 - a GCP staging sandbox has supported a successful repo-external Round 003 validation run
 - a prompt-driven MetaMask demo now settles Base Sepolia testnet USDC through AFAL's payment rail boundary and lets the payee agent verify settlement/receipt state
+- the payment rail can run an autonomous Base Sepolia USDC agent-wallet signer behind AFAL approval, max amount, asset/chain, and payee allowlist guardrails
+- Claude Code can discover AFAL through the MCP server and call `afal_pay_and_gate` from a plain payment prompt
+- GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1` exists for MCP preview testing
 
 What this stage still is **not**:
 
@@ -59,7 +62,7 @@ What this stage still is **not**:
 - a real trusted-surface integration
 - a production database-backed runtime
 - a production settlement or provider integration
-- an autonomous-custody wallet system
+- a production custody, MPC, or smart-account wallet system
 
 ---
 
@@ -67,9 +70,9 @@ What this stage still is **not**:
 
 The previous target stage has now been reached externally once.
 
-The next target stage is:
+The next target stage remains:
 
-- **repeatable consumer package and SDK boundary**
+- **repeatable consumer package, SDK, MCP, and hosted sandbox boundary**
 
 AFAL is no longer just a local durable demo system, but a runtime that can be cleanly integrated with:
 
@@ -79,12 +82,13 @@ AFAL is no longer just a local durable demo system, but a runtime that can be cl
 - payment/provider services over explicit external adapter boundaries
 - a minimal service-to-service auth boundary for those external payment/provider services
 - a standalone external-agent pilot kit that can be copied into a separate repo
+- a Claude Code / MCP integration where the agent discovers AFAL as tools
 
 In short:
 
 - previous stage = internally accepted externally integrated runtime
-- current stage = repo-external engineer can consume AFAL as a sandbox product surface
-- next stage = make that surface repeatable enough for SDK/package distribution and hosted sandbox onboarding
+- current stage = repo-external engineer and Claude Code can consume AFAL as a sandbox product surface
+- next stage = make that surface repeatable enough for slim SDK/MCP package distribution and hosted sandbox onboarding
 
 ---
 

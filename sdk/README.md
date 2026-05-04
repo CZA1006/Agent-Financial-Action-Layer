@@ -27,7 +27,7 @@ Phase 2 has started the first lightweight client boundary:
 - `sdk/client/createAfalClient().waitForPaymentReceipt` polls until AFAL has a final payment receipt.
 - `sdk/client/agent-payment` provides prompt-style payment helpers for simple agent examples.
 
-This is intentionally small. It is the integration boundary for Claude Code/OpenRouter samples, not a production package yet.
+This is intentionally small. It is the integration boundary for Claude Code/OpenRouter samples and the AFAL MCP payment preview, not a production package yet.
 
 ---
 
@@ -94,3 +94,17 @@ npm run tool:afal-payment -- \
 ```
 
 The command returns a JSON object with `actionRef`, `approvalSessionRef`, and a downstream wallet rail URL. An agent runtime can require this tool before any paid downstream action.
+
+For MCP-capable runtimes, the current preview boundary is:
+
+```bash
+npm run mcp:afal-payment
+```
+
+or the package binary from the GitHub prerelease:
+
+```bash
+afal-payment-mcp
+```
+
+The MCP server uses the same `sdk/client` boundary and exposes `afal_pay_and_gate` for one-prompt Claude Code payment acceptance.

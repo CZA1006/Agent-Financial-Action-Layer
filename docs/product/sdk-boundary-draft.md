@@ -18,7 +18,7 @@ Its purpose is to ensure that when external pilot feedback arrives, AFAL already
 
 AFAL is currently at:
 
-- **Late Phase 1 externally validated sandbox with wallet-confirmed testnet payment demo**
+- **Early Phase 2 agent payment control-plane preview with Claude Code MCP acceptance**
 
 It also has:
 
@@ -30,11 +30,15 @@ It also has:
 - public callback registration routes
 - a successful Round 003 external engineer run from an extracted handoff archive
 - a prompt-driven MetaMask agent payment demo over the same AFAL external-client boundary
+- an autonomous agent-wallet payment rail path behind AFAL approval and rail-side guardrails
+- an MCP payment server that Claude Code can discover and call through `afal_pay_and_gate`
+- a GitHub prerelease for the `afal-payment-mcp` preview binary
 
 The remaining proof points are:
 
 - repeatability with another external engineer or partner
-- a stable SDK surface that does not import monorepo harness internals
+- a stable SDK/MCP package surface that does not import monorepo harness internals
+- a smaller dedicated installable package, rather than a monorepo-shaped preview tarball
 - production-grade payment rail verification for wallet-backed settlements
 
 So this draft is now the bridge from validated pilot surface to first SDK implementation.

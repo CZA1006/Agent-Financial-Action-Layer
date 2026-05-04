@@ -27,14 +27,20 @@ Round 003 has now passed that first gap. Keep this handoff because every new eng
 AFAL has already reached:
 
 - **Late Phase 1 externally validated sandbox**
+- **Early Phase 2 Claude Code MCP / agent-wallet payment preview**
 - **repeatable real external-agent sandbox acceptance inside the main repo**
 - **standalone external-agent pilot kit inside `samples/standalone-external-agent-pilot/`**
+- **AFAL payment MCP preview release `afal-payment-mcp-v0.1.0-preview.1`**
 
 What this handoff is still used for:
 
 - another engineer should use the standalone kit from a separate repo or separate workspace
 - the engineer should rely only on public HTTP routes, onboarding docs, and the standalone sample code
 - AFAL should verify that packaging, provisioning, auth, callback registration, and basic payment/resource requests remain repeatable
+
+For Claude Code / MCP tester onboarding, prefer the MCP preview quickstart instead of this handoff:
+
+- [afal-payment-mcp-release-quickstart.md](afal-payment-mcp-release-quickstart.md)
 
 Before sending the handoff, the AFAL team should run:
 

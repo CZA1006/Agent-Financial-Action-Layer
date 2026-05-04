@@ -15,6 +15,7 @@ Focus:
 - stabilize AIP / AMN / ATS boundaries
 - stabilize payment and resource intent model
 - establish one MVP scenario
+- keep the externally validated SQLite/GCP sandbox repeatable
 
 Main themes:
 - identity and credential consistency
@@ -32,17 +33,21 @@ Focus:
 - support budget allocation and replenishment
 - improve audit and receipt model
 - strengthen resource settlement model
+- productize the AFAL MCP/SDK boundary for Claude Code, OpenRouter, and custom agents
 
 Main themes:
 - payment and resource flows become more executable
 - internal ledger and batch settlement become clearer
 - token economy support becomes more concrete
+- agent payment prompts route through AFAL before any downstream payment rail executes
 
 Potential additions:
 - compute budget credential support
 - provider access support
 - settlement reconciliation model
 - better action orchestration
+- dedicated `@afal/payment-mcp` or SDK package
+- stable hosted sandbox and public tester provisioning flow
 
 ---
 
@@ -53,6 +58,7 @@ Focus:
 - refine Trade Intent
 - define quote and routing object relationships
 - begin venue access planning without full market implementation
+- pilot one downstream machine-payment rail such as Coinbase x402 behind AFAL approval
 
 Main themes:
 - structured trade requests
@@ -73,6 +79,7 @@ By the end of 6 months, AFAL should be positioned as:
 
 - a documented identity / authority / treasury substrate
 - a structured action layer for payment and resource settlement
+- an agent payment control plane that Claude Code / MCP-capable agents can call before payment execution
 - a forward-compatible base for future market access and trading
 - a credible Web4 agent financial infrastructure project
 

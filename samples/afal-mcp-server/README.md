@@ -39,6 +39,20 @@ Package/binary entrypoint:
 afal-payment-mcp
 ```
 
+Current GitHub preview release:
+
+```text
+https://github.com/CZA1006/Agent-Financial-Action-Layer/releases/tag/afal-payment-mcp-v0.1.0-preview.1
+```
+
+Install the preview tarball directly:
+
+```bash
+npm install -g https://github.com/CZA1006/Agent-Financial-Action-Layer/releases/download/afal-payment-mcp-v0.1.0-preview.1/agent-financial-action-layer-0.1.0.tgz
+```
+
+This preview is intentionally not the final package shape. It proves the binary and MCP flow before splitting a dedicated `@afal/payment-mcp` package.
+
 Claude Code MCP config shape:
 
 ```json

@@ -12,6 +12,11 @@ For a portable Claude Code / MCP integration where the agent discovers AFAL as t
 - [afal-mcp-server/README.md](./afal-mcp-server/README.md)
 - [../docs/product/afal-payment-mcp-release-quickstart.md](../docs/product/afal-payment-mcp-release-quickstart.md)
 
+Current MCP preview release:
+
+- `afal-payment-mcp-v0.1.0-preview.1`
+- `https://github.com/CZA1006/Agent-Financial-Action-Layer/releases/tag/afal-payment-mcp-v0.1.0-preview.1`
+
 For a repo-external / extractable consumer kit, use:
 
 - [standalone-external-agent-pilot/README.md](./standalone-external-agent-pilot/README.md)

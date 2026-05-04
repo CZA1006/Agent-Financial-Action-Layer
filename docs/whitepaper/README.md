@@ -55,7 +55,7 @@ The repository has now moved beyond whitepaper-only or schema-only work.
 
 Current implementation stage:
 
-- late Phase 1 externally integrated runtime slice
+- early Phase 2 agent payment control-plane preview
 - seeded durable local execution across AIP / ATS / AMN / AFAL
 - shared SQLite-backed integration database for execution-critical state, admin audit, and notification outbox
 - trusted-surface approval callback and resume routes plus an independent trusted-surface review service stub
@@ -63,6 +63,11 @@ Current implementation stage:
 - receiver callback delivery with durable outbox, worker redelivery, and operator recovery surfaces
 - explicit payment-rail/provider adapter boundaries and network-shaped mock external services that AFAL can call over HTTP
 - a minimal service-to-service auth boundary for those external services, including signed request metadata placeholders
+- GCP staging validation for the externally provisioned sandbox
+- Base Sepolia USDC wallet-confirmed payment demo with AFAL settlement and receipt evidence
+- autonomous agent-wallet payment rail mode behind AFAL approval and rail-side guardrails
+- Claude Code MCP acceptance through `afal_pay_and_gate`
+- GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1` for MCP preview testing
 
 So the whitepaper should now be read as:
 
