@@ -638,6 +638,15 @@ The package now exposes a binary entrypoint for the MCP server:
 afal-payment-mcp
 ```
 
+The repo also includes a smaller standalone package preview:
+
+```bash
+npm run test:payment-mcp
+npm run pack:payment-mcp
+```
+
+That package lives in `packages/payment-mcp`, uses Node built-ins instead of `tsx`, and calls the AFAL HTTP contract directly. It is the intended path toward a future published `@afal/payment-mcp` package.
+
 Preview release/testing instructions:
 
 - [docs/product/afal-payment-mcp-release-quickstart.md](./docs/product/afal-payment-mcp-release-quickstart.md)
@@ -655,7 +664,7 @@ Preview release/testing instructions:
 | HTTP surface | framework-free router, durable HTTP wiring, SQLite HTTP wiring, thin Node server shells |
 | External sandbox | provisioned client registry, signed external-client auth, callback registration, standalone handoff package, public release-safe package |
 | Payment rail | mock payment rail, wallet-confirmed Base Sepolia MetaMask rail, optional JSON-RPC receipt verification, persistent wallet confirmations, autonomous Base Sepolia agent-wallet signer |
-| SDK / agent tool | lightweight signed AFAL TypeScript client, payment/resource request wrappers, action readback, payment receipt polling, prompt-payment helper, Claude/OpenRouter-style CLI tool, Claude Code payment-agent workspace, AFAL MCP payment server, `afal-payment-mcp` preview binary |
+| SDK / agent tool | lightweight signed AFAL TypeScript client, payment/resource request wrappers, action readback, payment receipt polling, prompt-payment helper, Claude/OpenRouter-style CLI tool, Claude Code payment-agent workspace, AFAL MCP payment server, standalone `packages/payment-mcp` preview |
 | OpenAPI | draft YAML, stable latest YAML/JSON, manifest, preview, snapshots |
 | Testing | runtime, durable persistence, API, HTTP, export, preview, snapshot tests |
 

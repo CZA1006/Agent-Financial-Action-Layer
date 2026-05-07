@@ -151,9 +151,9 @@ If that pilot succeeds, the next implementation unit should be:
 
 - a smaller consumer-facing TypeScript SDK / MCP package boundary for AFAL public routes
 
-That condition is now satisfied for the first pass. The repo now has `sdk/client`, `samples/agent-payment-tool`, `samples/afal-mcp-server`, the `afal-payment-mcp` binary entrypoint, and GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1`.
+That condition is now satisfied for the first pass. The repo now has `sdk/client`, `samples/agent-payment-tool`, `samples/afal-mcp-server`, the `afal-payment-mcp` binary entrypoint, GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1`, and the smaller `packages/payment-mcp` package candidate.
 
-The next packaging step is to reduce the package surface so external testers can install only the MCP/SDK layer, then decide whether to publish it as a dedicated npm package such as `@afal/payment-mcp`.
+The next packaging step is to run live Claude Code acceptance against the `packages/payment-mcp` tarball, then decide whether to publish it as a dedicated npm package such as `@afal/payment-mcp`.
 
 ---
 

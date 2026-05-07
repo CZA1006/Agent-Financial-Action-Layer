@@ -17,6 +17,10 @@ Current MCP preview release:
 - `afal-payment-mcp-v0.1.0-preview.1`
 - `https://github.com/CZA1006/Agent-Financial-Action-Layer/releases/tag/afal-payment-mcp-v0.1.0-preview.1`
 
+Standalone package candidate:
+
+- [../packages/payment-mcp/README.md](../packages/payment-mcp/README.md)
+
 For a repo-external / extractable consumer kit, use:
 
 - [standalone-external-agent-pilot/README.md](./standalone-external-agent-pilot/README.md)

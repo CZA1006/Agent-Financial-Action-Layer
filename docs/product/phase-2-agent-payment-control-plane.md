@@ -53,6 +53,8 @@ Current status: the Claude Code path has reached first acceptance through MCP. A
 
 Packaging status: the first GitHub prerelease, `afal-payment-mcp-v0.1.0-preview.1`, is published with the `afal-payment-mcp` binary and release quickstart. This is still a preview tarball from the monorepo package, not the final dedicated npm package.
 
+Standalone package status: `packages/payment-mcp` now contains the smaller `@afal/payment-mcp` candidate. It is pure JS, uses Node built-ins, calls AFAL HTTP routes directly, and can be packed with `npm run pack:payment-mcp`.
+
 The ideal user experience is:
 
 ```ts
@@ -143,6 +145,7 @@ Current implementation:
 - `samples/afal-mcp-server` exposes `afal_pay_and_gate`, `afal_request_payment`, `afal_approve_resume`, and `afal_provider_gate` as MCP tools.
 - `afal-payment-mcp` is the preview binary entrypoint for MCP distribution.
 - GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1` is available for testers who want to install the binary from a release tarball instead of cloning the repo.
+- `packages/payment-mcp` is the dedicated package candidate for the next preview release and avoids `tsx` plus monorepo sample imports.
 
 ### 2. Agent Examples
 
@@ -325,7 +328,7 @@ Phase 2 is complete when:
 
 ## Immediate Next Steps
 
-1. Reduce the MCP package surface so external testers can install only the MCP/SDK layer, not a monorepo-shaped tarball.
+1. Run live Claude Code acceptance against a tarball produced by `npm run pack:payment-mcp`.
 2. Replace deterministic demo refs such as `payint-0001` with unique action refs for repeated live testing.
 3. Build one minimal OpenRouter agent example on top of the MCP/SDK boundary after account credits are available.
 4. Design the x402/Coinbase pilot adapter and decide the first paid resource/API scenario.

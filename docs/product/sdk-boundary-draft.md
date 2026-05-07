@@ -33,12 +33,13 @@ It also has:
 - an autonomous agent-wallet payment rail path behind AFAL approval and rail-side guardrails
 - an MCP payment server that Claude Code can discover and call through `afal_pay_and_gate`
 - a GitHub prerelease for the `afal-payment-mcp` preview binary
+- a smaller standalone package candidate in `packages/payment-mcp`
 
 The remaining proof points are:
 
 - repeatability with another external engineer or partner
 - a stable SDK/MCP package surface that does not import monorepo harness internals
-- a smaller dedicated installable package, rather than a monorepo-shaped preview tarball
+- live acceptance and release of the smaller dedicated installable package, rather than the monorepo-shaped preview tarball
 - production-grade payment rail verification for wallet-backed settlements
 
 So this draft is now the bridge from validated pilot surface to first SDK implementation.

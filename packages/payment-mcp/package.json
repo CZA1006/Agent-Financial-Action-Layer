@@ -1,0 +1,18 @@
+{
+  "name": "@afal/payment-mcp",
+  "version": "0.1.0-preview.2",
+  "type": "module",
+  "description": "AFAL payment MCP server for Claude Code and MCP-capable agent runtimes",
+  "bin": {
+    "afal-payment-mcp": "bin/afal-payment-mcp.mjs"
+  },
+  "files": [
+    "bin/**/*.mjs",
+    "src/**/*.mjs",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=20"
+  },
+  "license": "MIT"
+}
