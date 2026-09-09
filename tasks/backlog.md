@@ -31,7 +31,8 @@ These items are now the immediate next stage after the externally validated Phas
 - server-side onchain verification for wallet-confirmed `txHash` values
 - agent-wallet payment rail signer under AFAL approval, max amount, asset/chain, and payee allowlist guardrails
 - GitHub prerelease path for AFAL payment MCP preview testing
-- smaller dedicated MCP/SDK package surface for external testers
+- smaller dedicated MCP package surface for external testers
+- live Claude Code acceptance against the `packages/payment-mcp` tarball
 - payment rail adapter interface
 - Coinbase x402 pilot adapter behind AFAL approval
 - payee/provider verification flow through AFAL settlement and receipt readback

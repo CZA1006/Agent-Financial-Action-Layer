@@ -60,11 +60,26 @@ Current local command:
 npm run mcp:afal-payment
 ```
 
-Package/binary command:
+Repo-root preview package/binary command:
 
 ```bash
 afal-payment-mcp
 ```
+
+Standalone package preview:
+
+```bash
+npm run test:payment-mcp
+npm run pack:payment-mcp
+```
+
+The standalone package is located at:
+
+```text
+packages/payment-mcp
+```
+
+It is the next package shape: it uses Node built-ins, calls AFAL HTTP routes directly, and does not import monorepo samples, TypeScript sources, or `tsx`.
 
 Preview install from a GitHub Release tarball:
 
@@ -74,7 +89,7 @@ which afal-payment-mcp
 afal-payment-mcp
 ```
 
-The current preview package intentionally ships the MCP server plus the minimal SDK/runtime files it imports. A later package should split this into a smaller dedicated `@afal/payment-mcp` package. Do not treat this tarball as the final npm package shape.
+The current published preview package intentionally ships the MCP server plus the minimal SDK/runtime files it imports. The new `packages/payment-mcp` package is the smaller dedicated package candidate for the next preview release. Do not treat the `afal-payment-mcp-v0.1.0-preview.1` tarball as the final npm package shape.
 
 ## Required Environment
 

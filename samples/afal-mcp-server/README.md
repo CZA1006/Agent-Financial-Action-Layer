@@ -53,6 +53,19 @@ npm install -g https://github.com/CZA1006/Agent-Financial-Action-Layer/releases/
 
 This preview is intentionally not the final package shape. It proves the binary and MCP flow before splitting a dedicated `@afal/payment-mcp` package.
 
+The dedicated package candidate now lives at:
+
+```text
+packages/payment-mcp
+```
+
+Use it for the next packaging pass:
+
+```bash
+npm run test:payment-mcp
+npm run pack:payment-mcp
+```
+
 Claude Code MCP config shape:
 
 ```json

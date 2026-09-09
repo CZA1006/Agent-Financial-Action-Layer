@@ -147,10 +147,11 @@ Phase 2 now has the first SDK/tool boundary:
 - `npm run mcp:afal-payment` exposes AFAL payment tools to Claude Code / MCP-capable agents.
 - The package now includes the `afal-payment-mcp` binary entrypoint for preview MCP distribution.
 - GitHub prerelease `afal-payment-mcp-v0.1.0-preview.1` publishes the first preview tarball and release quickstart for external MCP testing.
+- `packages/payment-mcp` now contains the smaller standalone MCP package candidate. It uses Node built-ins, calls AFAL HTTP routes directly, and can be packed with `npm run pack:payment-mcp`.
 
 ## Next Engineering Priorities
 
-1. Split the preview MCP server into a smaller consumer package, likely `@afal/payment-mcp`, instead of shipping the monorepo-shaped tarball.
+1. Run live Claude Code acceptance against the `packages/payment-mcp` packed tarball, then cut the next preview release from the smaller package.
 2. Replace seeded/static action refs in live demos with unique request/action refs to avoid stale receipt confusion.
 3. Move from IP-based staging to a stable HTTPS domain or hosted sandbox entrypoint.
 4. Run the OpenRouter sample with a funded `OPENROUTER_API_KEY` and confirm the LLM consistently chooses AFAL payment tools.
